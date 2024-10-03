@@ -71,6 +71,9 @@ class License {
 			$error_code    = $response->error_code ?? $error_code;
 			$error_message = $response->message ?? $error_message;
 			$status        = false;
+
+			$is_connected_aff = $response->is_connected_aff ?? 0;
+			Helper::update_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, $is_connected_aff );
 		} else {
 			$update_db     = false; // ? Don't update DB if the status is not 200, 401
 			$error_message = $res['message'] ?? $error_message;
@@ -83,7 +86,7 @@ class License {
 
 		// ? update license status in DB
 		if ( $update_db ) {
-			$status = $status ? 1 : 0;
+			$status = $status && 1 == $response->is_startup_plan ? 1 : 0; // phpcs:ignore
 			update_option( 'lasso_lite_license_status', $status, true );
 		}
 
@@ -95,6 +98,10 @@ class License {
 	 */
 	public static function check_user_license() {
 		$license = self::get_license();
+		if ( empty( $license ) ) {
+			return false;
+		}
+
 		list($license_status, $error_code, $error_message) = self::check_license( $license );
 
 		return $license_status;

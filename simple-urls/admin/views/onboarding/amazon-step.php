@@ -13,9 +13,10 @@ $is_valid_tracking_id            = empty( $amazon_tracking_id ) ? true : Amazon_
 $tracking_id_class         = $is_valid_tracking_id ? '' : ' invalid-field';
 $tracking_id_invalid_class = $is_valid_tracking_id ? ' d-none' : '';
 
-$amazon_pricing_daily = $lasso_options['amazon_pricing_daily'] ?? true;
-$update_price_checked = $amazon_pricing_daily ? 'checked' : '';
-$auto_monetize_amazon = $lasso_options['auto_monetize_amazon'] ?? true;
+$amazon_pricing_daily        = $lasso_options['amazon_pricing_daily'] ?? true;
+$update_price_checked        = $amazon_pricing_daily ? 'checked' : '';
+$auto_monetize_amazon        = $lasso_options['auto_monetize_amazon'] ?? true;
+$auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? true;
 ?>
 
 <div class="tab-item d-none" data-step="amazon">
@@ -119,6 +120,14 @@ $auto_monetize_amazon = $lasso_options['auto_monetize_amazon'] ?? true;
 							<span class="slider"></span>
 						</label>
 						<label class="m-0 lasso-lite-disabled no-hint">Show Discount Pricing</label>
+					</div>
+
+					<div class="form-group">
+						<label class="toggle m-0 mr-1">
+							<input type="checkbox" name="auto_upgrade_eligible_links" id="auto_upgrade_eligible_links" <?php echo $auto_upgrade_eligible_links ? 'checked' : ''; ?>>
+							<span class="slider"></span>
+						</label>
+						<label class="m-0">Auto-upgrade Eligible Links</label>
 					</div>
 				</div>
 			</div>

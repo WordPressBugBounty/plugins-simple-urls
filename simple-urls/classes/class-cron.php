@@ -7,6 +7,7 @@
 
 namespace LassoLite\Classes;
 
+use LassoLite\Classes\License;
 use LassoLite\Classes\Processes\Amazon;
 use LassoLite\Classes\Processes\Import_All;
 use LassoLite\Classes\Processes\Revert_All;
@@ -21,6 +22,7 @@ class Cron {
 		'lasso_lite_import_all'              => 'lasso_lite_15_minutes',
 		'lasso_lite_revert_all'              => 'lasso_lite_15_minutes',
 		'lasso_lite_tracking_support_status' => 'daily',
+		'lasso_lite_update_license_status'   => 'daily',
 	);
 
 	/**
@@ -32,6 +34,7 @@ class Cron {
 		add_action( 'lasso_lite_import_all', array( $this, 'lasso_import_all' ) );
 		add_action( 'lasso_lite_revert_all', array( $this, 'lasso_revert_all' ) );
 		add_action( 'lasso_lite_update_amazon', array( $this, 'lasso_lite_update_amazon' ) );
+		add_action( 'lasso_lite_update_license_status', array( $this, 'lasso_lite_update_license_status' ) );
 
 		$this->lasso_create_schedule_hook();
 	}
@@ -135,5 +138,12 @@ class Cron {
 			$lasso_amazon = new Amazon();
 			$lasso_amazon->run();
 		}
+	}
+
+	/**
+	 * Update license status.
+	 */
+	public function lasso_lite_update_license_status() {
+		License::check_user_license();
 	}
 }

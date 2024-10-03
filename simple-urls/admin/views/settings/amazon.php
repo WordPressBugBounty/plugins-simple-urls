@@ -30,9 +30,10 @@ $tracking_id_invalid_class = $is_valid_tracking_id ? ' d-none' : '';
 $amazon_pricing_daily = $lasso_options['amazon_pricing_daily'] ?? true;
 $update_price_checked = $amazon_pricing_daily ? 'checked' : '';
 
-$license_active = License::get_license_status();
-$class_license_active = $license_active ? '' : 'lasso-lite-disabled no-hint';
-$class_license_display = !empty( $license_active ) ? 'd-none' : '';
+$license_active              = License::get_license_status();
+$class_license_active        = $license_active ? '' : 'lasso-lite-disabled no-hint';
+$class_license_display       = !empty( $license_active ) ? 'd-none' : '';
+$auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? true;
 ?>
 
 <?php Config::get_header(); ?>
@@ -140,6 +141,14 @@ $class_license_display = !empty( $license_active ) ? 'd-none' : '';
 								<span class="slider"></span>
 							</label>
 							<label class="m-0 lasso-lite-disabled no-hint">Show Discount Pricing</label>
+						</div>
+
+						<div class="form-group">
+							<label class="toggle m-0 mr-1">
+								<input type="checkbox" name="auto_upgrade_eligible_links" id="auto_upgrade_eligible_links" <?php echo $auto_upgrade_eligible_links ? 'checked' : ''; ?>>
+								<span class="slider"></span>
+							</label>
+							<label class="m-0">Auto-upgrade Eligible Links</label>
 						</div>
 					</div>
 				</div>

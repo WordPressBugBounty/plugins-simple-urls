@@ -12,6 +12,7 @@ jQuery(document).ready(function() {
 		let general_enable_new_ui                = jQuery('#general_enable_new_ui').prop("checked") ? 1 : 0;
 		let btn_save                             = jQuery('#btn-save-settings-general');
 		let lasso_lite_update_popup              = jQuery('#url-save');
+		let performance_event_tracking           = jQuery('#performance_event_tracking').prop("checked") ? 1 : 0;
 
 		lasso_lite_helper.add_loading_button( btn_save );
 		event.preventDefault();
@@ -25,6 +26,7 @@ jQuery(document).ready(function() {
 				'general_disable_amazon_notifications' : general_disable_amazon_notifications,
 				'general_disable_notification'         : general_disable_notification,
 				'general_enable_new_ui'                : general_enable_new_ui,
+				'performance_event_tracking'           : performance_event_tracking,
 			},
 			beforeSend: function (xhr) {
 				// Collapse current error + success notifications

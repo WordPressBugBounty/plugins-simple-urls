@@ -4,7 +4,7 @@ Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campai
 Tags: affiliate, affiliate link manager, link cloaking, amazon affiliate, affiliate marketing
 Requires at least: 5.1
 Requires PHP: 7.2
-Tested up to: 6.4.2
+Tested up to: 6.6.1
 Stable tag: trunk
 
 Simple URLs helps you to manage links, create product displays, and grow your affiliate marketing business.
@@ -177,6 +177,11 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 
 === Changelog ===
+= 127 =
+* Released: October 2, 2024
+* Fixed promotional banners that were showing by mistake
+* Added auto-upgrade functionality for Affiliate+ links
+
 = 126 =
 * Released: August 26, 2024
 * Updated the plugin's onboarding flow 

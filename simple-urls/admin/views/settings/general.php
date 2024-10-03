@@ -18,6 +18,7 @@ $general_disable_amazon_notifications = $lasso_options['general_disable_amazon_n
 $general_disable_tooltip_checked      = $lasso_options['general_disable_tooltip'] ? 'checked' : '';
 $general_disable_notification         = $lasso_options['general_disable_notification'] ? 'checked' : '';
 $general_enable_new_ui                = Helper::is_lite_using_new_ui() ? 'checked' : '';
+$performance_event_tracking           = $lasso_options['performance_event_tracking'] ? 'checked="true"' : '';
 
 $license_active = License::get_license_status();
 $license_status = $license_active 
@@ -111,6 +112,24 @@ $license_msg = $lasso_options['license_serial'] === ''
 								<option value="Administrator" disabled selected>Administrator</option>
 							</select>
 						</section>
+
+
+						<!-- Force Performance JS always turn on client by default -->
+						<!-- PERFORMANCE -->
+						<section class="mb-5">
+							<h3>Advanced Click Tracking</h3>
+							<p>Send click tracking data to <a href="https://app.getlasso.co/performance/" target="_blank">Performance</a> for easy-to-understand analytics.</p>
+
+							<div class="form-group">
+								<label class="toggle m-0 mb-3 mr-1">
+									<!-- click and page view tracking -->
+									<input type="checkbox" id="performance_event_tracking" name="performance_event_tracking" <?php echo esc_html( $performance_event_tracking ); ?>>
+									<span class="slider"></span>
+								</label>
+								<label class="m-0" data-tooltip="When enabled, Lasso can help you understand what pages and links drive conversions on your site.">Page and Link-Level Tracking <i class="far fa-info-circle light-purple"></i></label>
+							</div>
+						</section>
+
 
 						<!-- User Interface -->
 						<section class="mb-5">

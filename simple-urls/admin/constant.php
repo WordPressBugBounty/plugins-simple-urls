@@ -59,6 +59,7 @@ class Constant {
 		'amazon_tracking_id'                   => '',
 		'amazon_default_tracking_country'      => 'us',
 		'amazon_pricing_daily'                 => true,
+		'auto_upgrade_eligible_links'          => true,
 
 		// ? general
 		'license_serial'                       => '',
@@ -67,6 +68,7 @@ class Constant {
 		'general_disable_notification'         => false,
 		'general_enable_new_ui'                => true,
 		'check_duplicate_link'                 => false,
+		'performance_event_tracking'           => true,
 
 		// ? url detail
 		'enable_nofollow'                      => true,
@@ -100,6 +102,7 @@ class Constant {
 	const LASSO_LITE_NONCE                        = 'simple-urls-nonce';
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
+	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
 
 	const BLOCK_CUSTOMIZE = array(
 		'single'            => array(

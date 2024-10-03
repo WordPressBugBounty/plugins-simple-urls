@@ -260,7 +260,7 @@ class Helper {
 	 * Get license status in DB
 	 */
 	public static function get_license_status() {
-		$db_status      = get_option( 'lasso_license_status', '' );
+		$db_status      = get_option( 'lasso_lite_license_status', '' );
 		$active_license = boolval( $db_status );
 
 		return $active_license;
@@ -1269,7 +1269,6 @@ class Helper {
 		$parse['query'] = $query;
 
 		return self::get_url_from_parse( $parse );
-
 	}
 
 	/**
@@ -1602,12 +1601,28 @@ class Helper {
 	 */
 	public static function get_headers( $license_id = null ) {
 		$headers = array(
-			'Content-Type' => 'application/json',
-			'license'      => $license_id ? $license_id : License::get_license(),
-			'site_id'      => License::get_site_id(),
-			'site_url'     => rawurlencode( site_url() ),
+			'Content-Type'  => 'application/json',
+			'license'       => $license_id ? $license_id : License::get_license(),
+			'site_id'       => License::get_site_id(),
+			'site_url'      => rawurlencode( site_url() ),
+			'is_lasso_lite' => 1,
+			'email'         => get_option( 'admin_email' ),
 		);
 
 		return $headers;
+	}
+
+	/**
+	 * Build lsid
+	 *
+	 * @return false|string
+	 */
+	public static function build_lsid() {
+		$lsid = session_create_id( 'ls-' );
+		if ( ! $lsid ) {
+			$lsid = 'ls-' . md5( uniqid( wp_rand(), true ) );
+		}
+
+		return $lsid;
 	}
 }

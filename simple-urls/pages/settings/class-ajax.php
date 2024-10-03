@@ -42,6 +42,7 @@ class Ajax {
 		$amazon_default_tracking_country = $post['amazon_default_tracking_country'] ?? '';
 		$amazon_pricing_daily            = $post['amazon_pricing_daily'] ?? '';
 		$auto_monetize_amazon            = $post['auto_monetize_amazon'] ?? '';
+		$auto_upgrade_eligible_links     = $post['auto_upgrade_eligible_links'] ?? '';
 
 		$options['amazon_tracking_id']              = $amazon_tracking_id;
 		$options['amazon_access_key_id']            = $amazon_access_key_id;
@@ -49,7 +50,7 @@ class Ajax {
 		$options['amazon_default_tracking_country'] = $amazon_default_tracking_country;
 		$options['amazon_pricing_daily']            = 'on' === $amazon_pricing_daily;
 		$options['auto_monetize_amazon']            = 'on' === $auto_monetize_amazon;
-
+		$options['auto_upgrade_eligible_links']     = 'on' === $auto_upgrade_eligible_links;
 		Setting::set_settings( $options );
 
 		if ( ! empty( $amazon_tracking_id ) ) {
@@ -71,10 +72,12 @@ class Ajax {
 		$general_disable_tooltip              = $post['general_disable_tooltip'] ?? Constant::DEFAULT_SETTINGS['general_disable_tooltip'];
 		$general_disable_notification         = $post['general_disable_notification'] ?? Constant::DEFAULT_SETTINGS['general_disable_notification'];
 		$general_enable_new_ui                = $post['general_enable_new_ui'] ?? Constant::DEFAULT_SETTINGS['general_enable_new_ui'];
+		$performance_event_tracking           = $post['performance_event_tracking'] ?? Constant::DEFAULT_SETTINGS['performance_event_tracking'];
 
 		$options['general_disable_amazon_notifications'] = $general_disable_amazon_notifications;
 		$options['general_disable_tooltip']              = $general_disable_tooltip;
 		$options['general_disable_notification']         = $general_disable_notification;
+		$options['performance_event_tracking']           = $performance_event_tracking;
 
 		Setting::set_settings( $options );
 		$data['msg'] = 'All settings saved';

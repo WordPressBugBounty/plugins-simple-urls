@@ -15,6 +15,7 @@ use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Shortcode;
+use LassoLite\Classes\License;
 
 /**
  * Hook.
@@ -160,7 +161,12 @@ class Hook {
 			remove_action( 'admin_print_footer_scripts', array( 'GWPerks', 'welcome_pointer_script' ), 10 ); // phpcs:ignore
 		}
 
-		add_action( 'admin_notices', array( $this, 'lasso_lite_custom_dashboard_banner' ) );
+		$license_active = License::get_license_status();
+		if ( false === $license_active ) {
+			add_action( 'admin_notices', array( $this, 'lasso_lite_custom_dashboard_banner' ) );
+		}
+
+		add_action( 'wp_footer', array( $this, 'lasso_lite_event_tracking' ) );
 		add_action( 'admin_footer', array( $this, 'open_links_in_new_tab' ) );
 	}
 
@@ -891,5 +897,53 @@ class Hook {
 			);
 		}
 		echo $html; // phpcs:ignore
+	}
+
+	/**
+	 * Print JS script for Lasso event tracking.
+	 */
+	public function lasso_lite_event_tracking() {
+		if ( is_admin() || strpos( Helper::get_server_param( 'REQUEST_URI' ), 'wp-admin' )
+			|| strpos( Helper::get_server_param( 'REQUEST_URI' ), 'elementor-preview' )
+			|| Helper::is_lasso_pro_installed()
+		) {
+			return;
+		}
+
+		$process_lasso_event_tracking = apply_filters( 'lasso_lite_event_tracking', true );
+
+		if ( ! $process_lasso_event_tracking ) {
+			return;
+		}
+
+		$lasso_options       = Setting::get_settings();
+		$is_ip_anonymization = false;
+		$lsid                = Helper::build_lsid();
+
+		$current_date    = gmdate( 'Ymd' );
+		$js_version      = LASSO_LITE_VERSION . '.' . $current_date;
+		$performance_url = 'https://js.getlasso.co/lasso-performance.min.js?ver=' . $js_version;
+
+		// @codeCoverageIgnoreStart
+		if ( $lasso_options['performance_event_tracking'] ) :
+			?>
+
+			<!-- Lasso tracking events - Performance -->
+			<script type="text/javascript" src="<?php echo $performance_url; // phpcs:ignore ?>" defer></script>
+			<script type="text/javascript" defer>
+				document.addEventListener("lassoTrackingEventLoaded", function(e) {
+					e.detail.init({
+						'lssid': '<?php echo License::get_site_id(); // phpcs:ignore ?>',
+						'lsid': '<?php echo $lsid; // phpcs:ignore ?>',
+						'pid': '<?php echo get_the_ID(); // phpcs:ignore ?>',
+						'ipa': '<?php echo $is_ip_anonymization; // phpcs:ignore ?>',
+						'performance': '1',
+						'matching': '<?php echo $lasso_options['auto_upgrade_eligible_links'] ? 1 : 0; ?>',
+					});
+				});
+			</script>
+			<?php
+		endif;
+		// @codeCoverageIgnoreEnd
 	}
 }

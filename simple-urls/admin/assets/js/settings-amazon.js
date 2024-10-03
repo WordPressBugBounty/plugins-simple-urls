@@ -15,6 +15,7 @@ jQuery(document).ready(function() {
 		let amazon_default_tracking_country = jQuery('#amazon_default_tracking_country').val().trim();
 		let amazon_pricing_daily = jQuery('#amazon_pricing_daily:checked').val();
 		let auto_monetize_amazon = jQuery('#auto_monetize_amazon:checked').val();
+		let auto_upgrade_eligible_links = jQuery('#auto_upgrade_eligible_links:checked').val();
 		let btn_save = jQuery('.btn-save-settings-amazon');
 		let is_tracking_id_valid = validate_tracking_id_format();
 		let current_page = lasso_lite_helper.get_page_name();
@@ -34,6 +35,7 @@ jQuery(document).ready(function() {
 					amazon_default_tracking_country: amazon_default_tracking_country,
 					amazon_pricing_daily: amazon_pricing_daily,
 					auto_monetize_amazon: auto_monetize_amazon,
+					auto_upgrade_eligible_links: auto_upgrade_eligible_links,
 				},
 				beforeSend: function (xhr) {
 					// Collapse current error + success notifications
