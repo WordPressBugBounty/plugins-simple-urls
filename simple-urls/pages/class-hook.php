@@ -75,6 +75,9 @@ class Hook {
 		add_filter( 'admin_footer_text', array( $this, 'admin_footer' ), 100, 2 );
 		add_filter( 'update_footer', '__return_empty_string', 11 );
 
+		// ? WP Rocket
+		add_filter( 'rocket_exclude_js', array( $this, 'exclude_lasso_performance_js_from_rocket_cache' ) );
+
 		$setting = new Setting();
 		if ( $setting->is_surls_page() ) {
 			// ? plugin: Pretty Links Pro
@@ -945,5 +948,16 @@ class Hook {
 			<?php
 		endif;
 		// @codeCoverageIgnoreEnd
+	}
+
+	/**
+	 * Exclude Lasso performance JS from WP Rocket cache
+	 *
+	 * @param array $excluded_js Excluded JS.
+	 * @return array
+	 */
+	public function exclude_lasso_performance_js_from_rocket_cache( $excluded_js ) {
+		$excluded_js[] = 'lasso-performance.min.js';
+		return $excluded_js;
 	}
 }

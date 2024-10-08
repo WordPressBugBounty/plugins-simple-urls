@@ -177,6 +177,10 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 
 === Changelog ===
+= 128 =
+* Released: October 8, 2024
+* Stability improvements
+
 = 127 =
 * Released: October 2, 2024
 * Fixed promotional banners that were showing by mistake
