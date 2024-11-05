@@ -225,6 +225,7 @@ input:focus.form-control, textarea:focus.form-control, select:focus.form-control
 .pagination.simple-pagination ul li:first-of-type {text-align: left; width: 60%;}
 .pagination.simple-pagination ul li:last-of-type {text-align: right; width: 60%;}
 .pagination.simple-pagination ul .page-link {border: 0px; background: none; padding: 0.5rem 0rem;}
+#lasso-display-add .pagination.simple-pagination ul .page-link {padding: 0.5rem 1rem;}
 .pagination.simple-pagination ul .page-link.ellipse {color: #5E36CA;}
 .pagination.simple-pagination ul .page-item.active .page-link {border-radius: 0.5rem; font-weight: 800; background: #5E36CA; color: #FFFFFF;}
 .pagination.simple-pagination ul .page-item.disabled .page-link {opacity: 0.25;}

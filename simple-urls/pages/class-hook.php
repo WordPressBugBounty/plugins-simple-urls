@@ -61,6 +61,9 @@ class Hook {
 		// ? lasso gutenberg block
 		add_action( 'enqueue_block_editor_assets', array( $this, 'lasso_lite_gutenberg_block' ) );
 
+		// ? Elementor
+		add_action( 'elementor/init', array( $this, 'elementor_init' ) );
+
 		// ? add Lasso button into TinyMCE
 		add_filter( 'mce_external_plugins', array( $this, 'lasso_add_tinymce_plugin' ) );
 		add_filter( 'mce_buttons', array( $this, 'lasso_lite_register_my_tc_button' ) );
@@ -345,6 +348,7 @@ class Hook {
 			Helper::enqueue_style( 'simple-pagination', 'simplePagination.css' );
 			Helper::enqueue_style( 'lasso-quill', 'quill.snow.css' );
 			Helper::enqueue_style( 'lasso-lite', 'lasso-lite.css' );
+			Helper::enqueue_style( 'lasso-modal-css', 'lasso-modal.css' );
 		}
 
 		// @codingStandardsIgnoreEnd
@@ -408,6 +412,9 @@ class Hook {
 			Helper::enqueue_script( 'circle-progress', 'circle-progress.min.js', array( 'jquery' ) );
 
 			Helper::enqueue_script( 'lasso-quill', 'quill.min.js' );
+			Helper::enqueue_script( 'lasso-elementor', 'lasso-elementor.js', array( 'jquery' ), true );
+			Helper::enqueue_script( 'lasso-modal-js', 'lasso-modal.js' );
+			Helper::enqueue_script( 'lasso-lite-display-modal', 'lasso-lite-display-modal.js' );
 			wp_enqueue_media();
 			Helper::enqueue_script( 'moment-js', 'moment.min.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'select2-js', 'select2.full.min.js', array( 'jquery' ) );
@@ -877,29 +884,36 @@ class Hook {
 	public function lasso_lite_custom_dashboard_banner() {
 		global $pagenow;
 
-		$setting_data    = Setting::get_settings();
-		$support_enabled = $setting_data[ Enum::SUPPORT_ENABLED ] ?? false;
-		if ( ! $support_enabled ) {
-			$template_path = '/admin/views/notifications/affiliate-promotions-no-intercom.php';
+		$license_active   = License::get_license_status();
+		$is_connected_aff = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
+		$is_show_upsell   = ! $license_active && 0 === $is_connected_aff;
+		if ( ! $is_show_upsell ) {
+			echo ''; // phpcs:ignore
 		} else {
-			$template_path = '/admin/views/notifications/affiliate-promotions-intercom.php';
-		}
+			$setting_data    = Setting::get_settings();
+			$support_enabled = $setting_data[ Enum::SUPPORT_ENABLED ] ?? false;
+			if ( ! $support_enabled ) {
+				$template_path = '/admin/views/notifications/affiliate-promotions-no-intercom.php';
+			} else {
+				$template_path = '/admin/views/notifications/affiliate-promotions-intercom.php';
+			}
 
-		$html = '';
-		if ( 'index.php' === $pagenow ) {
-			Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
-			Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ) );
+			$html = '';
+			if ( 'index.php' === $pagenow ) {
+				Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
+				Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ) );
 
-			$dismiss = intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, 0 ) );
-			$html    = Helper::include_with_variables(
-				SIMPLE_URLS_DIR . $template_path,
-				array(
-					'dismiss'     => $dismiss,
-					'option_name' => Constant::LASSO_OPTION_DISMISS_PROMOTIONS,
-				)
-			);
+				$dismiss = intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, 0 ) );
+				$html    = Helper::include_with_variables(
+					SIMPLE_URLS_DIR . $template_path,
+					array(
+						'dismiss'     => $dismiss,
+						'option_name' => Constant::LASSO_OPTION_DISMISS_PROMOTIONS,
+					)
+				);
+			}
+			echo $html; // phpcs:ignore
 		}
-		echo $html; // phpcs:ignore
 	}
 
 	/**
@@ -936,7 +950,6 @@ class Hook {
 			<script type="text/javascript" defer>
 				document.addEventListener("lassoTrackingEventLoaded", function(e) {
 					e.detail.init({
-						'lssid': '<?php echo License::get_site_id(); // phpcs:ignore ?>',
 						'lsid': '<?php echo $lsid; // phpcs:ignore ?>',
 						'pid': '<?php echo get_the_ID(); // phpcs:ignore ?>',
 						'ipa': '<?php echo $is_ip_anonymization; // phpcs:ignore ?>',
@@ -948,6 +961,56 @@ class Hook {
 			<?php
 		endif;
 		// @codeCoverageIgnoreEnd
+	}
+
+	/**
+	 * Elementor Init Hook
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function elementor_init() {
+		// ? Check if the user has a valid license for the Startup plan
+		if ( Helper::is_wp_elementor_plugin_actived() && ! Helper::is_lasso_pro_installed() && License::get_license_status() ) {
+			if ( class_exists( 'Elementor\Widget_Base' ) && class_exists( 'Elementor\Controls_Manager' ) ) {
+				add_action( 'elementor/widgets/register', array( $this, 'register_widget_lasso_shortcode' ) );
+				add_action( 'elementor/editor/before_enqueue_styles', array( $this, 'elementor_editor_styles' ) );
+			}
+
+			// ? Move the scan post into the  "elementor/document/after_save" action
+			add_action( 'elementor/document/after_save', array( $this, 'after_elementor_document_save' ), 10, 1 );
+		}
+	}
+
+	/**
+	 * Register lasso widget
+	 *
+	 * @param object $widgets_manager  Widget manager.
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function register_widget_lasso_shortcode( $widgets_manager ) {
+		require_once SIMPLE_URLS_PLUGIN_PATH . '/libs/elementor/widgets/lasso-shortcode.php';
+		$widgets_manager->register( new \Widget_Lasso_Shortcode() );
+	}
+
+	/**
+	 * Elementor load css
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function elementor_editor_styles() {
+		Helper::enqueue_style( 'lasso-elementor', 'lasso-elementor.css' );
+	}
+
+	/**
+	 * Move the scan post into the  "elementor/document/after_save" action
+	 *
+	 * @param object $document Elementor document.
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function after_elementor_document_save( $document ) {
+		$post = $document->get_post();
 	}
 
 	/**

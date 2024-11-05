@@ -28,6 +28,8 @@ $lasso_lite_setting = new Setting();
 $plugins_for_import = $lasso_lite_setting->check_plugins_for_import();
 $import_page_link   = Page::get_lite_page_url( Enum::PAGE_IMPORT );
 $license_active     = License::get_license_status();
+$is_connected_aff   = intval(Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ));
+$is_show_upsell    = !$license_active && 0 === $is_connected_aff;
 
 ?>
 <input type="hidden" id="license_status" value="<?php echo $license_active; ?>">
@@ -55,10 +57,10 @@ $license_active     = License::get_license_status();
 	<a href="https://getlasso.co/upgrade/" target="_blank">Upgrade to Lasso Pro</a>
 </div>
 
-<?php if ( ( ! $support_enable && ! $lasso_lite_setting->is_setting_onboarding_page() ) || ! $license_active ) { ?>
+<?php if ( $is_show_upsell && ! $support_enable && ! $lasso_lite_setting->is_setting_onboarding_page() ) { ?>
 <div id="fake-intercom-bubble-chat">
 	<div class="fake-intercom-bubble-chat-app-launcher-icon">
-	<?php if ( ! $license_active ) { ?>
+	<?php if ( $is_show_upsell ) { ?>
 		<img src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/crown-icon.png" style="height:35px;width:35px">
 	<?php } else { ?>
 		<i class="fas fa-question"></i>
@@ -104,10 +106,10 @@ if ( '' !== $plugins_for_import && ! $general_disable_notification && $import_pa
 	</script>
 <?php endif; ?>
 
-<?php if ( 0 !== intval( Helper::get_option( Constant::LASSO_OPTION_PERFORMANCE, '0' ) ) && ! $license_active ) : ?>
+<?php if ( $is_show_upsell ) : ?>
 <script>
-	var html = `<?php include SIMPLE_URLS_DIR . '/admin/views/notifications/performance-jsrender.html'; ?>`;
-	jQuery("#lasso_lite_notifications").append(html);
+	var performanceHtml = `<?php include SIMPLE_URLS_DIR . '/admin/views/notifications/performance-jsrender.html'; ?>`;
+	jQuery("#lasso_lite_notifications").append(performanceHtml);
 	jQuery('#lasso-performance button.close').click(function() {
 		let btn = jQuery(this);
 		jQuery.ajax({
@@ -126,20 +128,20 @@ if ( '' !== $plugins_for_import && ! $general_disable_notification && $import_pa
 
 <?php
 $template_path = '';
-if ( ! $license_active ) {
+if ( $is_show_upsell ) {
 	if ( ! $support_enable && ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 		$template_path = '/admin/views/notifications/promotions-no-intercom-jsrender.html';
-	} elseif ( '1' !== Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) ) {
+	} else {
 		$template_path = '/admin/views/notifications/promotions-intercom-jsrender.html';
 	}
 }
 
 ?>
 
-<?php if ( 0 !== intval( Helper::get_option( Constant::LASSO_OPTION_AFFILIATE_PROMOTIONS, '1' ) ) && ! $license_active && '' !== $template_path ) : ?>
+<?php if ( 0 !== intval( Helper::get_option( Constant::LASSO_OPTION_AFFILIATE_PROMOTIONS, '1' ) ) && $is_show_upsell && '' !== $template_path ) : ?>
 <script>
-	var html = `<?php include SIMPLE_URLS_DIR . $template_path; ?>`;
-	jQuery("#lasso_lite_notifications").append(html);
+	var notificationHtml = `<?php include SIMPLE_URLS_DIR . $template_path; ?>`;
+	jQuery("#lasso_lite_notifications").append(notificationHtml);
 	jQuery('#lasso-intercom-promotions button.close').click(function() {
 		let btn = jQuery(this);
 		jQuery.ajax({

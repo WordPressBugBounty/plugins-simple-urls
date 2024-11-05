@@ -8,9 +8,7 @@
 ?>
 
 <!-- URL ADD -->
-<div class="lasso-modal fade" id="url-quick-detail" tabindex="-1" role="dialog">
-	<div class="modal-dialog modal-lg" role="document">
-		<div class="modal-content shadow p-5 rounded url-quick-detail-wrapper">
-		</div>
+<div class="lasso-modal" id="url-quick-detail" role="dialog" tabindex="-1" role="dialog">
+	<div class="modal-content shadow p-5 rounded url-quick-detail-wrapper lasso-modal-content modal-lg">
 	</div>
 </div>

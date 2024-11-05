@@ -8,12 +8,19 @@ jQuery(document).ready(function () {
 			.on('click', '.lasso-display-type', add_display)
 			.on('click', '.lasso-display-add-btn.add-btn', add_short_code_single_main)
 			.on('click', '.btn-create-link', show_create_link_modal)
-			.on('hidden.bs.modal', '#lasso-display-add', reset_pop_up_display_modal);
+			.on('hidden.bs.modal', '#lasso-display-add', reset_pop_up_display_modal)
+			.on('keyup', '.search-keys input', function(e) {
+				// WHEN ENTER IS PRESSED, SEARCH
+				if (e.which === 13) {
+					single_list(true);
+				}
+			});
 
 		/**
 		 * Show modal Choose a Display Type
 		 */
 		function add_display() {
+			console.log('Add display');
 			tab = jQuery(this).data('tab');
 			show_tab( jQuery(this).data('tab-container') );
 		}
@@ -63,7 +70,11 @@ jQuery(document).ready(function () {
 						let el_all_link     = jQuery("#all_links");
 						currentPage         = page;
 
-						lasso_lite_helper.inject_to_template(el_all_link, 'single-list', json_data);
+						try {
+							lasso_lite_helper.inject_to_template(el_all_link, 'single-list', json_data);
+						} catch (error) {
+							lasso_lite_helper.inject_to_template_without_jquery_templates(el_all_link, 'single-list', json_data);
+						}
 						jQuery(el_all_link).append(html_pagination);
 						paginator(single_total);
 					}
@@ -111,13 +122,6 @@ jQuery(document).ready(function () {
 			jQuery("#lasso-display-add").modal("hide");
 			jQuery("#url-add").modal("show");
 		}
-
-		jQuery(".search-keys input").off('keyup').on('keyup',function( e ) {
-			// WHEN ENTER IS PRESSED, SEARCH
-			if(e.which === 13) {
-				single_list(true);
-			}
-		});
 
 		/**
 		 * Reset pop-up on close

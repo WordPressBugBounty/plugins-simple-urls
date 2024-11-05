@@ -93,6 +93,7 @@ jQuery(document).ready(function() {
 				save_link_btn.prop('disabled', true);
 				form_link_box.prop('disabled', true);
 				save_link_btn.html(get_loading_image_small())
+				btn_lasso_add_link.html(loading_by_font_awesome);
 			}
 		})
 			.done(function(res) {
@@ -182,7 +183,11 @@ jQuery(document).ready(function() {
 							}
 						];
 
-						lasso_lite_helper.inject_to_template('.url-quick-detail-wrapper', 'url-quick-detail-jsrender', json_data);
+						try {
+							lasso_lite_helper.inject_to_template('.url-quick-detail-wrapper', 'url-quick-detail-jsrender', json_data);
+						} catch (error) {
+							lasso_lite_helper.inject_to_template_without_jquery_templates('.url-quick-detail-wrapper', 'url-quick-detail-jsrender', json_data);
+						}
 
 						// INITIALIZE QUILL
 						let quill = new Quill('#description', quill_options);
@@ -207,7 +212,7 @@ jQuery(document).ready(function() {
 							});
 
 						// ? url_quick_detail_modal initial when Choose a Display Type is loaded
-						url_quick_detail_modal.modal("show");
+						jQuery("#url-quick-detail").modal("show");
 					}
 				}
 			})
@@ -259,18 +264,29 @@ jQuery(document).ready(function() {
 
 
 	function set_thumbnail() {
-		let custom_uploader = wp.media({
-			title: 'Select an Image',
-			multiple: false,
-			library: { type : 'image' },
-			button: { text: 'Select Image' }
-			// frame: 'post'
-		});
+		let elementor_editor = document.body.classList.contains( 'elementor-page' );
 
-		if(custom_uploader) {
+		if ( elementor_editor ) {
+			var custom_uploader = parent.wp.media({
+				title: 'Select an Image',
+				multiple: false,
+				library: { type : 'image' },
+				button: { text: 'Select Image' }
+			});
+		} else {
+			var custom_uploader = wp.media({
+				title: 'Select an Image',
+				multiple: false,
+				library: { type : 'image' },
+				button: { text: 'Select Image' }
+				// frame: 'post'
+			});
+		}
+
+		if (custom_uploader) {
 			// When a file is selected, grab the URL
 			custom_uploader.on('select', function() {
-				let attachment = custom_uploader.state().get('selection').first().toJSON();
+				var attachment = custom_uploader.state().get('selection').first().toJSON();
 				jQuery("#lasso_render_thumbnail").attr('src', attachment.url);
 				jQuery("#lasso_thumbnail_id").val(attachment.id);
 				jQuery("#thumbnail_image_url").val(attachment.url);
@@ -477,7 +493,11 @@ function refresh_setup_progress() {
 				let setup_progress = data.progress;
 
 				if ( jQuery("#wrapper-circle").length ) {
-					lasso_lite_helper.inject_to_template(jQuery("#wrapper-circle"), 'setup-pregress-jsrender', data);
+					try {
+						lasso_lite_helper.inject_to_template(jQuery("#wrapper-circle"), 'setup-pregress-jsrender', data);
+					} catch (error) {
+						lasso_lite_helper.inject_to_template_without_jquery_templates(jQuery("#wrapper-circle"), 'setup-pregress-jsrender', data);
+					}
 					render_setup_progress_circle(setup_progress);
 				}
 			}

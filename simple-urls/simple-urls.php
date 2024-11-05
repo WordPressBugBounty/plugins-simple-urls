@@ -2,11 +2,6 @@
 
 use LassoLite\Classes\Init;
 
-// ? ==============================================================================================
-// ? WE SHOULD UPDATE THE VERSION NUMBER HERE AS WELL WHEN RELEASING A NEW VERSION
-define( 'LASSO_LITE_VERSION', '128' );
-// ? ==============================================================================================
-
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }

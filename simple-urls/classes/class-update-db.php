@@ -14,6 +14,8 @@ use LassoLite\Models\Model;
 use LassoLite\Models\Url_Details;
 use LassoLite\Models\Revert;
 
+use LassoLite\Classes\Setting;
+
 /**
  * Update_DB
  */
@@ -73,6 +75,10 @@ class Update_DB {
 		if ( $version < 113 ) {
 			( new Amazon_Products() )->create_table();
 			$this->update_rating_and_review_data_from_aawp();
+		}
+
+		if ( $version < 129 ) {
+			Setting::set_setting( 'auto_upgrade_eligible_links', true );
 		}
 	}
 

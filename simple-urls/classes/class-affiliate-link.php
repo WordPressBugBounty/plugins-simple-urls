@@ -17,7 +17,9 @@ use LassoLite\Classes\Setting;
  * Affiliate_Link
  */
 class Affiliate_Link {
-	const DEFAULT_AMAZON_NAME = 'Amazon';
+	const DEFAULT_AMAZON_NAME          = 'Amazon';
+	const DEFAULT_TITLE                = 'Add a Link Title';
+	const ADD_NEW_LINK_RESPONSE_STATUS = 'lasso_add_new_link_response_status';
 	/**
 	 * Edit detail page
 	 *
@@ -218,6 +220,8 @@ class Affiliate_Link {
 
 		$lasso_amazon_api = new Amazon_Api();
 
+		list( $get_final_url, $page_title ) = Helper::get_redirect_final_target( $url, true, true );
+
 		$url            = Helper::add_https( $url );
 		$url            = Helper::format_url_before_requesting( $url );
 		$url            = Amazon_Api::get_redirect_url( $url );
@@ -225,8 +229,12 @@ class Affiliate_Link {
 		$get_final_url  = $url;
 		$permalink      = Helper::get_title_by_url( $url );
 		$title          = $is_amazon_link ? self::DEFAULT_AMAZON_NAME : $permalink;
-		$default_title  = $title;
 		$image          = Constant::DEFAULT_THUMBNAIL;
+
+		$is_amazon_short_link = Amazon_Api::is_amazon_shortened_url( $url );
+		if ( $is_amazon_link && $is_amazon_short_link ) {
+			$title = self::DEFAULT_AMAZON_NAME;
+		}
 
 		// ? Check whether product is existing
 		$lasso_post_id = self::get_lasso_lite_post_id_by_url( $url );
@@ -361,6 +369,7 @@ class Affiliate_Link {
 		$post                   = wp_unslash( $post ); // phpcs:ignore
 		$post_id                = intval( $post['post_id'] ?? 0 );
 		$is_update              = $post_id > 0;
+		$is_new                 = ! $is_update;
 		$is_change_primary_link = $post['is_change_primary_link'] ?? false;
 		$is_change_primary_link = Helper::cast_to_boolean( $is_change_primary_link );
 		$is_change_primary_link = true === $is_change_primary_link;
@@ -418,6 +427,11 @@ class Affiliate_Link {
 			$term
 		);
 
+		$get_final_url = Helper::get_redirect_final_target( $surl_redirect, true, $is_new ? true : false ); // ? If adding the new link, we set param "get_page_title" is true to get result from cache.
+		$get_final_url = is_array( $get_final_url ) ? $get_final_url[0] : $get_final_url;
+		$get_final_url = Amazon_Api::format_amazon_url( $get_final_url );
+		$surl_redirect = $get_final_url;
+
 		// ? Check whether product is existing
 		$lasso_post_id = self::get_lasso_lite_post_id_by_url( $surl_redirect );
 		if ( $lasso_post_id > 0 && $is_update && $is_change_primary_link ) {
@@ -442,23 +456,24 @@ class Affiliate_Link {
 
 		$affiliate_homepage = Helper::get_base_domain( $surl_redirect );
 		$is_opportunity     = 1;
-		$product_id         = Amazon_Api::get_product_id_by_url( $surl_redirect );
-		$product_type       = Amazon_Api::is_amazon_url( $surl_redirect ) ? Amazon_Api::PRODUCT_TYPE : '';
+		$product_id         = Amazon_Api::get_product_id_by_url( $get_final_url );
+		$product_type       = Amazon_Api::is_amazon_url( $get_final_url ) ? Amazon_Api::PRODUCT_TYPE : '';
 
 		if ( Amazon_Api::PRODUCT_TYPE === $product_type ) {
 			$product = $lasso_amazon_api->get_amazon_product_from_db( $product_id );
 			if ( ! $product ) {
-				$product = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $surl_redirect );
+				$product = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $get_final_url );
+				$product = $product['product'] ?? array();
 			}
 
 			$is_importing               = $data['is_importing'] ?? false;
 			$old_redirect_url           = get_post_meta( $post_id, Meta_Enum::SURL_REDIRECT, true );
 			$old_thumbnail              = get_post_meta( $post_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, true );
-			$update_title               = 'Amazon' === $post_title;
+			$update_title               = self::DEFAULT_AMAZON_NAME === $post_title;
 			$update_thumbnail           = Constant::DEFAULT_THUMBNAIL === $thumbnail || $is_importing;
 			$use_defined_affiliate_name = $data['use_defined_affiliate_name'] ?? false;
 
-			if ( Amazon_Api::is_amazon_url( $old_redirect_url ) ) {
+			if ( Amazon_Api::is_amazon_url( $get_final_url ) ) {
 				$old_amazon_id    = Amazon_Api::get_product_id_by_url( $old_redirect_url );
 				$update_title     = ( $product_id !== $old_amazon_id || $update_title ) && ! $use_defined_affiliate_name;
 				$update_thumbnail = strpos( $old_thumbnail, 'media-amazon.' ) !== false || Constant::DEFAULT_THUMBNAIL === $thumbnail;
@@ -466,8 +481,9 @@ class Affiliate_Link {
 				$update_title = $use_defined_affiliate_name ? false : true;
 			}
 
-			$post_title = $update_title ? ( $product['default_product_name'] ?? $post_title ) : $post_title;
-			$thumbnail  = $update_thumbnail ? ( $product['default_image'] ?? ( $product['product']['image'] ?? $thumbnail ) ) : $thumbnail;
+			$post_title = $update_title ? ( $product['default_product_name'] ?? $product['title'] ?? $post_title ) : $post_title;
+			$thumbnail  = $update_thumbnail ? ( $product['default_image'] ?? ( $product['image'] ?? $thumbnail ) ) : $thumbnail;
+			$price      = ! $price ? ( $product['price'] ?? $price ) : $price;
 		}
 
 		$lasso_lite_post = array(

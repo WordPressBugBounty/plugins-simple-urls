@@ -9,6 +9,7 @@ namespace LassoLite\Classes;
 
 use LassoLite\Classes\License;
 use LassoLite\Classes\Processes\Amazon;
+use LassoLite\Classes\Processes\Amazon_Shortlink;
 use LassoLite\Classes\Processes\Import_All;
 use LassoLite\Classes\Processes\Revert_All;
 
@@ -18,6 +19,7 @@ use LassoLite\Classes\Processes\Revert_All;
 class Cron {
 
 	const CRONS = array(
+		'lasso_lite_amazon_shortlink'        => 'lasso_lite_15_minutes',
 		'lasso_lite_update_amazon'           => 'lasso_lite_15_minutes',
 		'lasso_lite_import_all'              => 'lasso_lite_15_minutes',
 		'lasso_lite_revert_all'              => 'lasso_lite_15_minutes',
@@ -34,6 +36,7 @@ class Cron {
 		add_action( 'lasso_lite_import_all', array( $this, 'lasso_import_all' ) );
 		add_action( 'lasso_lite_revert_all', array( $this, 'lasso_revert_all' ) );
 		add_action( 'lasso_lite_update_amazon', array( $this, 'lasso_lite_update_amazon' ) );
+		add_action( 'lasso_lite_amazon_shortlink', array( $this, 'lasso_lite_amazon_shortlink' ) );
 		add_action( 'lasso_lite_update_license_status', array( $this, 'lasso_lite_update_license_status' ) );
 
 		$this->lasso_create_schedule_hook();
@@ -136,6 +139,17 @@ class Cron {
 		$settings = Setting::get_settings();
 		if ( boolval( $settings['amazon_pricing_daily'] ) ) {
 			$lasso_amazon = new Amazon();
+			$lasso_amazon->run();
+		}
+	}
+
+	/**
+	 * Revert all
+	 */
+	public function lasso_lite_amazon_shortlink() {
+		$settings = Setting::get_settings();
+		if ( boolval( $settings['amazon_pricing_daily'] ) ) {
+			$lasso_amazon = new Amazon_Shortlink();
 			$lasso_amazon->run();
 		}
 	}

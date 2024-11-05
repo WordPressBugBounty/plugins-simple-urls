@@ -64,7 +64,12 @@ function add_short_code_single(obj) {
 	let link_slug = jQuery(obj).data('link-slug');
 	let post_id = jQuery(obj).data('post-id');
 	let shortcode = '[lasso ref="' + link_slug + '" id="' + post_id + '"]';
-	tiny_mce_editor.insertContent(shortcode);
+
+	try {
+		tiny_mce_editor.insertContent(shortcode);
+	} catch (e) {
+		add_short_code_elementor(shortcode);
+	}
 	jQuery('#lasso-display-add').modal('hide');
 }
 

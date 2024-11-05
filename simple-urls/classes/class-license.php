@@ -86,8 +86,12 @@ class License {
 
 		// ? update license status in DB
 		if ( $update_db ) {
-			$status = $status && 1 == $response->is_startup_plan ? 1 : 0; // phpcs:ignore
-			update_option( 'lasso_lite_license_status', $status, true );
+			$db_status = $status && 1 == $response->is_startup_plan ? 1 : 0; // phpcs:ignore
+			update_option( 'lasso_lite_license_status', $db_status, true );
+		}
+
+		if ( 1 !== $response->is_startup_plan ) {
+			$status = false;
 		}
 
 		return array( Lasso_Helper::cast_to_boolean( $status ), $error_code, $error_message );

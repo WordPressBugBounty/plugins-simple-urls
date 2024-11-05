@@ -9,6 +9,7 @@ namespace LassoLite\Models;
 
 use LassoLite\Admin\Constant;
 use LassoLite\Classes\Amazon_Api;
+use LassoLite\Classes\Meta_Enum;
 
 /**
  * Model
@@ -97,5 +98,36 @@ class Url_Details extends Model {
 		}
 
 		return null;
+	}
+
+	/**
+	 * Get amazon shortlink by base domain amzn.to
+	 *
+	 * @param int $limit Limit. Default is 10.
+	 */
+	public static function get_amzn_to_shortlinks( $limit = 10 ) {
+		$sql     = '
+			SELECT DISTINCT lud.lasso_id
+			FROM ' . ( new self() )->get_table_name() . ' AS lud
+				INNER JOIN ' . self::get_wp_table_name( 'posts' ) . ' AS wp
+				ON wp.ID = lud.lasso_id
+				LEFT JOIN ' . self::get_wp_table_name( 'postmeta' ) . ' AS pmeta
+				ON wp.ID = pmeta.post_id
+			WHERE (
+					lud.base_domain = %s
+					AND wp.post_type = %s
+					AND wp.post_status = "publish"
+				)
+				OR (
+					pmeta.meta_key = %s
+					AND pmeta.meta_value LIKE %s
+				)
+			ORDER BY wp.post_modified_gmt DESC
+			LIMIT %d
+		';
+		$prepare = self::prepare( $sql, 'amzn.to', Constant::LASSO_POST_TYPE, Meta_Enum::SURL_REDIRECT, '%amzn.to%', $limit ); // phpcs:ignore
+		$result  = self::get_results( $prepare );
+
+		return $result;
 	}
 }

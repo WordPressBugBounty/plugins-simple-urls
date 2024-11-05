@@ -1062,14 +1062,8 @@ class Amazon_Api {
 		}
 
 		$lasso_settings                        = Setting::get_settings();
-		$amazon_multiple_tracking_id           = $lasso_settings['amazon_multiple_tracking_id'] ?? true;
-		$amazon_tracking_id_whitelist          = $lasso_settings['amazon_tracking_id_whitelist'] ?? array();
 		$amazon_tracking_id                    = trim( $lasso_settings['amazon_tracking_id'] ?? '' );
 		$amazon_add_tracking_id_to_attribution = $lasso_settings['amazon_add_tracking_id_to_attribution'] ?? true;
-
-		if ( ! $amazon_multiple_tracking_id ) {
-			$amazon_tracking_id_whitelist = array();
-		}
 
 		$lasso_db      = new Lasso_DB();
 		$amz_cache_key = self::OBJECT_KEY . '_' . self::FUNCTION_NAME_GET_LASSO_ID_BY_PRODUCT_ID_AND_TYPE . '_' . $product_id . '_' . self::PRODUCT_TYPE;
@@ -1086,8 +1080,7 @@ class Amazon_Api {
 		$tag = Helper::get_argument_from_url( $product_url, 'tag' );
 		$tag = $custom_tracking_id ? $custom_tracking_id : $tag;
 		$tag = $tag ? $tag : '';
-		$tag = ! empty( $amazon_tracking_id ) && ! in_array( $tag, $amazon_tracking_id_whitelist, true )
-			? $amazon_tracking_id : $tag;
+		$tag = ! empty( $tag ) ? $tag : $amazon_tracking_id;
 
 		// ? Return the remove all url queries for product url
 		if ( $product_id ) {
@@ -1416,5 +1409,100 @@ class Amazon_Api {
 		$json_response = $this->query_amazon_v5( $parameters );
 
 		return $json_response;
+	}
+
+	/**
+	 * Build discount pricing html.
+	 *
+	 * @param string $latest_price Latest price.
+	 * @param mixed  $basis_price  Basis price value.
+	 * @param string $currency     Currency ISO.
+	 */
+	public static function build_discount_pricing_html( $latest_price, $basis_price, $currency ) {
+		$result = '';
+
+		try {
+			$latest_price_value = Helper::get_price_value_from_price_text( $latest_price );
+			$basis_price_value  = Helper::get_price_value_from_price_text( $basis_price );
+
+			if ( $basis_price_value && ( round( $latest_price_value, 2 ) < round( $basis_price_value, 2 ) ) ) {
+				$currency_symbol    = Helper::get_currency_symbol_from_iso_code( $currency );
+				$currency_position  = preg_match( '/[€]|R\$|TL|kr|zł/', $latest_price ) ? 'end' : 'begin';
+				$basis_price_format = preg_match( '/[€]|R\$|TL|kr|zł/', $latest_price ) ? number_format( $basis_price_value, 2, ',', '.' ) : number_format( $basis_price_value, 2, '.', ',' );
+				$format_price       = 'begin' === $currency_position ? $currency_symbol . $basis_price_format : $basis_price_format . ' ' . $currency_symbol;
+
+				$result = "<strike>$format_price</strike>";
+			}
+		} catch ( \Exception $e ) {
+			$result = '';
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Check amazon setting is configured or not
+	 *
+	 * @return boolean
+	 */
+	public static function is_amazon_setting_configured() {
+		$lasso_settings       = Setting::get_settings();
+		$is_amazon_configured = $lasso_settings['amazon_access_key_id'] && $lasso_settings['amazon_secret_key'] && $lasso_settings['amazon_tracking_id'];
+
+		return $is_amazon_configured;
+	}
+
+	/**
+	 * Get final url of the amazon shortlink from cache
+	 *
+	 * @param string $shortlink Amazon shortlink.
+	 * @return string|null
+	 */
+	public static function get_shortlink_final_url_cached( $shortlink ) {
+		if ( ! self::is_amazon_shortened_url( $shortlink ) ) {
+			return null;
+		}
+		$final_url_cache = get_option( self::build_shortlink_cache_key( $shortlink ) );
+
+		if ( $final_url_cache === $shortlink ) {
+			return null;
+		}
+
+		return $final_url_cache ? $final_url_cache : null;
+	}
+
+	/**
+	 * Build amazon shortlink cache key
+	 *
+	 * @param string $shortlink Amazon shortlink.
+	 * @return string|null
+	 */
+	public static function build_shortlink_cache_key( $shortlink ) {
+		if ( ! self::is_amazon_shortened_url( $shortlink ) ) {
+			return null;
+		}
+
+		$parse = wp_parse_url( $shortlink );
+		$host  = str_replace( '.', '_', $parse['host'] );
+		$id    = trim( $parse['path'] ?? '', '/' );
+
+		return $host . '_' . $id;
+	}
+
+	/**
+	 * Format Amazon URLs
+	 *
+	 * @param string $url Amazon product url.
+	 * @return string URL.
+	 */
+	public static function format_amazon_url( $url ) {
+		$is_amazon_link = self::is_amazon_url( $url );
+		$product_id     = self::get_product_id_by_url( $url );
+
+		if ( $is_amazon_link && $product_id && strpos( $url, 'smile.amazon.' ) !== false ) {
+			$url = str_replace( 'smile.amazon.', 'amazon.', $url );
+		}
+
+		return $url;
 	}
 }

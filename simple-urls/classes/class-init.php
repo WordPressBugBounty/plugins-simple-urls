@@ -71,6 +71,7 @@ class Init {
 
 		$this->processes = array(
 			'\LassoLite\Classes\Processes\Amazon',
+			'\LassoLite\Classes\Processes\Amazon_Shortlink',
 			'\LassoLite\Classes\Processes\Import_All',
 			'\LassoLite\Classes\Processes\Revert_All',
 		);

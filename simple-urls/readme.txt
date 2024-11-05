@@ -177,6 +177,12 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 
 === Changelog ===
+= 129 =
+* Released: November 5, 2024
+* Fixed an issue with promotional banners showing by mistake
+* Added the ability to refresh manually Amazon product data
+* Fixed an issue with the Lasso block in Elementor 
+
 = 128 =
 * Released: October 8, 2024
 * Stability improvements

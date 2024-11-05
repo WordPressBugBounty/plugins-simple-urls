@@ -9,6 +9,7 @@ namespace LassoLite\Classes;
 
 use LassoLite\Admin\Constant;
 
+use LassoLite\Classes\Affiliate_Link;
 use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Cache_Per_Process;
 use LassoLite\Classes\Enum;
@@ -1624,5 +1625,173 @@ class Helper {
 		}
 
 		return $lsid;
+	}
+
+	/**
+	 * Check if WP Elementor plugin is active.
+	 *
+	 * @return bool
+	 */
+	public static function is_wp_elementor_plugin_actived() {
+		return is_plugin_active( 'elementor/elementor.php' );
+	}
+
+	/**
+	 * FOLLOW ALL REDIRECTS
+	 * This makes multiple requests, following each redirect until it reaches the final destination.
+	 *
+	 * @param string $url            URL.
+	 * @param bool   $is_lasso_save  Is Lasso save data action. Default to false.
+	 * @param bool   $get_page_title Get page title or not. Default to false.
+	 */
+	public static function get_redirect_final_target( $url, $is_lasso_save = false, $get_page_title = false ) {
+		// ? Get final url for amazon shortlink from cache
+		$amazon_shortlink_final_url_cached = Amazon_Api::get_shortlink_final_url_cached( $url );
+		if ( $amazon_shortlink_final_url_cached ) {
+			return $get_page_title ? array( $amazon_shortlink_final_url_cached, get_option( Amazon_Api::build_shortlink_cache_key( $url ) . '_page_title' ) ) : $amazon_shortlink_final_url_cached;
+		}
+
+		$origin_url  = $url;
+		$url         = Amazon_Api::get_amazon_product_url( $url, $is_lasso_save ? true : false );
+		$url         = self::format_url_before_requesting( $url );
+		$base_domain = self::get_base_domain( $url );
+		$browser     = self::get_server_param( 'HTTP_USER_AGENT' );
+		$browser     = '' !== $browser ? $browser : self::$user_agent;
+		$use_bls     = apply_filters( 'get_final_url_domain_bls', false, $url );
+
+		$cache_prefix = 'get_final_url_';
+		$page_title   = '';
+
+		// ? check result in cache first, it may be use before in the same request.
+		$final_url_cache = Cache_Per_Process::get_instance()->get_cache( $cache_prefix . md5( $url ) . $get_page_title );
+		if ( $final_url_cache ) {
+			return $final_url_cache;
+		}
+		if ( Amazon_Api::is_amazon_url( $url ) && Amazon_Api::get_product_id_by_url( $url ) ) {
+			return $get_page_title ? array( $url, $page_title ) : $url;
+		}
+
+		$res = wp_remote_get(
+			$url,
+			array(
+				'headers' => array(
+					'user-agent' => $browser,
+				),
+			)
+		);
+
+		$is_amazon_shortened_url = Amazon_Api::is_amazon_shortened_url( $url );
+
+		$status_code = is_wp_error( $res ) ? 500 : $res['response']['code'] ?? '';
+		if ( 200 === $status_code || 429 === $status_code ) {
+			$new_url = $res['http_response']->get_response_object()->url;
+			$use_bls = apply_filters( 'get_final_url_domain_bls', false, $new_url );
+		}
+
+		if ( $is_amazon_shortened_url ) {
+			$use_bls = true;
+		}
+
+		if ( is_wp_error( $res ) || $use_bls || 403 === $status_code ) {
+			$headers          = self::get_headers();
+			$data             = array(
+				'url' => $url,
+			);
+			$encrypted_base64 = http_build_query( $data );
+			$res              = self::send_request( 'get', LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
+
+			$final_url  = $res['response']->finalUrl ?? $url;
+			$page_title = $res['response']->pageTitle ?? '';
+
+			// ? Set the response status code for add new link process
+			Cache_Per_Process::get_instance()->set_cache( Affiliate_Link::ADD_NEW_LINK_RESPONSE_STATUS . md5( $origin_url ), $res['response']->status ?? 200 );
+
+			$tmp_url = self::get_final_url_from_url_param( $final_url );
+			if ( $tmp_url ) {
+				$page_title = self::get_title_by_url( $tmp_url );
+				$final_url  = $tmp_url;
+			}
+
+			// ? cache result
+			$result = $get_page_title ? array( $final_url, $page_title ) : $final_url;
+			Cache_Per_Process::get_instance()->set_cache( $cache_prefix . md5( $url ) . $get_page_title, $result );
+
+			// ? Cache the final url of amazon shortlink
+			if ( $is_amazon_shortened_url ) {
+				$shortlink_cache_key = Amazon_Api::build_shortlink_cache_key( $url );
+				update_option( $shortlink_cache_key, $final_url );
+				// ? Cache the page title of amazon shortlink
+				update_option( $shortlink_cache_key . '_page_title', $page_title );
+			}
+
+			return $result;
+		}
+
+		$http_response = $res['http_response']->get_response_object();
+		$status        = wp_remote_retrieve_response_code( $res );
+
+		// ? Set the response status code for add new link process
+		Cache_Per_Process::get_instance()->set_cache( Affiliate_Link::ADD_NEW_LINK_RESPONSE_STATUS . md5( $origin_url ), $status );
+
+		$final_url  = $http_response->url;
+		$page_title = self::get_page_title( $http_response->body );
+		if ( strpos( $page_title, 'Please Wait...' ) !== false
+			|| strpos( $page_title, 'Cloudflare' ) !== false
+			|| strpos( $page_title, 'Access Denied' ) !== false
+			|| strpos( $page_title, 'Just a moment...' ) !== false
+		) {
+			$page_title = self::get_title_by_url( $final_url );
+		}
+
+		$tmp_url = self::get_final_url_from_url_param( $final_url );
+		if ( $tmp_url ) {
+			$page_title = self::get_title_by_url( $tmp_url );
+			$final_url  = $tmp_url;
+		}
+
+		// ? Cache the final url of amazon shortlink
+		if ( $is_amazon_shortened_url ) {
+			$shortlink_cache_key = Amazon_Api::build_shortlink_cache_key( $url );
+			update_option( $shortlink_cache_key, $final_url );
+			// ? Cache the page title of amazon shortlink
+			update_option( $shortlink_cache_key . '_page_title', $page_title );
+		}
+
+		if ( ! $page_title || Affiliate_Link::DEFAULT_TITLE === $page_title ) {
+			$page_title = self::get_title_by_url( $final_url );
+		}
+
+		// ? cache result
+		$result = $get_page_title ? array( $final_url, $page_title ) : $final_url;
+		Cache_Per_Process::get_instance()->set_cache( $cache_prefix . md5( $url ) . $get_page_title, $result );
+
+		return $result;
+	}
+
+	/**
+	 * Get page title from HTML
+	 *
+	 * @param string $html HTML string.
+	 */
+	public static function get_page_title( $html ) {
+		$temp = explode( '<title', $html )[1] ?? '';
+		$html = $temp ? '<title' . $temp : $html;
+		$temp = explode( '</title>', $html )[0] ?? '';
+		$html = $temp ? $temp . '</title>' : $html;
+		$res  = preg_match( '/<title\s*(.*?)>(.*?)<\/title>/siU', $html, $title_matches );
+		if ( ! $res ) {
+			return '';
+		}
+
+		// ? Clean up title: remove EOL's and excessive whitespace.
+		$title = preg_replace( '/\s+/', ' ', $title_matches[2] ?? '' );
+		// ? String – to UTF8 is \xe2\x80\x93, replace by -
+		$title = str_replace( '–', '-', $title );
+		// ? Remove all non-US-ASCII (i.e. outside 0x0-0x7F) characters
+		$title = preg_replace( '/[^\x00-\x7F]/', '', $title );
+		$title = trim( $title );
+		$title = self::format_post_title( $title );
+
+		return $title;
 	}
 }

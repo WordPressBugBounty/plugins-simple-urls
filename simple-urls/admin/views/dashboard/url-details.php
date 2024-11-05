@@ -11,6 +11,7 @@ use LassoLite\Classes\Config;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Group;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\License;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 
@@ -57,7 +58,9 @@ if ( isset( $lasso_lite_url->category ) ) {
 	}
 }
 
-$price_disabled = $amazon_product_id ? 'disabled' : '';
+$price_disabled = $is_amazon_link ? 'disabled' : '';
+$license_status = License::get_license_status();
+$is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
 ?>
 
 <?php Config::get_header(); ?>
@@ -254,13 +257,29 @@ $price_disabled = $amazon_product_id ? 'disabled' : '';
 						<input type="hidden" id="thumbnail_id" name="thumbnail_id" value="<?php echo esc_html( $lasso_lite_url->thumbnail_id ); ?>"/>
 
 						<!-- THEME & IMAGE REFRESH -->
-						<div class="row lasso-lite-disabled">
-							<div class="col-md">
+						<div class="row">
+							<div class="col-md lasso-lite-disabled">
 								<div class="form-group mb-4">
 									<label data-tooltip="Choose the default display theme for this link."><strong>Display Theme</strong> <i class="far fa-info-circle light-purple"></i></label>
 									<select id="theme_name" name="theme_name" class="form-control lasso-lite-disabled no-hint" disabled>
 										<option value="" selected="">Cactus</option>
 									</select>
+								</div>
+							</div>
+
+							<div class="col-md thumbnail-wrapper <?php echo $is_amazon_configured || $license_status ? "" : "lasso-lite-disabled" ?> <?php echo $amazon_product_id && $is_update ? "" : "d-none" ?> ">
+								<div class="input-group">
+									<label data-tooltip="Click the button below to grab an updated image from Amazon."><strong>Amazon Image</strong> <i class="far fa-info-circle light-purple"></i></label>
+
+									<div class="row">
+										<div class="col pr-0">
+											<input type="text" id="thumbnail_image_url" class="form-control form-control-append" value="<?php echo esc_html( $lasso_lite_url->image_src ); ?>" readonly>
+										</div>
+
+										<div class="col-2 p-0">
+											<a href="#" id="<?php echo $is_amazon_configured || $license_status ? "lasso-render-image" : "lasso-lite-disabled" ?>" class="btn btn-append refresh-image">Refresh</a>
+										</div>
+									</div>
 								</div>
 							</div>
 						</div>
@@ -286,7 +305,7 @@ $price_disabled = $amazon_product_id ? 'disabled' : '';
 									<div class="float-right">
 										<label data-tooltip="Turn this on to show the price in this display."><i class="far fa-info-circle light-purple"></i></label>
 										<label class="toggle">
-											<input id="show_pricing" type="checkbox" <?php echo esc_html( $lasso_lite_url->url_detail_checkbox->show_price ); ?>>
+											<input id="show_pricing" type="checkbox" <?php echo esc_html( $lasso_lite_url->url_detail_checkbox->show_price ); ?> <?php echo esc_html( $price_disabled ); ?>>
 											<span class="slider"></span>
 										</label>
 									</div>

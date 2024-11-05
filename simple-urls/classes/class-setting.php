@@ -15,6 +15,10 @@ use LassoLiteVendor\Firebase\JWT\JWT;
  * Setting
  */
 class Setting {
+	const DISPLAY_TYPE_SINGLE = 'Single';
+	const DISPLAY_TYPE_GRID   = 'Grid';
+	const DISPLAY_TYPE_LIST   = 'List';
+
 	/**
 	 * Convert WP GET parameters to Lasso GET
 	 *
@@ -44,6 +48,13 @@ class Setting {
 		'amalinkspro/amalinkspro.php',
 		'easy-affiliate-links/easy-affiliate-links.php',
 	);
+
+	/**
+	 * Settings general page
+	 *
+	 * @var string $settings_general_page
+	 */
+	public $settings_general_page = 'settings-general';
 
 	/**
 	 * Setting constructor.
@@ -411,6 +422,23 @@ class Setting {
 			array(
 				'post_type' => Constant::LASSO_POST_TYPE,
 				'page'      => $this->dashboard_page,
+			),
+			admin_url( 'edit.php' )
+		);
+
+		return $dashboard_url;
+	}
+
+	/**
+	 * Get report url by tab
+	 *
+	 * @param string $page_slug Page slug.
+	 */
+	public static function get_lasso_page_url( $page_slug ) {
+		$dashboard_url = add_query_arg(
+			array(
+				'post_type' => Constant::LASSO_POST_TYPE,
+				'page'      => $page_slug,
 			),
 			admin_url( 'edit.php' )
 		);
