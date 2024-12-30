@@ -105,9 +105,12 @@ class SURL extends LL_Object {
 			$revert = new Revert();
 			$where  = '
 				AND ID NOT IN (
-					SELECT post_data
-					FROM ' . $revert->get_table_name() . '
-					WHERE plugin = "' . SIMPLE_URLS_SLUG . '"
+					SELECT r.post_data
+					FROM ' . $revert->get_table_name() . ' AS r
+					INNER JOIN ' . Model::get_wp_table_name( 'posts' ) . ' AS p
+						ON p.ID = r.post_data
+					WHERE r.plugin = "' . SIMPLE_URLS_SLUG . '"
+					AND p.post_type = "' . Constant::LASSO_PRO_POST_TYPE . '"
 				)
 			';
 		}

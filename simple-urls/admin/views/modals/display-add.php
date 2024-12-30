@@ -91,3 +91,24 @@
 		</div>
 	</div>
 </div>
+
+<script>
+	window.lasso_display_add_modal = null;
+
+    function init_lasso_display_add_modal(options = {}) {
+        lasso_display_add_modal = new LassoModal('lasso-display-add', options);
+
+        // reset pop-up on close
+        lasso_display_add_modal.onModalHidden( function () {
+            jQuery("#lasso-display-type").removeClass("d-none");
+            jQuery("#lasso-display-add .tab-container").addClass("d-none");
+            jQuery("#lasso-display-add .tab-container .lasso-items").html('');
+
+            jQuery("#lasso-display-add .btn-generate-text").text("Generate");
+            jQuery("#lasso-display-add #prompt").val('');
+            jQuery("#lasso-display-add .lasso-response").addClass("d-none");
+        });
+
+        return lasso_display_add_modal;
+    }
+</script>

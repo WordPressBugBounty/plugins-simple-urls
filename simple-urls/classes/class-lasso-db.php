@@ -516,6 +516,8 @@ class Lasso_DB {
 		// ? Lasso Pro plugin
 		$url_details_table = Model::get_wp_table_name( 'lasso_url_details' );
 		if ( Model::table_exists( $url_details_table ) && ( empty( $filter_plugin ) || $support_plugin[ Setting_Enum::LASSO_PRO_SLUG ] === $filter_plugin ) ) {
+			$pro_revert_table = Model::get_wp_table_name( 'lasso_revert' );
+
 			$sql = $sql . "
 				UNION
 	
@@ -529,12 +531,16 @@ class Lasso_DB {
 					'' as check_disabled
 				FROM " . $this->posts . ' as po
 				INNER JOIN ' . $url_details_table . ' AS lud ON lud.lasso_id = po.ID 
+				LEFT JOIN ' . $pro_revert_table . ' AS r
+					ON po.ID = r.lasso_id
+					AND r.plugin = %s
 				WHERE po.post_type = %s 
 					AND lud.redirect_url IS NOT NULL
 					AND lud.redirect_url <> ""
+					AND r.lasso_id IS NULL
 			';
 
-			$sql = Model::prepare( $sql, Setting_Enum::LASSO_PRO_SLUG );
+			$sql = Model::prepare( $sql, Setting_Enum::SURL_SLUG, Setting_Enum::LASSO_PRO_SLUG );
 		}
 
 		if ( $include_imported ) {

@@ -58,7 +58,7 @@ jQuery(document).ready(function() {
 
 	function save_lasso_url() {
 		// ? Re-assign case elements existing render yet
-		if ( js_error.length === 0) {
+		if ( js_error.length === 0 ) {
 			save_form                = jQuery('#add_new_form');
 			js_error                 = save_form.find('.js-error');
 			save_link_btn            = save_form.find('button');
@@ -70,8 +70,8 @@ jQuery(document).ready(function() {
 			is_from_editor           = jQuery(add_popup).data('is-from-editor');
 			go_to_detail_modal       = is_from_editor !== undefined && is_from_editor === 1;
 		}
-
-		let url = form_link_box.val();
+		
+		let url = jQuery('#add-new-url-box').val();
 
 		js_error.addClass('d-none');
 
@@ -99,6 +99,8 @@ jQuery(document).ready(function() {
 			.done(function(res) {
 				if (res.success) {
 					if ( go_to_detail_modal ) {
+						btn_lasso_add_link.data('disabled', 0);
+						btn_lasso_add_link.html(btn_lasso_add_link_clone);
 						load_url_quick_detail( res.data['post_id'] );
 					} else {
 						let post_id = res.data['post_id'] ? res.data['post_id'] : res.data.post['lasso_id'];

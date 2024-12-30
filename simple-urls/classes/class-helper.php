@@ -591,6 +591,42 @@ class Helper {
 	}
 
 	/**
+	 * Remove specific parameters from URL
+	 *
+	 * @param  string       $url    URL to clean.
+	 * @param  array|string $params Parameter(s) to remove.
+	 * @return string               Cleaned URL
+	 */
+	public static function remove_url_params( $url, $params ) {
+		$parsed_url = wp_parse_url( $url );
+
+		if ( ! isset( $parsed_url['query'] ) ) {
+			return $url;
+		}
+
+		parse_str( $parsed_url['query'], $query_params );
+
+		// ? Handle both array and single parameter
+		$params = (array) $params;
+		foreach ( $params as $param ) {
+			unset( $query_params[ $param ] );
+		}
+
+		// ? Rebuild URL
+		$clean_url = $parsed_url['scheme'] . '://' . $parsed_url['host'] . $parsed_url['path'];
+		if ( ! empty( $query_params ) ) {
+			$clean_url .= '?' . http_build_query( $query_params );
+		}
+
+		// ? Add fragment if exists
+		if ( isset( $parsed_url['fragment'] ) ) {
+			$clean_url .= '#' . $parsed_url['fragment'];
+		}
+
+		return $clean_url;
+	}
+
+	/**
 	 * Get argument from url
 	 *
 	 * @param string $link     Amazon link.

@@ -1037,6 +1037,25 @@ class Amazon_Api {
 	}
 
 	/**
+	 * Clean Amazon URL that contains maas parameter
+	 *
+	 * @param string $product_url Amazon product URL.
+	 * @return string
+	 */
+	public static function clean_maas_url( $product_url ) {
+		if ( ! self::is_amazon_url( $product_url ) || self::is_amazon_shortened_url( $product_url ) ) {
+			return $product_url;
+		}
+
+		$maas = Helper::get_argument_from_url( $product_url, 'maas' );
+		if ( $maas ) {
+			$product_url = Helper::remove_url_params( $product_url, array( 'tag' ) );
+		}
+
+		return $product_url;
+	}
+
+	/**
 	 * Make product url to shorten url if this setting is enabled
 	 *
 	 * @param string $product_url        Amazon product url.
@@ -1058,7 +1077,10 @@ class Amazon_Api {
 			$keep_args = self::keep_args( $product_url );
 			$args      = Helper::build_url_parameter_string( $keep_args );
 
-			return $args ? $url_without_params . '?' . $args : $url_without_params;
+			$product_url = $args ? $url_without_params . '?' . $args : $url_without_params;
+			$product_url = self::clean_maas_url( $product_url );
+
+			return $product_url;
 		}
 
 		$lasso_settings                        = Setting::get_settings();
@@ -1074,6 +1096,7 @@ class Amazon_Api {
 		}
 
 		if ( $check_lasso_post && ! $lasso_id ) {
+			$product_url = self::clean_maas_url( $product_url );
 			return $product_url;
 		}
 
@@ -1116,6 +1139,8 @@ class Amazon_Api {
 			$product_url    = trim( $product_url );
 			$product_url    = trim( $product_url, '?' );
 		}
+
+		$product_url = self::clean_maas_url( $product_url );
 
 		return $product_url;
 	}

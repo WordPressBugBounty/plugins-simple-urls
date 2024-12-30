@@ -429,7 +429,7 @@ div.error {padding: 0px; border: 0px; margin: 0px;}
 .image_loading.onboarding {position: initial;}
 .color-picker {border-radius: 0 0.5rem 0.5rem 0 !important;}
 .sp-colorize-container {border: 1px solid #ced4da; border-right: 0px !important; border-radius: 0.5rem 0 0 0.5rem !important;}
-#fake-intercom-bubble-chat {position: fixed;z-index: 2147483003;bottom: 20px;right: 20px;width: 60px;height: 60px;border-radius: 50%;background: #22BAA0;cursor: pointer;box-shadow: 0 1px 6px 0 rgb(0 0 0 / 6%), 0 2px 32px 0 rgb(0 0 0 / 16%);animation: 250ms ease;opacity: 0;transition: 0.25s ease;}
+#fake-intercom-bubble-chat {position: fixed;z-index: 150000;bottom: 20px;right: 20px;width: 60px;height: 60px;border-radius: 50%;background: #22BAA0;cursor: pointer;box-shadow: 0 1px 6px 0 rgb(0 0 0 / 6%), 0 2px 32px 0 rgb(0 0 0 / 16%);animation: 250ms ease;opacity: 0;transition: 0.25s ease;}
 #fake-intercom-bubble-chat .fake-intercom-bubble-chat-open {opacity: 1;}
 #fake-intercom-bubble-chat .fake-intercom-bubble-chat-app-launcher-icon {display: flex;align-items: center;justify-content: center;position: absolute;top: 0;left: 0;width: 60px;height: 60px;transition: transform 100ms linear, opacity 80ms linear;opacity: 1;transform: rotate(0deg) scale(1);}
 #fake-intercom-bubble-chat .fake-intercom-bubble-chat-app-launcher-icon svg {width: 28px;height: 32px;}

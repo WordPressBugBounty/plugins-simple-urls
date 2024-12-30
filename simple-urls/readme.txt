@@ -177,6 +177,12 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 
 === Changelog ===
+= 130 =
+* Released: Decebmer 30, 2024
+* Updated Amazon attribution link handling to comply with new policies
+* Improved importing/exporting displays from Lite to Pro for upgrades
+* Fixed an edge case issue that stopped users from accessing the "Add a link" modals
+
 = 129 =
 * Released: November 5, 2024
 * Fixed an issue with promotional banners showing by mistake

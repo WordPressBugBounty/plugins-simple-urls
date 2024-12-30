@@ -412,9 +412,12 @@ class Hook {
 			Helper::enqueue_script( 'circle-progress', 'circle-progress.min.js', array( 'jquery' ) );
 
 			Helper::enqueue_script( 'lasso-quill', 'quill.min.js' );
-			Helper::enqueue_script( 'lasso-elementor', 'lasso-elementor.js', array( 'jquery' ), true );
 			Helper::enqueue_script( 'lasso-modal-js', 'lasso-modal.js' );
-			Helper::enqueue_script( 'lasso-lite-display-modal', 'lasso-lite-display-modal.js' );
+			
+			if ( ! Helper::is_classic_editor() && ( $setting->is_wordpress_post() || $setting->is_custom_post() ) ) {
+				Helper::enqueue_script( 'lasso-lite-display-modal', 'lasso-lite-display-modal.js' );
+			}
+
 			wp_enqueue_media();
 			Helper::enqueue_script( 'moment-js', 'moment.min.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'select2-js', 'select2.full.min.js', array( 'jquery' ) );
@@ -433,6 +436,10 @@ class Hook {
 
 			if ( SIMPLE_URLS_SLUG . '-' . Enum::PAGE_URL_DETAILS === $page ) {
 				Helper::enqueue_script( 'url-details', 'url-details.js', array( 'jquery' ) );
+			}
+
+			if ( self::is_editor() ) {
+				Helper::enqueue_script( 'lasso-elementor', 'lasso-elementor.js', array( 'jquery' ), true );
 			}
 		}
 
@@ -600,7 +607,7 @@ class Hook {
 		if ( ! Helper::is_lasso_pro_plugin_active() ) {
 			$lasso_setting = new Setting();
 			if ( Helper::is_classic_editor() && ( $lasso_setting->is_wordpress_post() || $lasso_setting->is_custom_post() ) ) {
-				$plugin_array['lasso_lite_tc_button'] = SIMPLE_URLS_URL . '/admin/assets/js/lasso-lite-display-modal.js?v=' . strval( @filemtime( SIMPLE_URLS_DIR . '/admin/assets/js/lasso-display-modal.js' ) ); // phpcs:ignore
+				$plugin_array['lasso_lite_tc_button'] = SIMPLE_URLS_URL . '/admin/assets/js/lasso-lite-display-modal.js?v=' . strval( @filemtime( SIMPLE_URLS_DIR . '/admin/assets/js/lasso-lite-display-modal.js' ) ); // phpcs:ignore
 				Helper::enqueue_script( 'display-add', 'display-add.js', array( 'jquery' ) );
 				Helper::enqueue_script( 'url-add', 'url-add.js', array( 'jquery' ) );
 			}
@@ -1022,5 +1029,18 @@ class Hook {
 	public function exclude_lasso_performance_js_from_rocket_cache( $excluded_js ) {
 		$excluded_js[] = 'lasso-performance.min.js';
 		return $excluded_js;
+	}
+
+	/**
+	 * Check is Elementor editor page
+	 *
+	 * @return bool
+	 */
+	public static function is_editor() {
+		$http_referer = Helper::get_server_param( 'HTTP_REFERER' );
+		$query_str    = wp_parse_url( $http_referer, PHP_URL_QUERY );
+		parse_str( $query_str, $query_params );
+
+		return isset( $query_params['action'] ) && 'elementor' === $query_params['action'];
 	}
 }

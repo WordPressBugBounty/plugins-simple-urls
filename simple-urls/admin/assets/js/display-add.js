@@ -20,7 +20,6 @@ jQuery(document).ready(function () {
 		 * Show modal Choose a Display Type
 		 */
 		function add_display() {
-			console.log('Add display');
 			tab = jQuery(this).data('tab');
 			show_tab( jQuery(this).data('tab-container') );
 		}
