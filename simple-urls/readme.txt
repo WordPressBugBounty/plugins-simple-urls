@@ -177,6 +177,11 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 
 === Changelog ===
+
+= 131 =
+* Released: March 21, 2025
+* Updated performance tracking and link upgrades
+
 = 130 =
 * Released: Decebmer 30, 2024
 * Updated Amazon attribution link handling to comply with new policies

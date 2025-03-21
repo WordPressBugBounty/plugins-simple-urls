@@ -1043,15 +1043,6 @@ class Amazon_Api {
 	 * @return string
 	 */
 	public static function clean_maas_url( $product_url ) {
-		if ( ! self::is_amazon_url( $product_url ) || self::is_amazon_shortened_url( $product_url ) ) {
-			return $product_url;
-		}
-
-		$maas = Helper::get_argument_from_url( $product_url, 'maas' );
-		if ( $maas ) {
-			$product_url = Helper::remove_url_params( $product_url, array( 'tag' ) );
-		}
-
 		return $product_url;
 	}
 

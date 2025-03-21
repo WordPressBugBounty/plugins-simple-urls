@@ -946,7 +946,7 @@ class Hook {
 
 		$current_date    = gmdate( 'Ymd' );
 		$js_version      = LASSO_LITE_VERSION . '.' . $current_date;
-		$performance_url = 'https://js.getlasso.co/lasso-performance.min.js?ver=' . $js_version;
+		$performance_url = 'https://js.lasso.link/lasso-performance.min.js?ver=' . $js_version;
 
 		// @codeCoverageIgnoreStart
 		if ( $lasso_options['performance_event_tracking'] ) :
