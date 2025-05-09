@@ -106,26 +106,6 @@ if ( '' !== $plugins_for_import && ! $general_disable_notification && $import_pa
 	</script>
 <?php endif; ?>
 
-<?php if ( $is_show_upsell ) : ?>
-<script>
-	var performanceHtml = `<?php include SIMPLE_URLS_DIR . '/admin/views/notifications/performance-jsrender.html'; ?>`;
-	jQuery("#lasso_lite_notifications").append(performanceHtml);
-	jQuery('#lasso-performance button.close').click(function() {
-		let btn = jQuery(this);
-		jQuery.ajax({
-			url: '<?php echo $ajax_url; // phpcs:ignore ?>',
-			type: 'post',
-			data: {
-				action: 'lasso_lite_disable_performance',
-				nonce: lassoLiteOptionsData.optionsNonce,
-			},
-		}).done(function(res) {
-			jQuery('#lasso-performance').collapse('hide');
-		});
-	});
-</script>
-<?php endif; ?>
-
 <?php
 $template_path = '';
 if ( $is_show_upsell ) {

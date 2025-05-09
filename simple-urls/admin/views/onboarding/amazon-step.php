@@ -2,6 +2,7 @@
 
 use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Helper;
+use LassoLite\Admin\Constant;
 
 $amazon_default_tracking_country = ! $lasso_options['amazon_default_tracking_country'] ?? '1';
 $countries_dd                    = Helper::get_countries_dd( $amazon_default_tracking_country );
@@ -67,7 +68,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 				<!-- AUTO MONETIZE AMAZON -->
 				<div class="white-bg rounded shadow p-4 mb-4 pb-5">
 					<section>
-						<p>Auto-Monetize Amazon Links is available with the Startup plan. <br><a href="https://app.getlasso.co/checkout/startup" target="_blank" class="purple underline">Click here to upgrade</a>.</p>
+						<p>Auto-Monetize Amazon Links is available with the Pro plan. <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank" class="purple underline">Click here to upgrade</a>.</p>
 						<h3>Auto-Monetize Amazon Links</h3>
 						<p>Automatically monetize all current and future Amazon links with your Tracking ID and and added to your affiliate dashboard.</p>
 						<p class="pt-1">
@@ -88,7 +89,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 					<section>
 						<h3>Amazon Product API</h3>
 						<p>If you want to use the Amazon API for product data, here's how to get your <a href="https://support.getlasso.co/en/articles/3182308-how-to-get-your-amazon-product-api-keys" target="_blank" class="purple underline">API keys from Amazon</a>.</p>
-						<p>You can get Amazon product names, images, and pricing without an API key with the <a href="https://app.getlasso.co/checkout/startup" target="_blank" class="purple underline">Lasso Startup plan</a>.</p>
+						<p>You can get Amazon product names, images, and pricing without an API key with the <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank" class="purple underline">Lasso Pro plan</a>.</p>
 
 						<div class="form-group">
 							<label data-tooltip="Select your Amazon Associates locale."><strong>Default Tracking ID</strong> <i class="far fa-info-circle light-purple"></i></label>

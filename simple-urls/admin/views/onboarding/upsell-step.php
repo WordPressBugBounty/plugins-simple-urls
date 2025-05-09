@@ -2,6 +2,7 @@
 
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Page;
+use LassoLite\Admin\Constant;
 ?>
 
 <div class="tab-item d-none" data-step="upsell">
@@ -14,14 +15,14 @@ use LassoLite\Classes\Page;
 		<h1 class="font-weight-bold green">Unlock Explosive Growth With <br>API-Free Amazon Data and Pro Features</h1>
 	</div>
 	<div class="onboarding_header text-center">
-		<h1 class="font-weight-bold black">Just $15 Per Month</h1>
+		<h1 class="font-weight-bold black">Just $29 Per Month</h1>
 	</div>
 
 	<div class="row feature-list" style="margin:0 auto">
 		<div class="col-md-6 col-12">
 			<ul id="plan-1-feature-list" class="plan-feature-list pt-3">
 				<li class="font-weight-bold">API-free Amazon Product Images & Prices</li>
-				<li class="font-weight-bold">Revenue Analytics for Major Networks</li>
+				<li class="font-weight-bold">Mobile deep linking and localization</li>
 				<li class="font-weight-bold">AI Opportunity Alerts</li>
 			</ul>
 		</div>
@@ -34,8 +35,8 @@ use LassoLite\Classes\Page;
 		</div>
 	</div>
 
-	<a href="https://app.getlasso.co/checkout/startup" id="upgrade-license" class="btn green-bg white badge-pill px-3 shadow font-weight-bold hover-green hover-down mb-3 mt-4 d-block-center">
-		<i class="fas fa-crown white mr-2"></i>Just $15 Per Month<i class="fas fa-crown white ml-2"></i>
+	<a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" id="upgrade-license" class="btn green-bg white badge-pill px-3 shadow font-weight-bold hover-green hover-down mb-3 mt-4 d-block-center">
+		<i class="fas fa-crown white mr-2"></i>Just $29 Per Month<i class="fas fa-crown white ml-2"></i>
 	</a>
 	<div class="mt-2">
 		<a href="<?php echo esc_url( Page::get_lite_page_url( Enum::PAGE_DASHBOARD ) ); ?>" class="underline next-step text-center d-block-center">No thanks, take me to the dashboard</a>

@@ -10,7 +10,7 @@ use LassoLite\Classes\Config;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
 use LassoLite\Classes\Setting;
-
+use LassoLite\Admin\Constant;
 
 $lasso_options       = Setting::get_settings();
 
@@ -74,7 +74,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 					<!-- AUTO MONETIZE AMAZON -->
 					<div class="white-bg rounded shadow p-4">
 						<section>
-							<p class="<?php echo $class_license_display ?>">Auto-Monetize Amazon Links is available with the Startup plan. <br><a href="https://app.getlasso.co/signup/start-up" target="_blank" class="purple underline">Click here to upgrade</a>.</p>
+							<p class="<?php echo $class_license_display ?>">Auto-Monetize Amazon Links is available with the Pro plan. <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank" class="purple underline">Click here to upgrade</a>.</p>
 							<h3 class="<?php echo $class_license_active ?>">Auto-Monetize Amazon Links</h3>
 							<p class="<?php echo $class_license_active ?>">Automatically monetize all current and future Amazon links with your Tracking ID and and added to your affiliate dashboard.</p>
 
@@ -109,7 +109,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 						<section>
 							<h3>Amazon Product API</h3>
 							<p>If you want to use the Amazon API for product data, here's how to get your <a href="https://support.getlasso.co/en/articles/3182308-how-to-get-your-amazon-product-api-keys" target="_blank" class="purple underline">API keys from Amazon</a>.</p>
-							<p class="<?php echo $class_license_display ?>">You can get Amazon product names, images, and pricing without an API key with the <a href="https://app.getlasso.co/signup/start-up" target="_blank" class="purple underline">Lasso Startup plan</a>.</p>
+							<p class="<?php echo $class_license_display ?>">You can get Amazon product names, images, and pricing without an API key with the <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank" class="purple underline">Lasso Pro plan</a>.</p>
 
 							<div class="form-group">
 								<label data-tooltip="Select your Amazon Associates locale."><strong>Default Tracking ID</strong> <i class="far fa-info-circle light-purple"></i></label>

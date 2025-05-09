@@ -97,12 +97,12 @@ class Constant {
 	const LASSO_OPTION_REVIEW_ALLOW               = 'review_allow_notification';
 	const LASSO_OPTION_REVIEW_SNOOZE              = 'review_snooze';
 	const LASSO_OPTION_REVIEW_LINK_COUNT          = 'review_link_count';
-	const LASSO_OPTION_PERFORMANCE                = 'performance';
 	const LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE = 'dismiss_performance_notice';
 	const LASSO_LITE_NONCE                        = 'simple-urls-nonce';
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
 	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
+	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://app.getlasso.co/checkout/monthly';
 
 	const BLOCK_CUSTOMIZE = array(
 		'single'            => array(

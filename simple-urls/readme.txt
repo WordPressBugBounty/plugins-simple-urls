@@ -178,6 +178,11 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 === Changelog ===
 
+= 132 =
+* Released: May 8, 2025
+* Fixed a bug related to new PHP versions
+* Updated in-app banners
+
 = 131 =
 * Released: March 21, 2025
 * Updated performance tracking and link upgrades

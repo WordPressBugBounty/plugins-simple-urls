@@ -33,7 +33,6 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_save_support', array( $this, 'lasso_lite_save_support' ) );
 		add_action( 'wp_ajax_lasso_lite_review_snooze', array( $this, 'lasso_lite_review_snooze' ) );
 		add_action( 'wp_ajax_lasso_lite_disable_review', array( $this, 'lasso_lite_disable_review' ) );
-		add_action( 'wp_ajax_lasso_lite_disable_performance', array( $this, 'lasso_lite_disable_performance' ) );
 		add_action( 'wp_ajax_lasso_lite_dismiss_notice', array( $this, 'lasso_lite_dismiss_notice' ) );
 		add_action( 'wp_ajax_lasso_lite_disable_affiliate_promotions', array( $this, 'lasso_lite_disable_affiliate_promotions' ) );
 	}
@@ -232,21 +231,6 @@ class Ajax {
 		Helper::verify_access_and_nonce();
 
 		Helper::update_option( Constant::LASSO_OPTION_REVIEW_ALLOW, '0' );
-
-		wp_send_json_success(
-			array(
-				'status' => 1,
-			)
-		);
-	}
-
-	/**
-	 * Disable Performance notification
-	 */
-	public function lasso_lite_disable_performance() {
-		Helper::verify_access_and_nonce();
-
-		Helper::update_option( Constant::LASSO_OPTION_PERFORMANCE, '0' );
 
 		wp_send_json_success(
 			array(

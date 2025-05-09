@@ -1,7 +1,7 @@
 <?php
 
 use LassoLite\Classes\Setting;
-
+use LassoLite\Admin\Constant;
 $lasso_options = Setting::get_settings();
 ?>
 
@@ -20,7 +20,7 @@ $lasso_options = Setting::get_settings();
 
 	<h1 class="font-weight-bold">Connect Your Lasso Account</h1>
 	<p>Adding your Lasso license key enables important features like Affiliate+ opportunities and link synchronization.</p>
-	<p>If you don’t have a Lasso license key, you can get one <a href="https://app.getlasso.co/checkout/startup" target="_blank">here.</a></p>
+	<p>If you don’t have a Lasso license key, you can get one <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank">here.</a></p>
 	<div class="form-group mb-4">
 		<div class="collapse orange" id="activate-error"><label>This license key doesn't work. Double-check and try again.</label></div>
 		<input type="text" name="license_serial" class="form-control w-50 d-block-center" id="license" value="<?php echo $lasso_options['license_serial']; ?>" placeholder="Enter your license key">

@@ -18,7 +18,7 @@ var lasso_lite_helper = {
 		<div class="container p-5">
 			<div class="row p-4 align-items-center border rounded">
 				<div class="col-lg-4 purple-bg p-4 rounded">
-					<img src="https://getlasso.co/wp-content/uploads/dashboard.svg" class="img-fluid">
+					<img src="/wp-content/plugins/simple-urls/admin/assets/images/dashboard.svg" class="img-fluid">
 				</div>
 		
 				<div class="col-lg p-4">

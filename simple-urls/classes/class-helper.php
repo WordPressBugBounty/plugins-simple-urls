@@ -1734,7 +1734,7 @@ class Helper {
 				'url' => $url,
 			);
 			$encrypted_base64 = http_build_query( $data );
-			$res              = self::send_request( 'get', LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
+			$res              = self::send_request( 'get', Constant::LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
 
 			$final_url  = $res['response']->finalUrl ?? $url;
 			$page_title = $res['response']->pageTitle ?? '';
