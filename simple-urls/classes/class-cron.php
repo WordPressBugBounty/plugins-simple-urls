@@ -12,6 +12,8 @@ use LassoLite\Classes\Processes\Amazon;
 use LassoLite\Classes\Processes\Amazon_Shortlink;
 use LassoLite\Classes\Processes\Import_All;
 use LassoLite\Classes\Processes\Revert_All;
+use LassoLite\Classes\Setting;
+use LassoLite\Classes\Enum;
 
 /**
  * Config
@@ -30,7 +32,7 @@ class Cron {
 	/**
 	 * Cron constructor.
 	 */
-	public function __construct() {
+	public function register_hooks() {
 		add_filter( 'cron_schedules', array( $this, 'add_lasso_cron' ) );
 		add_action( 'lasso_lite_tracking_support_status', array( $this, 'lasso_lite_tracking_support_status' ) );
 		add_action( 'lasso_lite_import_all', array( $this, 'lasso_import_all' ) );
@@ -88,13 +90,14 @@ class Cron {
 						'schedule' => $data['schedule'],
 						'interval' => $interval,
 					);
-
 				}
 			}
 		}
 
 		foreach ( $crons as $cron_name => $interval ) {
-			if ( ! wp_next_scheduled( $cron_name ) ) {
+			$next_scheduled = wp_next_scheduled( $cron_name );
+			if ( ! $next_scheduled ) {
+				// No schedule exists - create a new one.
 				wp_schedule_event( time(), $interval, $cron_name );
 			}
 		}

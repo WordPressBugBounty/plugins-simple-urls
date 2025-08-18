@@ -568,8 +568,14 @@ class Hook {
 				Constant::LASSO_SUPPORT_URL,
 			);
 
-			$new_submenu[91] = array(
-				'Affiliate<sup>+</sup>',
+			$new_submenu[93] = array(
+				'Analytics',
+				'manage_options',
+				Constant::LASSO_ANALYTICS_URL,
+			);
+
+			$new_submenu[95] = array(
+				'Marketplace',
 				'manage_options',
 				Constant::LASSO_AFFILIATE_PLUS_URL,
 			);
@@ -579,7 +585,6 @@ class Hook {
 				'manage_options',
 				Constant::LASSO_UPGRADE_URL,
 			);
-
 		}
 
 		// ? ERROR | Overriding WordPress globals is prohibited. Found assignment to $submenu

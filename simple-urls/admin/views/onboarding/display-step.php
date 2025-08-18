@@ -131,14 +131,14 @@ $enable_brag_mode_attr = $lasso_options['enable_brag_mode'] ? 'checked' : '';
 					</div>
 
 					<div class="form-row mb-4">
-						<div class="col-lg">
+						<div class="col-lg lasso-lite-disabled">
 							<label data-tooltip="This is the main color of the Pros Field."><strong>Pros</strong> <i class="far fa-info-circle light-purple"></i></label>
-							<input type="text" name="display_color_pros" value="<?php echo $lasso_options['display_color_pros']; ?>" class="form-control color-picker" placeholder="#FFFFFF" />
+							<input type="text" name="display_color_pros" value="<?php echo $lasso_options['display_color_pros']; ?>" class="form-control color-picker" placeholder="#FFFFFF" disabled />
 						</div>
 
-						<div class="col-lg">
+						<div class="col-lg lasso-lite-disabled">
 							<label data-tooltip="This is the main color of the Cons Field."><strong>Cons</strong> <i class="far fa-info-circle light-purple"></i></label>
-							<input type="text" name="display_color_cons" value="<?php echo $lasso_options['display_color_cons']; ?>" class="form-control color-picker" placeholder="#FFFFFF" />
+							<input type="text" name="display_color_cons" value="<?php echo $lasso_options['display_color_cons']; ?>" class="form-control color-picker" placeholder="#FFFFFF" disabled />
 						</div>
 					</div>
 
@@ -176,14 +176,14 @@ $enable_brag_mode_attr = $lasso_options['enable_brag_mode'] ? 'checked' : '';
 				</div>
 
 				<div class="form-row mb-4">
-					<div class="col-lg">
+					<div class="col-lg lasso-lite-disabled">
 						<label data-tooltip="If you set a secondary button for your display and leave it blank, this is what it will default to."><strong>Secondary Button</strong> <i class="far fa-info-circle light-purple"></i></label>
-						<input type="text" name="secondary_button_text" value="<?php echo $lasso_options['secondary_button_text']; ?>" class="form-control" placeholder="Learn More" />
+						<input type="text" name="secondary_button_text" value="<?php echo $lasso_options['secondary_button_text']; ?>" class="form-control" placeholder="Learn More" disabled />
 					</div>
 
-					<div class="col-lg">
+					<div class="col-lg lasso-lite-disabled">
 						<label data-tooltip="This is the color of your display's secondary CTA button.">&nbsp;</label>
-						<input type="text" name="display_color_secondary_button" value="<?php echo $lasso_options['display_color_secondary_button']; ?>" class="form-control color-picker" placeholder="#22BAA0" />
+						<input type="text" name="display_color_secondary_button" value="<?php echo $lasso_options['display_color_secondary_button']; ?>" class="form-control color-picker" placeholder="#22BAA0" disabled />
 					</div>
 				</div>
 

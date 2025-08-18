@@ -5,20 +5,22 @@
  * @package Header
  */
 
+use LassoLite\Admin\Constant;
+
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 
-$available_pages = Helper::available_pages();
-$header_menu = array( Enum::PAGE_DASHBOARD );
+$available_pages         = Helper::available_pages();
+$header_menu             = array( Enum::PAGE_DASHBOARD );
 $should_show_import_step = Helper::should_show_import_page();
 if ( $should_show_import_step ) {
 	$header_menu[] = Enum::PAGE_IMPORT;
 }
 $header_menu = array_merge( $header_menu, array( Enum::PAGE_OPPORTUNITIES, Enum::PAGE_GROUPS, Enum::PAGE_TABLES ) );
 
-if (  Setting::get_setting( 'general_disable_tooltip' ) ) {
+if ( Setting::get_setting( 'general_disable_tooltip' ) ) {
 	echo '
 		<style>
 			[data-tooltip]:hover:before, [data-tooltip]:hover:after {visibility: hidden;}
@@ -30,9 +32,9 @@ if (  Setting::get_setting( 'general_disable_tooltip' ) ) {
 ?>
 
 <!-- REQUEST REVIEW -->
-<?php 
+<?php
 if ( Helper::show_request_review() ) {
-	echo Helper::include_with_variables( SIMPLE_URLS_DIR . '/admin/views/notifications/request-review.php' ); 
+	echo Helper::include_with_variables( SIMPLE_URLS_DIR . '/admin/views/notifications/request-review.php' );
 }
 ?>
 
@@ -42,7 +44,7 @@ if ( Helper::show_request_review() ) {
 
 		<!-- LASSO LOGO -->
 		<div class="col-lg-2">
-			<a href="<?php echo Page::get_page_url( $available_pages[Enum::PAGE_DASHBOARD]->slug ) ?>" class="logo mx-auto mx-lg-0">
+			<a href="<?php echo Page::get_page_url( $available_pages[ Enum::PAGE_DASHBOARD ]->slug ); ?>" class="logo mx-auto mx-lg-0">
 				<img src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/lasso-logo.svg">
 			</a>
 		</div>
@@ -50,8 +52,8 @@ if ( Helper::show_request_review() ) {
 		<!-- NAVIGATION -->
 		<div class="col-lg py-lg-0 py-3 ml-5">
 			<ul class="nav justify-content-center font-weight-bold">
-			<?php foreach( $header_menu as $menu ): ?>
-			<?php $page = $available_pages[$menu]; ?>
+			<?php foreach ( $header_menu as $menu ) : ?>
+				<?php $page = $available_pages[ $menu ]; ?>
 				<li class="nav-item mx-3">
 					<a class="nav-link px-0 white <?php echo $page->active_class; ?>" 
 						href="<?php echo Page::get_page_url( $page->slug ); ?>">
@@ -60,13 +62,13 @@ if ( Helper::show_request_review() ) {
 				</li>
 			<?php endforeach; ?>
 				<li class="nav-item mx-3">
-					<a class="nav-link px-0 white" href="https://app.getlasso.co/performance/" target="_blank">
-						Performance
+					<a class="nav-link px-0 white" href="<?php echo Constant::LASSO_ANALYTICS_URL; ?>" target="_blank">
+						Analytics
 					</a>
 				</li>
 				<li class="nav-item mx-3">
-					<a class="nav-link px-0 white" href="https://app.getlasso.co/plus/" target="_blank">
-						Affiliate<sup>+</sup>
+					<a class="nav-link px-0 white" href="<?php echo Constant::LASSO_AFFILIATE_PLUS_URL; ?>" target="_blank">
+						Marketplace
 					</a>
 				</li>
 			</ul>

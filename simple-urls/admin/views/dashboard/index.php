@@ -30,7 +30,18 @@ $link_search_txt = esc_html( $_GET['link-search-input'] ?? '' );
 			</div>
 
 			<!-- FILTERS -->
-			<div class="col-lg text-center large mb-4">
+			<div class="col-lg text-center large mb-4 lasso-lite-disabled">
+				<ul class="nav justify-content-center font-weight-bold">
+					<li class="nav-item mx-3 red-tooltip" id="total-broken-links-li" data-tooltip="See broken URLs">
+						<a class="nav-link gray hover-underline px-0" href="#" id="total-broken-links-a"><span id="total-broken-links"><i class="far fa-unlink"></i></span></a>
+					</li>
+					<li class="nav-item mx-3 orange-tooltip" id="total-out-of-stock-li" data-tooltip="See out-of-stock products">
+						<a class="nav-link gray hover-underline px-0" href="#" id="total-out-of-stock-a"><span id="total-out-of-stock"><i class="far fa-box-open"></i></span></a>
+					</li>
+					<li class="nav-item mx-3 green-tooltip" id="total-opportunities-li" data-tooltip="See opportunities">
+						<a class="nav-link gray hover-underline px-0" href="#" id="total-opportunities-a"><!-- add class "active" --><span id="total-opportunities"><i class="far fa-lightbulb-on"></i></span></a>
+					</li>
+				</ul>
 			</div>
 
 			<!-- SEARCH -->

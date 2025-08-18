@@ -18,6 +18,98 @@ use LassoLite\Models\Revert;
  * Lasso_DB
  */
 class Lasso_DB {
+
+	/**
+	 * Database name
+	 *
+	 * @var string
+	 */
+	public $dbname;
+
+	/**
+	 * Database table prefix
+	 *
+	 * @var string
+	 */
+	public $prefix;
+
+	/**
+	 * Current domain
+	 *
+	 * @var string
+	 */
+	public $current_domain;
+
+	/**
+	 * WordPress posts table
+	 *
+	 * @var string
+	 */
+	public $posts;
+
+	/**
+	 * WordPress postmeta table
+	 *
+	 * @var string
+	 */
+	public $postmeta;
+
+	/**
+	 * WordPress terms table
+	 *
+	 * @var string
+	 */
+	public $terms;
+
+	/**
+	 * WordPress term_taxonomy table
+	 *
+	 * @var string
+	 */
+	public $term_taxonomy;
+
+	/**
+	 * WordPress term_relationships table
+	 *
+	 * @var string
+	 */
+	public $term_relationships;
+
+	/**
+	 * WordPress options table
+	 *
+	 * @var string
+	 */
+	public $options;
+
+	/**
+	 * Lasso amazon_products table
+	 *
+	 * @var string
+	 */
+	public $amazon_products;
+
+	/**
+	 * Pretty Links table
+	 *
+	 * @var string
+	 */
+	public $pretty_links;
+
+	/**
+	 * AAWP products table
+	 *
+	 * @var string
+	 */
+	public $aawp;
+
+	/**
+	 * AAWP lists table
+	 *
+	 * @var string
+	 */
+	public $aawp_list;
+
 	/**
 	 * Construction of Lasso_DB
 	 */
@@ -342,7 +434,6 @@ class Lasso_DB {
 							ON CONVERT(ap.asin USING utf8) = CONVERT(r.old_uri USING utf8)
 				WHERE
 					r.old_uri IS NULL
-
 				UNION
 			';
 

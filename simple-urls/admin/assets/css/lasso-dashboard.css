@@ -456,3 +456,5 @@ div.error {padding: 0px; border: 0px; margin: 0px;}
 *********************************************************/
 .esg-display-none {display: none;}
 .checkmarks-list li:before {content: "\2714\0020";color: #22baa0;margin-right: 10px;}
+.btn-upgrade{background: linear-gradient(45deg, #5E36CA, #22BAA0, #22BAA0) !important; border: none; padding: 10px 20px; display: inline-block; color: white !important;border-radius: 0.5rem;}
+.btn-upgrade:hover{ background: linear-gradient(45deg, #22BAA0, #5E36CA, #5E36CA) !important;}

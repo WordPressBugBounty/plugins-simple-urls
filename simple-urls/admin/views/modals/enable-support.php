@@ -9,11 +9,11 @@ use LassoLite\Classes\Enum;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\License;
 
-$settings = Setting::get_settings();
-$email_support = ! empty( $settings[Enum::EMAIL_SUPPORT] ) ? $settings[Enum::EMAIL_SUPPORT] : get_option( 'admin_email' );
-$is_subscribe_setting = $settings[Enum::IS_SUBSCRIBE] ?? '';
-$is_subscribe_setting_checked = 'true' === $is_subscribe_setting || empty( $settings[Enum::IS_SUBSCRIBE] ) ? 'checked' : '';
-$license_active = License::get_license_status();
+$settings                     = Setting::get_settings();
+$email_support                = ! empty( $settings[ Enum::EMAIL_SUPPORT ] ) ? $settings[ Enum::EMAIL_SUPPORT ] : get_option( 'admin_email' );
+$is_subscribe_setting         = $settings[ Enum::IS_SUBSCRIBE ] ?? '';
+$is_subscribe_setting_checked = 'true' === $is_subscribe_setting || empty( $settings[ Enum::IS_SUBSCRIBE ] ) ? 'checked' : '';
+$license_active               = License::get_license_status();
 ?>
 <div class="modal fade" id="enable-support" tabindex="-1" role="dialog">
 	<div class="modal-dialog" role="document">
@@ -28,7 +28,7 @@ $license_active = License::get_license_status();
 						</ul>
 					</div>
 					<div class="text-center">
-						<p><a href="https://app.getlasso.co/signup/plus" target="_blank" id="btn-save-support" class="btn">Connect for free</a></p>
+						<p><a href="https://app.getlasso.co/signup/plus" target="_blank" id="btn-connect-for-free" class="btn">Connect for free</a></p>
 						<div class="clearfix"></div>
 						<div class="clearfix"></div>
 						<small class="mt-2 dismiss">No thanks.</small>
@@ -52,7 +52,7 @@ $license_active = License::get_license_status();
 							</label>
 						</div>
 						<div class="text-center">
-							<p><button id="btn-save-support" class="btn">Enable Support</button></p>
+							<p><button id="btn-connect-for-free" class="btn">Enable Support</button></p>
 							<div class="clearfix"></div>
 							<div class="clearfix"></div>
 							<small class="mt-2 dismiss">No thanks, I don't want support</small>

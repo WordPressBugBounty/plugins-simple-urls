@@ -31,6 +31,7 @@ class Constant {
 	const SITE_ID_KEY       = 'site_id';
 
 	const LASSO_AFFILIATE_PLUS_URL = 'https://app.getlasso.co/plus/';
+	const LASSO_ANALYTICS_URL      = 'https://app.getlasso.co/analytics/';
 
 	const DEFAULT_SETTINGS = array(
 		// ? display
@@ -102,7 +103,7 @@ class Constant {
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
 	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
-	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://app.getlasso.co/checkout/monthly';
+	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://getlasso.co/upgrade/';
 
 	const BLOCK_CUSTOMIZE = array(
 		'single'            => array(

@@ -5,7 +5,7 @@
  * Description: Lasso Lite (formerly SimpleURLs) is a complete URL management system that allows you to create, manage, and track outbound links from your site using custom post types and 301 redirects.
  * Author: Lasso
  * Author URI: https://getlasso.co/?utm_source=SimpleURLs&utm_medium=WP
- * Version: 132
+ * Version: 133
 
  * Text Domain: simple-urls
  * Domain Path: /languages
@@ -23,7 +23,7 @@ use LassoLite\Classes\License;
 
 // ? ==============================================================================================
 // ? WE SHOULD UPDATE THE VERSION NUMBER HERE AS WELL WHEN RELEASING A NEW VERSION
-define( 'LASSO_LITE_VERSION', '132' );
+define( 'LASSO_LITE_VERSION', '133' );
 // ? ==============================================================================================
 
 function activate_lasso_lite() {

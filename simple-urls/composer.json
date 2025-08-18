@@ -5,11 +5,16 @@
 	"homepage": "https://github.com/studiopress/simple-urls",
 	"license": "GPL-2.0-or-later",
 	"require": {
-		"php": "^5.3 || ^7",
+		"php": "^5.3 || ^7 || ^8",
 		"sentry/sdk": "^3.2",
 		"psr/container": "1.1.1",
 		"http-interop/http-factory-guzzle": "1.1.1",
 		"firebase/php-jwt": "^6.3"
+	},
+	"require-dev": {
+		"wp-coding-standards/wpcs": "^2.3",
+		"phpunit/phpunit": "^9.0",
+		"yoast/phpunit-polyfills": "^1.0"
 	},
 	"config": {
 		"sort-order": true,

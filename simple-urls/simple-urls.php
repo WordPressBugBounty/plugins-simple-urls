@@ -5,7 +5,7 @@ use LassoLite\Classes\Init;
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-define( "SIMPLE_URLS_SLUG", "surl" );
+define( 'SIMPLE_URLS_SLUG', 'surl' );
 define( 'SIMPLE_URLS_DIR', plugin_dir_path( __FILE__ ) );
 define( 'SIMPLE_URLS_URL', plugins_url( '', __FILE__ ) );
 define( 'SIMPLE_URLS_PLUGIN_PATH', __DIR__ );
@@ -26,9 +26,3 @@ if ( is_admin() ) {
 }
 
 new Init();
-
-
-
-
-
-

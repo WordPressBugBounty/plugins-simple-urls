@@ -19,7 +19,7 @@ $should_show_import_step = Helper::should_show_import_page();
 ?>
 
 <section class="purple-bg pt-3 pb-5 min-vh-116">
-	<div id="onboarding_container" class="container container-sm">
+	<div id="onboarding_container" class="container container-sm lite-container">
 		<!-- LOGO -->
 		<div class="pb-5">
 			<div class="logo-large mx-auto">

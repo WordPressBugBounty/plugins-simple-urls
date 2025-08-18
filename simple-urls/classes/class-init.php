@@ -63,11 +63,10 @@ class Init {
 			'\LassoLite\Pages\Hook',
 			'\LassoLite\Pages\Url_Details\Hook',
 			'\LassoLite\Pages\Import_Urls\Hook',
-		);
-
-		$this->classes = array(
 			'\LassoLite\Classes\Cron',
 		);
+
+		$this->classes = array();
 
 		$this->processes = array(
 			'\LassoLite\Classes\Processes\Amazon',

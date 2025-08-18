@@ -1,0 +1,143 @@
+libs/
+logs/
+vendor-prefix/
+
+###############################################################################
+# Core VCS & metadata                                                         #
+###############################################################################
+.git/
+.gitmodules
+.hg/
+.svn/
+*.patch
+*.diff
+
+###############################################################################
+# Sensitive & environment-specific files                                      #
+###############################################################################
+.env
+.env.*
+.envrc
+*.key
+*.pem
+*.crt
+*.pfx
+*.p12
+*.jks
+
+###############################################################################
+# Dependency & package manager folders                                        #
+###############################################################################
+node_modules/
+vendor/            # Go, PHP, etc.
+.bundle/           # Ruby
+Pods/              # CocoaPods
+__pycache__/
+*.egg-info/
+*.venv/
+.venv/
+.env/              # Python virtual-env common name
+target/            # Maven / Cargo
+.idea/
+.vscode/
+*.code-workspace
+
+###############################################################################
+# Build / output / cache directories                                          #
+###############################################################################
+build/
+dist/
+out/
+bin/
+obj/
+.next/
+.cache/
+coverage/
+reports/
+*.log
+*.tmp
+*.temp
+*.bak
+
+###############################################################################
+# Operating-system junk                                                       #
+###############################################################################
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+###############################################################################
+# Binary & archive formats                                                    #
+###############################################################################
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.rar
+*.7z
+*.gz
+*.bz2
+*.xz
+*.jar
+*.war
+*.ear
+*.exe
+*.dll
+*.so
+*.o
+*.a
+*.class
+*.whl
+*.pdf
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.mp4
+*.mov
+*.avi
+
+###############################################################################
+# Language-specific noise                                                     #
+###############################################################################
+# — JavaScript / TypeScript
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# — Python
+pip-wheel-metadata/
+*.pyo
+*.pyd
+
+# — Go
+*.test
+*.coverprofile
+
+# — Rust
+*.rlib
+Cargo.lock
+
+# — Terraform
+.terraform/
+*.tfstate*
+.terragrunt-cache/
+
+# — Misc editors
+*.swp        # Vim swap
+*.swo
+*~           # Emacs / bash
+
+###############################################################################
+# Catch-alls                                                                  #
+###############################################################################
+# Exclude any hidden files at repo root that you’re sure you don’t want:
+# .*  <-- uncomment if you *know* every dotfile should be ignored
+
+###############################################################################
+# End of file                                                                 #
+###############################################################################

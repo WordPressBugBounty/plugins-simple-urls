@@ -107,7 +107,16 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 					<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5">
 						<!-- PRODUCT API -->
 						<section>
-							<h3>Amazon Product API</h3>
+							<div class="row mb-4 align-items-center">
+								<div class="col-7">
+									<h3 class="mb-0">Amazon Product API</h3>
+								</div>
+								<div class="col-5 text-right">
+									<a class="btn-upgrade" href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_self" class="purple mr-3">
+										<strong>Get Amazon Images</strong>
+									</a>
+								</div>
+							</div>
 							<p>If you want to use the Amazon API for product data, here's how to get your <a href="https://support.getlasso.co/en/articles/3182308-how-to-get-your-amazon-product-api-keys" target="_blank" class="purple underline">API keys from Amazon</a>.</p>
 							<p class="<?php echo $class_license_display ?>">You can get Amazon product names, images, and pricing without an API key with the <a href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_blank" class="purple underline">Lasso Pro plan</a>.</p>
 

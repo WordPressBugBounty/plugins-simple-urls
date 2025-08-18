@@ -178,6 +178,10 @@ We share actionable affiliate marketing tips for bloggers on [our website](https
 
 === Changelog ===
 
+= 133 =
+* Released: August 18, 2025
+* Improved the upgrade process from Lite to Pro
+
 = 132 =
 * Released: May 8, 2025
 * Fixed a bug related to new PHP versions
