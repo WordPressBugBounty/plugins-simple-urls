@@ -1830,4 +1830,19 @@ class Helper {
 
 		return $title;
 	}
+
+	/**
+	 * Build the dynamic query variable name for serving the performance snippet.
+	 *
+	 * Derive a domain-specific key to reduce collisions and support per-domain routing.
+	 *
+	 * @return string Query var name (md5 hash of the base domain)
+	 */
+	public static function get_snippet_query() {
+		$domain = self::get_base_domain( site_url() );
+		if ( empty( $domain ) ) {
+			return 'lasso_connect_snippet_lite';
+		}
+		return md5( $domain );
+	}
 }

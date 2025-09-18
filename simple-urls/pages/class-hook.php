@@ -42,6 +42,8 @@ class Hook {
 		add_action( 'admin_init', array( $this, 'amazon_api_pre_populated_automatically' ) );
 		add_action( 'init', array( $this, 'register_taxonomy' ) );
 		add_action( 'admin_menu', array( $this, 'build_admin_menu' ), 2 );
+		add_action( 'init', array( $this, 'lasso_register_connect_snippet_rewrite' ) );
+		add_action( 'upgrader_process_complete', array( $this, 'lasso_connect_snippet_flush_on_upgrade' ), 10, 2 );
 
 		$lasso_shortcode = new Shortcode();
 		add_shortcode( 'lasso', array( $lasso_shortcode, 'lasso_lite_core_shortcode' ) );
@@ -80,6 +82,11 @@ class Hook {
 
 		// ? WP Rocket
 		add_filter( 'rocket_exclude_js', array( $this, 'exclude_lasso_performance_js_from_rocket_cache' ) );
+
+		add_filter( 'query_vars', array( $this, 'lasso_connect_snippet_query_var' ) );
+
+		// Serve vanity JS path /js/snippet.min.js via plugin handler (run as early as possible)
+		add_action( 'template_redirect', array( $this, 'serve_connect_snippet' ), 0 );
 
 		$setting = new Setting();
 		if ( $setting->is_surls_page() ) {
@@ -646,7 +653,7 @@ class Hook {
 				$current_screen = get_current_screen();
 				// ? Check to make sure render html only block editor Gutenberg
 				if ( ( method_exists( $current_screen, 'is_block_editor' ) && $current_screen->is_block_editor() )
-					|| ( function_exists( 'is_gutenberg_page' ) ) && is_gutenberg_page()
+					|| ( function_exists( 'is_gutenberg_page' ) && is_gutenberg_page() )
 				) {
 					echo Helper::get_display_modal_html(); // phpcs:ignore
 				}
@@ -951,14 +958,30 @@ class Hook {
 
 		$current_date    = gmdate( 'Ymd' );
 		$js_version      = LASSO_LITE_VERSION . '.' . $current_date;
-		$performance_url = 'https://js.lasso.link/lasso-performance.min.js?ver=' . $js_version;
+
+		// Prefer clean path when permalinks are enabled; fall back to query when using Plain
+		$snippet_query        = Helper::get_snippet_query();
+		$permalink_struct     = get_option( 'permalink_structure' );
+		$performance_url_hash = add_query_arg(
+			array(
+				$snippet_query => '1',
+				'ver'          => $js_version,
+			),
+			home_url( '/' )
+		);
+
+		$pretty_perf_url          = add_query_arg( 'ver', $js_version, home_url( LASSO_SNIPPET_VANITY_PATH_LITE ) );
+		$performance_url_local    = empty( $permalink_struct ) ? $performance_url_hash : $pretty_perf_url;
+		$performance_url_external = 'https://js.lasso.link/lasso-performance.min.js?ver=' . $js_version; // load exteral js
 
 		// @codeCoverageIgnoreStart
 		if ( $lasso_options['performance_event_tracking'] ) :
 			?>
 
 			<!-- Lasso tracking events - Performance -->
-			<script type="text/javascript" src="<?php echo $performance_url; // phpcs:ignore ?>" defer></script>
+			<script type="text/javascript" src="<?php echo $performance_url_external; // phpcs:ignore ?>" defer></script>
+			<script type="text/javascript" src="<?php echo $performance_url_local; // phpcs:ignore ?>" defer></script>
+			<script type="text/javascript" src="<?php echo $performance_url_hash; // phpcs:ignore ?>" defer></script>
 			<script type="text/javascript" defer>
 				document.addEventListener("lassoTrackingEventLoaded", function(e) {
 					e.detail.init({
@@ -1047,5 +1070,133 @@ class Hook {
 		parse_str( $query_str, $query_params );
 
 		return isset( $query_params['action'] ) && 'elementor' === $query_params['action'];
+	}
+
+	/**
+	 * Register rewrite rule for /js/connect-snippet.min.js
+	 */
+	public static function lasso_register_connect_snippet_rewrite() {
+		$snippet_query = Helper::get_snippet_query();
+		add_rewrite_rule( '^js/snippet\.min\.js$', 'index.php?' . $snippet_query . '=1', 'top' );
+	}
+
+	/**
+	 * Flush rewrites after plugin upgrades via WP upgrader
+	 *
+	 * @param object $upgrader Upgrader instance.
+	 * @param array  $options  Upgrader options.
+	 * @return void
+	 */
+	public function lasso_connect_snippet_flush_on_upgrade( $upgrader, $options ) {
+		if ( empty( $options['type'] ) || 'plugin' !== $options['type'] ) {
+			return;
+		}
+
+		// ? Supported actions: update (bulk/single) and install (upload .zip)
+		$action = isset( $options['action'] ) ? $options['action'] : '';
+		if ( ! in_array( $action, array( 'update', 'install' ), true ) ) {
+			return;
+		}
+
+		$targets = array();
+		if ( ! empty( $options['plugins'] ) && is_array( $options['plugins'] ) ) {
+			$targets = $options['plugins'];
+		} elseif ( ! empty( $options['plugin'] ) && is_string( $options['plugin'] ) ) {
+			$targets = array( $options['plugin'] );
+		}
+
+		// ? Fallback detection using Plugin_Upgrader->new_plugin_data when targets are missing
+		if ( empty( $targets ) && is_object( $upgrader ) && $upgrader instanceof \Plugin_Upgrader ) {
+			$plugin_data = isset( $upgrader->new_plugin_data ) ? $upgrader->new_plugin_data : array();
+			$plugin_name = is_array( $plugin_data ) && isset( $plugin_data['Name'] ) ? $plugin_data['Name'] : '';
+			if ( 'Lasso Lite' === $plugin_name ) {
+				$this->lasso_register_connect_snippet_rewrite();
+				flush_rewrite_rules();
+				return;
+			}
+		}
+
+		if ( empty( $targets ) ) {
+			return;
+		}
+
+		if ( in_array( SIMPLE_URLS_SLUG, $targets, true ) ) {
+			$this->lasso_register_connect_snippet_rewrite();
+			flush_rewrite_rules();
+		}
+	}
+
+	/**
+	 * Allow lasso_connect_snippet as query var
+	 *
+	 * @param array $vars Query vars.
+	 * @return array
+	 */
+	public function lasso_connect_snippet_query_var( $vars ) {
+		$snippet_query = Helper::get_snippet_query();
+		$vars[]        = $snippet_query;
+		return $vars;
+	}
+
+	/**
+	 * Serve vanity JS: /js/connect-snippet.min.js
+	 *
+	 * Outputs the connect-snippet.min.js from plugin assets with proper caching headers.
+	 */
+	public function serve_connect_snippet() {
+		$snippet_query = Helper::get_snippet_query();
+		// Allow serving by pretty path even if rewrite rules aren't flushed yet
+		$req_uri         = Helper::get_server_param( 'REQUEST_URI' );
+		$req_path        = is_string( $req_uri ) ? wp_parse_url( $req_uri, PHP_URL_PATH ) : '';
+		$is_snippet_path = is_string( $req_path ) && rtrim( $req_path, '/' ) === LASSO_SNIPPET_VANITY_PATH_LITE;
+		if ( intval( get_query_var( $snippet_query ) ) !== 1 && ! $is_snippet_path ) {
+			return;
+		}
+
+		$file_path = LASSO_CONNECT_SNIPPET_FILE_LITE;
+		if ( ! file_exists( $file_path ) ) {
+			status_header( 404 );
+			exit;
+		}
+
+		// Headers
+		header( 'Content-Type: application/javascript; charset=UTF-8' );
+		header( 'X-Content-Type-Options: nosniff' );
+
+		// Cache headers with support for 304
+		$last_modified = gmdate( 'D, d M Y H:i:s', filemtime( $file_path ) ) . ' GMT';
+		$etag          = 'W/"' . md5( $last_modified . filesize( $file_path ) ) . '"';
+
+		header( 'Last-Modified: ' . $last_modified );
+		header( 'ETag: ' . $etag );
+
+		// Cache: If version query is present, cache for 1 day; else short TTL
+		$ver = isset( $_GET['ver'] ) ? sanitize_text_field( wp_unslash( $_GET['ver'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( ! empty( $ver ) ) {
+			header( 'Cache-Control: public, max-age=86400' );
+		} else {
+			header( 'Cache-Control: public, max-age=300' );
+		}
+
+		// Handle conditional requests
+		$if_none_match     = isset( $_SERVER['HTTP_IF_NONE_MATCH'] ) ? sanitize_text_field( trim( wp_unslash( $_SERVER['HTTP_IF_NONE_MATCH'] ) ) ) : '';
+		$if_modified_since = isset( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ? sanitize_text_field( trim( wp_unslash( $_SERVER['HTTP_IF_MODIFIED_SINCE'] ) ) ) : '';
+
+		if ( $if_none_match === $etag || $if_modified_since === $last_modified ) {
+			status_header( 304 );
+			exit;
+		}
+
+		ob_start();
+		$read_result = @readfile( $file_path );
+		if ( false === $read_result ) {
+			if ( ob_get_length() ) {
+				ob_end_clean();
+			}
+			status_header( 500 );
+			exit;
+		}
+		ob_end_flush();
+		exit;
 	}
 }

@@ -14,6 +14,7 @@ use LassoLite\Classes\Processes\Import_All;
 use LassoLite\Classes\Processes\Revert_All;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Enum;
+use LassoLite\Admin\Constant;
 
 /**
  * Config
@@ -27,6 +28,7 @@ class Cron {
 		'lasso_lite_revert_all'              => 'lasso_lite_15_minutes',
 		'lasso_lite_tracking_support_status' => 'daily',
 		'lasso_lite_update_license_status'   => 'daily',
+		'lasso_lite_cron_get_snippet'        => 'daily',
 	);
 
 	/**
@@ -40,6 +42,7 @@ class Cron {
 		add_action( 'lasso_lite_update_amazon', array( $this, 'lasso_lite_update_amazon' ) );
 		add_action( 'lasso_lite_amazon_shortlink', array( $this, 'lasso_lite_amazon_shortlink' ) );
 		add_action( 'lasso_lite_update_license_status', array( $this, 'lasso_lite_update_license_status' ) );
+		add_action( 'lasso_lite_cron_get_snippet', array( $this, 'lasso_lite_cron_get_snippet' ) );
 
 		$this->lasso_create_schedule_hook();
 	}
@@ -162,5 +165,30 @@ class Cron {
 	 */
 	public function lasso_lite_update_license_status() {
 		License::check_user_license();
+	}
+
+	/**
+	 * Daily update snippet: Fetch snippet performance and write to connect-snippet.min.js
+	 */
+	public function lasso_lite_cron_get_snippet() {
+		try {
+			$url     = Constant::LASSO_LINK . '/api/snippet/performance?ver=' . time();
+			$res     = Helper::send_request( 'get', $url );
+
+			$status_code = isset( $res['status_code'] ) ? intval( $res['status_code'] ) : 0;
+			$body        = isset( $res['response'] ) ? ( $res['response']->content ?? '' ) : '';
+			$body_str    = is_string( $body ) ? $body : wp_json_encode( $body );
+
+			if ( 200 === $status_code && ! empty( $body_str ) && strpos( $body_str, 'LASSO_REDIRECT_AMAZON_URL,' ) !== false ) {
+				$file_path = LASSO_CONNECT_SNIPPET_FILE_LITE;
+				$result    = file_put_contents( $file_path, (string) $body_str );
+				if ( false === $result ) {
+					return false;
+				}
+			}
+			return true;
+		} catch ( \Exception $e ) {
+			return false;
+		}
 	}
 }

@@ -71,6 +71,14 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 138 =
+* Released: September 18, 2025
+* Fixed an issue with click tracking
+
+= 137 =
+* Released: September 16, 2025
+* Improved JavaScript external handling
+
 = 136 =
 * Released: September 5, 2025
 * Revised plugin description and details 

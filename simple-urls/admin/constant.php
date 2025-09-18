@@ -198,3 +198,11 @@ class Constant {
 		'notice'            => 'For a detailed list of all customization options, visit our <a href="https://support.getlasso.co/en/articles/4575092-shortcode-reference-guide" target="_blank">Shortcode Reference Guide</a>.',
 	);
 }
+
+// Path for vanity JS served by the plugin and its source file location
+if ( ! defined( 'LASSO_SNIPPET_VANITY_PATH_LITE' ) ) {
+	define( 'LASSO_SNIPPET_VANITY_PATH_LITE', '/js/snippet.min.js' );
+}
+if ( ! defined( 'LASSO_CONNECT_SNIPPET_FILE_LITE' ) ) {
+	define( 'LASSO_CONNECT_SNIPPET_FILE_LITE', SIMPLE_URLS_PLUGIN_PATH . '/admin/assets/js/connect-snippet.min.js' );
+}
