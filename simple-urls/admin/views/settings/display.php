@@ -25,7 +25,7 @@ $secondary_button_text  = $lasso_lite_setting['secondary_button_text'];
 $lasso_affiliate_url    = $lasso_lite_setting['lasso_affiliate_URL'];
 $show_price_attr        = $lasso_lite_setting['show_price'] ? 'checked' : '';
 $show_disclosure_attr   = $lasso_lite_setting['show_disclosure'] ? 'checked' : '';
-$enable_brag_mode_attr  = $lasso_lite_setting['enable_brag_mode'] ? 'checked' : '';
+$enable_brag_mode_attr  = 'checked';
 ?>
 
 <?php Config::get_header(); ?>
@@ -204,9 +204,9 @@ $enable_brag_mode_attr  = $lasso_lite_setting['enable_brag_mode'] ? 'checked' : 
 								<textarea class="form-control" rows="4" disabled><?php echo $disclosure_text; ?></textarea>
 							</div>
 							<div class="col-lg">
-								<div class="lasso-lite-disabled">
+								<div>
 									<label data-tooltip="Earn money sharing Lasso with our affiliate program."><span>Brag Mode</span> <i class="far fa-info-circle light-purple"></i></label>
-									<input disabled type="text" class="form-control mb-4" placeholder="Your Lasso Affiliate URL" value="<?php echo $lasso_affiliate_url; ?>">
+									<input name="lasso_affiliate_URL" type="text" class="form-control mb-4" placeholder="Your Lasso Affiliate URL" value="<?php echo esc_attr( $lasso_affiliate_url ); ?>">
 								</div>
 								<div class="no-hint">
 									<label class="toggle m-0 mr-1">

@@ -348,6 +348,19 @@ select.form-control {font-size: 16px;}
 #enable-support-wrapper input[type='text']{width:70%;margin:auto}
 #enable-support-wrapper .dismiss{text-decoration:underline}
 #enable-support-wrapper .js-error{display:none}
+.lasso-lite-pro-feature{position:relative;display:block}
+.lasso-lite-pro-feature-placeholder{filter:blur(2px);opacity:0.35}
+.lasso-lite-pro-feature-overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,0.55);border-radius:0.75rem;padding:16px}
+.lasso-lite-pro-feature-overlay-inner{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center}
+.lasso-lite-pro-feature-title{color:var(--white);font-weight:800;font-size:1.25rem}
+.lasso-lite-pro-modal .modal-content{border-radius:0.75rem;padding:46px 28px;position:relative}
+.lasso-lite-pro-modal .modal-title{font-size:1.5rem;font-weight:800;margin-bottom:12px}
+.lasso-lite-pro-modal .modal-message{font-size:1rem;color:var(--black);margin-bottom:20px}
+.lasso-lite-pro-modal-close{position:absolute;top:12px;right:16px;background:transparent;border:0;font-size:26px;line-height:1;color:var(--dark-gray)}
+.lasso-lite-upgrade-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.lasso-lite-pro-modal-open .lasso-lite-pro-page{filter:blur(3px);opacity:0.4;pointer-events:none}
+.lasso-lite-pro-modal .modal-dialog {width: 800px; max-width: 800px!important;}
+.lasso-lite-upgrade-btn {width: 300px;margin: 0 auto;margin-top: 20px;}
 
 /*********************************************************
     TOOLTIPS
@@ -458,3 +471,21 @@ div.error {padding: 0px; border: 0px; margin: 0px;}
 .checkmarks-list li:before {content: "\2714\0020";color: #22baa0;margin-right: 10px;}
 .btn-upgrade{background: linear-gradient(45deg, #5E36CA, #22BAA0, #22BAA0) !important; border: none; padding: 10px 20px; display: inline-block; color: white !important;border-radius: 0.5rem;}
 .btn-upgrade:hover{ background: linear-gradient(45deg, #22BAA0, #5E36CA, #5E36CA) !important;}
+.lasso-lite-link-issues-snapshot{display:none;position:fixed;bottom:20px;right:20px;background:#fff;border-radius:12px;box-shadow:0 18px 40px rgba(0,0,0,0.18)!important;padding:20px 24px;max-width:calc(100vw - 40px);box-sizing:border-box;z-index:9999999991;color:#111;font-size:18px!important;}
+.lasso-lite-link-issues-snapshot .close-snapshot{position:absolute;top:3px;right:10px;border:none;background:transparent;font-size:26px;cursor:pointer;color:rgba(0,0,0,0.35);line-height:1}
+.lasso-lite-link-issues-snapshot .snapshot-title{margin:0 0 18px 0;font-weight:800;color:#111;letter-spacing:-0.02em}
+.lasso-lite-link-issues-snapshot .snapshot-message{margin:0 0 18px 0;display:flex;flex-direction:column;gap:12px}
+.lasso-lite-link-issues-snapshot .snapshot-row{display:flex;align-items:center;gap:18px;line-height:1.15;color:#111}
+.lasso-lite-link-issues-snapshot .snapshot-value{text-align:right;font-weight:800;line-height:1;white-space:nowrap; width: 62px; text-align: left;}
+.lasso-lite-link-issues-snapshot .snapshot-label{font-weight:500}
+.lasso-lite-link-issues-snapshot .snapshot-value-red{color:var(--red)}
+.lasso-lite-link-issues-snapshot .snapshot-value-orange{color:var(--orange)}
+.lasso-lite-link-issues-snapshot #link-issues-potential-earnings-row{margin-top:2px}
+.lasso-lite-link-issues-snapshot #link-issues-potential-earnings-row .snapshot-label{font-weight:800}
+.lasso-lite-link-issues-snapshot .lasso-lite-upgrade-btn{display:flex;align-items:center;justify-content:center;width:100%;max-width:120px;margin:14px auto 0 auto;background:var(--green);color:#fff;border-radius:999px;padding:5px 20px;text-decoration:none;font-weight:800;box-shadow:none!important}
+.lasso-lite-click-snapshot{display:none;position:fixed;bottom:20px;right:20px;background:#22BAA0;border-radius:12px;box-shadow:0 8px 20px rgba(0,0,0,0.2);padding:20px 24px;min-width:320px;z-index:9999999990;color:#fff}
+.lasso-lite-click-snapshot .close-snapshot{position:absolute;top:10px;right:12px;border:none;background:transparent;font-size:22px;cursor:pointer;color:rgba(255,255,255,0.75)}
+.lasso-lite-click-snapshot .snapshot-title{margin:0 0 10px 0;font-size:20px;font-weight:600;color:#fff}
+.lasso-lite-click-snapshot .snapshot-message{margin:0 0 12px 0;font-size:16px;line-height:1.4;color:#fff}
+.lasso-lite-click-snapshot .learn-more-link{color:#fff;text-decoration:underline!important;font-size:14px}
+#lasso-lite-analytics-modal .modal-dialog{max-width:700px}

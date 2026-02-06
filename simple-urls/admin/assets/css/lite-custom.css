@@ -1,6 +1,6 @@
 /* ONBOARDING */
 .min-vh-116 {
-    min-height: 116vh !important;
+    min-height: 100vh !important;
 }
 #onboarding_container {
     max-width: 90%;
@@ -122,10 +122,6 @@
     color: #979CA0 !important;
 }
 
-.intercom-lightweight-app .intercom-lightweight-app-launcher.intercom-launcher {
-    display: none;
-}
-
 /* Request Review */
 .ls-review .icon{display: inline-block; width: fit-content; padding: 15px;}
 .ls-review .icon img{width: 50px; border-radius: 50%;}
@@ -135,3 +131,454 @@
 .ls-review .dismiss{color: var(--lasso-blue);}
 .ls-review .dismiss{font-size: 150%;}
 .ls-review .dismiss:hover{cursor: pointer;}
+
+/* Lasso Signup UI */
+#lasso-signup-wrapper {
+    max-width: 360px;
+    margin: 30px auto;
+}
+
+.onboarding-form #lasso-email-signup-form label {
+    color: var(--black);
+}
+
+.onboarding-form .lasso-signup-divider span {
+    color: #374151;
+}
+
+.lasso-signup-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+    background-color: #232a3a;
+    color: #ffffff;
+}
+
+.lasso-signup-btn:hover {
+    background-color: var(--lasso-purple);
+}
+
+.lasso-signup-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.lasso-signup-btn-google {
+    background-color: #232a3a;
+    color: #ffffff;
+}
+
+.lasso-signup-btn-google:hover {
+    background-color: var(--lasso-purple);
+    color: #ffffff;
+}
+
+.lasso-signup-divider {
+    display: flex;
+    align-items: center;
+}
+
+.lasso-signup-divider::before,
+.lasso-signup-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #d1d5db;
+}
+
+.lasso-signup-divider span {
+    padding: 0 16px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.footer-form .lasso-signup-divider span {
+    color: white;
+}
+
+#lasso-signup-wrapper .form-group label {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+#lasso-signup-wrapper .onboarding-form .form-group label {
+    color: #374151;
+}
+
+#lasso-signup-wrapper .footer-form .form-group label {
+    color: white;
+}
+
+.footer-form #lasso-email-signup-form label {
+    color: white;
+}
+
+#lasso-signup-wrapper .form-control {
+    padding: 12px 16px;
+    font-size: 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background-color: #f9fafb;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+#lasso-signup-wrapper .form-control:focus {
+    outline: none;
+    border-color: var(--lasso-purple);
+    box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    background-color: #ffffff;
+}
+
+#lasso-signup-wrapper .form-control.invalid-field {
+    border-color: #ef4444;
+}
+
+#lasso-signup-wrapper .form-control.invalid-field:focus {
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.lasso-password-wrapper {
+    position: relative;
+}
+
+.lasso-password-wrapper .form-control {
+    padding-right: 48px;
+}
+
+.lasso-password-toggle {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lasso-password-toggle:hover {
+    color: #6b7280;
+}
+
+.lasso-field-error {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 6px;
+    font-size: 13px;
+    color: #ef4444;
+}
+
+.lasso-field-error::before {
+    content: '⚠';
+    font-size: 12px;
+}
+
+.lasso-general-error {
+    padding: 12px;
+    background-color: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    color: #dc2626;
+    font-size: 14px;
+    text-align: center;
+}
+
+.lasso-skip-link {
+    color: #6b7280;
+    text-decoration: underline!important;
+    font-size: 14px;
+}
+
+.lasso-skip-link:hover {
+    color: #374151;
+}
+
+.lasso-signup-success {
+    text-align: center;
+    padding: 24px 0;
+}
+
+.lasso-signup-success h3 {
+    color: var(--green);
+    font-weight: 600;
+}
+
+.lasso-success-icon {
+    display: flex;
+    justify-content: center;
+}
+
+.lasso-login-btn {
+    background-color: #1f2937;
+    color: #fff !important;
+    text-decoration: none !important;
+}
+#btn-login-after-signup, #btn-login-after-signup:hover{
+    color: #000 !important;
+}
+
+#lasso-lite-analytics-modal #btn-login-after-signup, #lasso-lite-analytics-modal #btn-login-after-signup:hover{
+    color: white !important;
+}
+
+.lasso-login-btn:hover {
+    background-color: #111827;
+    color: #fff !important;
+}
+
+.lasso-plugin-footer {
+    margin-top: 40px;
+    position: relative;
+}
+
+.lasso-plugin-footer-version {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 400;
+    opacity: 0.9;
+}
+
+.lasso-footer-cta {
+    background-color: #5E36CA;
+    padding: 32px 24px;
+    text-align: center;
+}
+
+.lasso-footer-cta-inner {
+    max-width: 450px;
+    margin: 0 auto;
+}
+
+.lasso-footer-cta-title {
+    color: #ffffff;
+    font-size: 30px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.lasso-footer-cta-subtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 16px;
+    margin-bottom: 24px;
+}
+
+.lasso-footer-signup-wrapper {
+    max-width: 320px;
+    margin: 30px auto;
+}
+
+.lasso-footer-cta-footer {
+    max-width: 800px;
+    margin: 36px auto 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    align-items: center;
+    gap: 16px;
+}
+
+.lasso-plugin-footer--with-cta .lasso-footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0px;
+}
+
+.lasso-plugin-footer--with-cta .lasso-footer-social {
+    display: flex;
+    gap: 16px;
+}
+
+.lasso-plugin-footer--with-cta .lasso-footer-links {
+    display: flex;
+    gap: 24px;
+}
+
+.lasso-footer-cta .lasso-signup-btn {
+    background-color: #ffffff;
+    color: #5E36CA;
+}
+
+.lasso-footer-cta .lasso-signup-btn:hover {
+    background-color: #f3f4f6;
+}
+
+.lasso-footer-cta .lasso-signup-btn-google {
+    background-color: #ffffff;
+    color: #5E36CA;
+    font-weight: 600;
+}
+
+.lasso-footer-cta .lasso-signup-btn-google:hover {
+    background-color: #f3f4f6;
+    color: #5E36CA;
+}
+
+.lasso-footer-success {
+    text-align: center;
+    padding: 12px 0;
+}
+
+.lasso-footer-success h3 {
+    font-weight: 600;
+}
+
+.lasso-footer-default {
+    background-color: #5E36CA;
+    padding: 24px;
+}
+
+.lasso-footer-inner {
+    max-width: 500px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.lasso-footer-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.lasso-footer-logo {
+    height: 50px;
+    width: auto;
+}
+
+.lasso-footer-social {
+    display: flex;
+    gap: 16px;
+}
+
+.lasso-footer-social a {
+    color: #ffffff;
+    font-size: 18px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease;
+}
+
+.lasso-footer-social a:hover {
+    opacity: 1;
+    color: #ffffff;
+}
+
+.lasso-footer-links {
+    display: flex;
+    gap: 24px;
+}
+
+.lasso-footer-links a {
+    color: #ffffff;
+    font-size: 14px;
+    text-decoration: none;
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+}
+
+.lasso-footer-links a:hover {
+    opacity: 1;
+    color: #ffffff;
+}
+
+@media (max-width: 768px) {
+    .lasso-footer-inner {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .lasso-footer-brand {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .lasso-footer-links {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .lasso-footer-cta-footer {
+        grid-template-columns: 1fr;
+        text-align: center;
+    }
+
+    .lasso-plugin-footer--with-cta .lasso-footer-brand {
+        flex-direction: column;
+    }
+}
+
+.lasso-footer-nav-link {
+    color: #ffffff;
+    font-size: 14px;
+    text-decoration: none;
+    opacity: 0.9;
+    transition: opacity 0.2s ease;
+    text-align: center;
+    margin-bottom: 0;
+}
+
+.lasso-footer-nav-link:hover {
+    opacity: 1;
+    color: #ffffff;
+}
+
+.lite-container.min-height {
+    min-height: unset !important;
+}
+
+.lasso-plugin-footer a {
+    text-decoration: none;
+    color: var(--white);
+    font-weight: normal;
+    font-size: 1rem;
+    display: block;
+    line-height: 1.5;
+    margin-bottom: 0.5rem;
+}
+
+.lasso-plugin-footer a:hover {
+    text-shadow: 0px 0px 10px white !important;
+}
+
+.lasso-footer-social a,
+.lasso-footer-links a,
+.lasso-footer-nav-link {
+    display: inline-block;
+    margin-bottom: 0;
+    text-shadow: none !important;
+}
+
+.lasso-lite-layout {
+    min-height: calc(100vh - 32px);
+    display: flex;
+    flex-direction: column;
+}
+
+.lasso-lite-layout > section {
+    flex: 1 0 auto;
+}
+
+@media screen and (max-width: 782px) {
+    .lasso-lite-layout {
+        min-height: calc(100vh - 46px);
+    }
+}

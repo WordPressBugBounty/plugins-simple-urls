@@ -16,7 +16,7 @@ use LassoLite\Classes\Page;
 
 <!-- GROUP -->
 <input id="total-posts" class="d-none" value="0" />
-<section class="px-3 py-5">
+<section class="px-3 pt-5 pb-0">
 	<div class="lite-container min-height">
 
 		<!-- TITLE BAR -->

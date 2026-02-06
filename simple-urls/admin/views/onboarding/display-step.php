@@ -4,7 +4,7 @@ use LassoLite\Classes\Enum;
 
 $show_price_attr       = $lasso_options['show_price'] ? 'checked' : '';
 $show_disclosure_attr  = $lasso_options['show_disclosure'] ? 'checked' : '';
-$enable_brag_mode_attr = $lasso_options['enable_brag_mode'] ? 'checked' : '';
+$enable_brag_mode_attr = 'checked';
 ?>
 
 <div class="tab-item d-none" data-step="display">
@@ -193,9 +193,9 @@ $enable_brag_mode_attr = $lasso_options['enable_brag_mode'] ? 'checked' : '';
 						<textarea class="form-control" rows="4" disabled><?php echo $lasso_options['disclosure_text']; ?></textarea>
 					</div>
 					<div class="col-lg">
-						<div class="lasso-lite-disabled">
+						<div>
 							<label data-tooltip="Earn money sharing Lasso with our affiliate program."><span>Brag Mode</span> <i class="far fa-info-circle light-purple"></i></label>
-							<input disabled type="text" class="form-control mb-4" placeholder="Your Lasso Affiliate URL" value="<?php echo $lasso_options['lasso_affiliate_URL']; ?>">
+							<input name="lasso_affiliate_URL" type="text" class="form-control mb-4" placeholder="Your Lasso Affiliate URL" value="<?php echo esc_attr( $lasso_options['lasso_affiliate_URL'] ); ?>">
 						</div>
 						<div class="no-hint">
 							<label class="toggle m-0 mr-1">

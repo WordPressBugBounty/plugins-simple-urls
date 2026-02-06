@@ -10,6 +10,7 @@ namespace LassoLite\Pages;
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Affiliate_Link;
+use LassoLite\Classes\Enum;
 use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Setting;
@@ -29,8 +30,17 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_get_display_html', array( $this, 'lasso_lite_get_display_html' ) );
 		add_action( 'wp_ajax_lasso_lite_get_link_quick_detail', array( $this, 'lasso_lite_get_link_quick_detail' ) );
 		add_action( 'wp_ajax_lasso_lite_save_link_quick_detail', array( $this, 'lasso_lite_save_link_quick_detail' ) );
+		add_action( 'wp_ajax_lasso_lite_get_click_snapshot', array( $this, 'lasso_lite_get_click_snapshot' ) );
+		add_action( 'wp_ajax_lasso_lite_get_link_issues_snapshot', array( $this, 'lasso_lite_get_link_issues_snapshot' ) );
+		add_action( 'wp_ajax_lasso_lite_get_links_issues_totals', array( $this, 'lasso_lite_get_links_issues_totals' ) );
+		add_action( 'wp_ajax_lasso_lite_get_earnings_estimate', array( $this, 'lasso_lite_get_earnings_estimate' ) );
+		add_action( 'wp_ajax_lasso_lite_get_external_signup_config', array( $this, 'lasso_lite_get_external_signup_config' ) );
+		add_action( 'wp_ajax_lasso_lite_external_signup', array( $this, 'lasso_lite_external_signup' ) );
+		add_action( 'wp_ajax_lasso_lite_external_signup_exchange', array( $this, 'lasso_lite_external_signup_exchange' ) );
 		add_action( 'wp_ajax_lasso_lite_get_setup_progress', array( $this, 'lasso_lite_get_setup_progress' ) );
 		add_action( 'wp_ajax_lasso_lite_save_support', array( $this, 'lasso_lite_save_support' ) );
+		add_action( 'wp_ajax_lasso_lite_save_lasso_account', array( $this, 'lasso_lite_save_lasso_account' ) );
+		add_action( 'wp_ajax_lasso_lite_check_existing_account', array( $this, 'lasso_lite_check_existing_account' ) );
 		add_action( 'wp_ajax_lasso_lite_review_snooze', array( $this, 'lasso_lite_review_snooze' ) );
 		add_action( 'wp_ajax_lasso_lite_disable_review', array( $this, 'lasso_lite_disable_review' ) );
 		add_action( 'wp_ajax_lasso_lite_dismiss_notice', array( $this, 'lasso_lite_dismiss_notice' ) );
@@ -191,6 +201,308 @@ class Ajax {
 	}
 
 	/**
+	 * Get click snapshot data
+	 */
+	public function lasso_lite_get_click_snapshot() {
+		Helper::verify_access_and_nonce();
+
+		$post      = Helper::POST(); // phpcs:ignore
+		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
+
+		$transient_key = 'lasso_lite_click_snapshot_' . md5( \site_url() );
+		$cache_ttl     = (int) \apply_filters( 'lasso_lite_click_snapshot_cache_ttl', 6 * \HOUR_IN_SECONDS );
+
+		if ( $use_cache ) {
+			$cached = \get_transient( $transient_key );
+			if ( false !== $cached ) {
+				wp_send_json_success( $cached );
+			}
+		}
+
+		$response = Helper::send_request(
+			'get',
+			Constant::LASSO_LINK . '/clicks/lasso-lite/monthly',
+			array(),
+			array(
+				'site-url' => \site_url(),
+			)
+		);
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg'         => 'Unable to fetch click snapshot.',
+					'status_code' => $response['status_code'] ?? null,
+					'response'    => $response['response'] ?? null,
+				)
+			);
+		}
+
+		if ( $use_cache ) {
+			\set_transient( $transient_key, $response['response'], $cache_ttl );
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * Get link issues snapshot data
+	 */
+	public function lasso_lite_get_link_issues_snapshot() {
+		Helper::verify_access_and_nonce();
+
+		$post      = Helper::POST(); // phpcs:ignore
+		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
+
+		$transient_key = 'lasso_lite_link_issues_snapshot_' . md5( \site_url() );
+		$cache_ttl     = (int) \apply_filters( 'lasso_lite_link_issues_snapshot_cache_ttl', 6 * \HOUR_IN_SECONDS );
+
+		if ( $use_cache ) {
+			$cached = \get_transient( $transient_key );
+			if ( false !== $cached ) {
+				wp_send_json_success( $cached );
+			}
+		}
+
+		$response = Helper::send_request(
+			'get',
+			Constant::LASSO_LINK . '/lite/notify-snappshot',
+			array(),
+			array(
+				'site-url' => \site_url(),
+			)
+		);
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg'         => 'Unable to fetch link issues snapshot.',
+					'status_code' => $response['status_code'] ?? null,
+					'response'    => $response['response'] ?? null,
+				)
+			);
+		}
+
+		if ( $use_cache ) {
+			\set_transient( $transient_key, $response['response'], $cache_ttl );
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * Get link issues totals data (broken/out-of-stock/opportunities) for dashboard pills.
+	 */
+	public function lasso_lite_get_links_issues_totals() {
+		Helper::verify_access_and_nonce();
+
+		$post      = Helper::POST(); // phpcs:ignore
+		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
+
+		$transient_key = 'lasso_lite_links_issues_totals_' . md5( \site_url() );
+		$cache_ttl     = (int) \apply_filters( 'lasso_lite_links_issues_totals_cache_ttl', 6 * \HOUR_IN_SECONDS );
+
+		if ( $use_cache ) {
+			$cached = \get_transient( $transient_key );
+			if ( false !== $cached ) {
+				wp_send_json_success( $cached );
+			}
+		}
+
+		$response = Helper::send_request(
+			'get',
+			Constant::LASSO_LINK . '/api/links/issues',
+			array(),
+			array(
+				'site-url' => \site_url(),
+			)
+		);
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg'         => 'Unable to fetch link issues totals.',
+					'status_code' => $response['status_code'] ?? null,
+					'response'    => $response['response'] ?? null,
+				)
+			);
+		}
+
+		if ( $use_cache ) {
+			\set_transient( $transient_key, $response['response'], $cache_ttl );
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * Get estimated earnings for this site (used for monthly notification).
+	 */
+	public function lasso_lite_get_earnings_estimate() {
+		Helper::verify_access_and_nonce();
+
+		$post      = Helper::POST(); // phpcs:ignore
+		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
+
+		$transient_key = 'lasso_lite_earnings_estimate_' . md5( \site_url() );
+		$cache_ttl     = (int) \apply_filters( 'lasso_lite_earnings_estimate_cache_ttl', 6 * \HOUR_IN_SECONDS );
+
+		if ( $use_cache ) {
+			$cached = \get_transient( $transient_key );
+			if ( false !== $cached ) {
+				wp_send_json_success( $cached );
+			}
+		}
+
+		$response = Helper::send_request(
+			'get',
+			Constant::LASSO_LINK . '/api/earnings/estimate',
+			array(),
+			array(
+				'site-url' => \site_url(),
+			)
+		);
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg'         => 'Unable to fetch earnings estimate.',
+					'status_code' => $response['status_code'] ?? null,
+					'response'    => $response['response'] ?? null,
+				)
+			);
+		}
+
+		if ( $use_cache ) {
+			\set_transient( $transient_key, $response['response'], $cache_ttl );
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * Get external signup config
+	 */
+	public function lasso_lite_get_external_signup_config() {
+		Helper::verify_access_and_nonce();
+
+		$post         = Helper::POST(); // phpcs:ignore
+		$callback_url = esc_url_raw( $post['callback_url'] ?? '' );
+		$source       = sanitize_text_field( $post['source'] ?? 'lasso-lite' );
+
+		if ( empty( $callback_url ) ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'Missing callback URL.',
+				)
+			);
+		}
+
+		$request_url = add_query_arg(
+			array(
+				'source'       => $source,
+				'callback_url' => $callback_url,
+			),
+			Constant::LASSO_HUB_URL . '/api/account/external/config'
+		);
+
+		$response = Helper::send_request( 'get', $request_url );
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'Unable to fetch signup config.',
+				)
+			);
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * External signup
+	 */
+	public function lasso_lite_external_signup() {
+		Helper::verify_access_and_nonce();
+
+		$post     = Helper::POST(); // phpcs:ignore
+		$email    = sanitize_email( $post['email'] ?? '' );
+		$password = (string) ( $post['password'] ?? '' );
+		$source   = sanitize_text_field( $post['source'] ?? 'lasso-lite' );
+
+		if ( empty( $email ) || empty( $password ) ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'Missing required fields.',
+				)
+			);
+		}
+
+		$data     = array(
+			'email'    => $email,
+			'password' => $password,
+			'source'   => $source,
+		);
+		$headers  = array(
+			'Content-Type' => 'application/json',
+		);
+		$response = Helper::send_request( 'post', Constant::LASSO_HUB_URL . '/api/signup/external', $data, $headers );
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			$error_message = 'Signup failed.';
+			if ( ! empty( $response['response'] ) ) {
+				$error_message = $response['response']->error ?? $response['response']->message ?? $error_message;
+			}
+
+			wp_send_json_error(
+				array(
+					'msg'         => $error_message,
+					'status_code' => $response['status_code'],
+					'response'    => $response['response'],
+				)
+			);
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
+	 * External signup exchange
+	 */
+	public function lasso_lite_external_signup_exchange() {
+		Helper::verify_access_and_nonce();
+
+		$post          = Helper::POST(); // phpcs:ignore
+		$exchange_code = sanitize_text_field( $post['exchange_code'] ?? '' );
+
+		if ( empty( $exchange_code ) ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'Missing exchange code.',
+				)
+			);
+		}
+
+		$data     = array(
+			'exchange_code' => $exchange_code,
+		);
+		$headers  = array(
+			'Content-Type' => 'application/json',
+		);
+		$response = Helper::send_request( 'post', Constant::LASSO_HUB_URL . '/api/signup/external/exchange', $data, $headers );
+
+		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'Exchange failed.',
+				)
+			);
+		}
+
+		wp_send_json_success( $response['response'] );
+	}
+
+	/**
 	 * Get setup progress information
 	 */
 	public function lasso_lite_get_setup_progress() {
@@ -204,6 +516,111 @@ class Ajax {
 		Helper::verify_access_and_nonce();
 
 		Setting::save_support();
+	}
+
+	/**
+	 * Save Lasso account credentials after signup
+	 */
+	public function lasso_lite_save_lasso_account() {
+		Helper::verify_access_and_nonce();
+
+		$post    = Helper::POST();
+		$email   = sanitize_email( $post['email'] ?? '' );
+		$api_key = sanitize_text_field( $post['api_key'] ?? '' );
+		$user_id = intval( $post['user_id'] ?? 0 );
+
+		if ( empty( $email ) || empty( $api_key ) ) {
+			wp_send_json_error( array( 'msg' => 'Missing required fields' ) );
+			return;
+		}
+
+		Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $email );
+		Helper::update_option( Constant::LASSO_ACCOUNT_API_KEY, $api_key );
+		Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
+
+		wp_send_json_success(
+			array(
+				'success' => true,
+				'msg'     => 'Account saved successfully',
+			)
+		);
+	}
+
+	/**
+	 * Check whether current site already has an account in Lasso (via lasso.link),
+	 * and if yes sync WP options so the footer signup CTA won't show.
+	 */
+	public function lasso_lite_check_existing_account() {
+		Helper::verify_access_and_nonce();
+
+		$is_connected_aff      = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
+		$lasso_account_email   = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		$lasso_account_user_id = intval( Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
+		$is_lasso_connected    = ! empty( $lasso_account_email ) || $lasso_account_user_id > 0 || $is_connected_aff > 0;
+
+		if ( $is_lasso_connected ) {
+			wp_send_json_success(
+				array(
+					'connected' => true,
+					'synced'    => false,
+				)
+			);
+		}
+
+		$lookup = Helper::send_request(
+			'get',
+			rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing',
+			array(),
+			array(
+				'site-url' => \site_url(),
+			)
+		);
+
+		$lookup_body = $lookup['response'] ?? null;
+		if ( empty( $lookup_body ) || ( $lookup['status_code'] ?? 500 ) >= 400 || empty( $lookup_body->data ) ) {
+			wp_send_json_success(
+				array(
+					'connected' => false,
+					'synced'    => false,
+				)
+			);
+		}
+
+		if ( empty( $lookup_body->data->exists ) ) {
+			wp_send_json_success(
+				array(
+					'connected' => false,
+					'synced'    => false,
+					'exists'    => false,
+				)
+			);
+		}
+
+		$email   = sanitize_email( $lookup_body->data->email ?? '' );
+		$user_id = intval( $lookup_body->data->user_id ?? 0 );
+		if ( empty( $email ) || $user_id <= 0 ) {
+			wp_send_json_success(
+				array(
+					'connected' => false,
+					'synced'    => false,
+					'exists'    => true,
+				)
+			);
+		}
+
+		Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $email );
+		Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
+
+		wp_send_json_success(
+			array(
+				'connected' => true,
+				'synced'    => true,
+				'email'     => $email,
+				'user_id'   => $user_id,
+			)
+		);
 	}
 
 	/**

@@ -71,6 +71,31 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 143 =
+* Released: January 23, 2026
+* Added simple click counts for links
+* Improved link optimizations for all free users
+
+= 142 =
+* Released: January 14, 2026
+* API endpoint fix
+
+= 141 =
+* Released: January 13, 2026
+* Added in-app account creation
+* Improved Lasso account connection
+* Various small bug fixes
+
+= 140 =
+* Released: November 6, 2025
+* Link handling updates
+* JavaScript Cleanup
+
+= 139 =
+* Released: October 23, 2025
+* Fixed the copy shortcode button
+* Misc JavaScript improvements
+
 = 138 =
 * Released: September 18, 2025
 * Fixed an issue with click tracking

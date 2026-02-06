@@ -18,6 +18,11 @@ function go_to_next_step_action( tab_item_child_element ) {
 		next_tab_container.removeClass('d-none');
 
 		window.scrollTo(0, 0);
+	} else {
+		let dashboard_url = jQuery('#onboarding_container').data('dashboard-url');
+		if ( dashboard_url ) {
+			window.location.href = dashboard_url;
+		}
 	}
 }
 
@@ -42,7 +47,13 @@ function process_up_sell_modal( event ) {
 		let up_sell_modal_w = up_sell_modal.width();
 		let maximum_left = lite_container.width() + lite_container.offset().left;
 		let lasso_lite_disabled_wrapper = jQuery(event.target).closest('.lasso-lite-disabled');
+		let skip_upsell = jQuery(event.target).closest('.lasso-lite-skip-upsell');
 		let support = lasso_lite_helper.get_url_parameter('support');
+
+		if ( skip_upsell.length !== 0 ) {
+			up_sell_modal.css('display', 'none');
+			return;
+		}
 
 		if ( lasso_lite_disabled_wrapper.length !== 0 && support === null ) {
 			let x = ( event.pageX - 150 );

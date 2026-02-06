@@ -26,6 +26,10 @@ class Hook {
 		// ? change Edit URL in Dashboard
 		add_filter( 'get_edit_post_link', array( $this, 'affiliate_link_edit_post_link' ), 10, 3 );
 		add_action( 'wp_ajax_lasso_lite_upload_thumbnail', array( $this, 'upload_thumbnail' ) );
+
+		// ? Customize URLs returned by the editor link pickers for our CPT
+		add_filter( 'wp_link_query', array( $this, 'use_custom_url_instead_permalink' ), 100 );
+		add_filter( 'rest_pre_echo_response', array( $this, 'use_custom_url_instead_permalink_gutenberg' ), 100, 3 );
 	}
 
 	/**
@@ -44,6 +48,67 @@ class Hook {
 		}
 
 		return $url;
+	}
+
+	/**
+	 * Rewrite classic editor link modal results to use our public URL for CPT.
+	 *
+	 * @param array $results Link query results.
+	 * @return array
+	 */
+	public function use_custom_url_instead_permalink( $results ) {
+		if ( ! is_array( $results ) || empty( $results ) ) {
+			return $results;
+		}
+
+		foreach ( $results as &$item ) {
+			$post_id = intval( $item['ID'] ?? 0 );
+			if ( $post_id && SIMPLE_URLS_SLUG === get_post_type( $post_id ) ) {
+				$lasso = Affiliate_Link::get_lasso_url( $post_id );
+				if ( ! empty( $lasso->public_link ) ) {
+					$item['permalink'] = esc_url_raw( $lasso->public_link );
+				}
+			}
+		}
+
+		return $results;
+	}
+
+	/**
+	 * Rewrite Gutenberg search results to use our public URL for CPT.
+	 *
+	 * @param mixed           $response Response data.
+	 * @param \WP_REST_Server $server   Server.
+	 * @param \WP_REST_Request $request Request.
+	 * @return mixed
+	 */
+	public function use_custom_url_instead_permalink_gutenberg( $response, $server, $request ) {
+		$params = $request->get_params();
+		$route  = method_exists( $request, 'get_route' ) ? $request->get_route() : '';
+		if ( '/wp/v2/search' !== $route || ! is_array( $response ) || empty( $response ) ) {
+			return $response;
+		}
+
+		// LinkControl passes type=post; subtype holds the CPT.
+		$type = $params['type'] ?? '';
+		if ( 'post' !== $type ) {
+			return $response;
+		}
+
+		foreach ( $response as &$item ) {
+			$subtype = $item['subtype'] ?? '';
+			if ( 'post' === ( $item['type'] ?? '' ) && SIMPLE_URLS_SLUG === $subtype ) {
+				$post_id = intval( $item['id'] ?? 0 );
+				if ( $post_id ) {
+					$lasso = Affiliate_Link::get_lasso_url( $post_id );
+					if ( ! empty( $lasso->public_link ) ) {
+						$item['url'] = esc_url_raw( $lasso->public_link );
+					}
+				}
+			}
+		}
+
+		return $response;
 	}
 
 	/**

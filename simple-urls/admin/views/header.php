@@ -31,6 +31,8 @@ if ( Setting::get_setting( 'general_disable_tooltip' ) ) {
 
 ?>
 
+<script src="https://kit.fontawesome.com/21b80bd767.js" crossorigin="anonymous"></script>
+
 <!-- REQUEST REVIEW -->
 <?php
 if ( Helper::show_request_review() ) {

@@ -2,6 +2,7 @@ var lasso_lite_open_need_more_customization = 'lasso_lite_open_need_more_customi
 
 jQuery(document).ready(function() {
 	customize_displays_handler();
+	lock_brag_mode_on();
 	onboarding_set_customizations();
 
 	jQuery(document)
@@ -148,9 +149,32 @@ function customize_displays_handler() {
 	jQuery("#show_price").off("change").on("change", function(event) {
 		onboarding_set_customizations();
 	});
-	jQuery("[name='enable_brag_mode']").off("change").on("change", function(event) {
-		onboarding_set_customizations();
-	});
+}
+
+function lock_brag_mode_on() {
+	let brag_mode_toggle = jQuery("[name='enable_brag_mode']");
+	if ( brag_mode_toggle.length === 0 ) {
+		return;
+	}
+
+	brag_mode_toggle.prop("checked", true);
+
+	brag_mode_toggle
+		.off("click.lassoLiteBragLock")
+		.on("click.lassoLiteBragLock", function(event) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			jQuery(this).prop("checked", true);
+			onboarding_set_customizations();
+
+			let upgrade_url = window.lassoLiteOptionsData.upgrade_url;
+
+			if ( upgrade_url ) {
+				window.open(upgrade_url, "_blank");
+			}
+			return false;
+		});
 }
 
 function onboarding_set_customizations() {
@@ -188,11 +212,7 @@ function onboarding_set_customizations() {
 	}
 
 	let brag_icon = jQuery(".lasso-brag");
-	if(jQuery("[name='enable_brag_mode']").is(":checked")) {
-		brag_icon.removeClass("d-none");
-	} else {
-		brag_icon.addClass("d-none");
-	}
+	brag_icon.removeClass("d-none");
 }
 
 function need_more_customization() {

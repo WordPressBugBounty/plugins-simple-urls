@@ -129,7 +129,7 @@ class License {
 	/**
 	 * Send install data to Lasso server
 	 */
-	public static function lasso_getinfo() {
+	public static function lasso_getinfo($ignore_keys = array()) {
 		global $wp_version;
 		global $wpdb;
 
@@ -143,11 +143,22 @@ class License {
 			'wordpress_version' => $wp_version,
 			'php_version'       => phpversion(),
 			'mysql_version'     => $wpdb->db_version(),
-			'is_classic_editor' => Lasso_Helper::is_classic_editor() ? 1 : 0,
+			'is_classic_editor' => Lasso_Helper::is_classic_editor() ? 1 : 0
 		);
 
+		$settings = Lasso_Setting::get_settings();
+		$email_db = $settings[ Enum::EMAIL_SUPPORT ] ?? '';
+		if ( ! empty( $email_db ) ) {
+			$data['email'] = $email_db;
+		}
+		if ( ! empty( $ignore_keys ) ) {
+			foreach ( $ignore_keys as $key ) {
+				unset( $data[ $key ] );
+			}
+		}
+
 		// phpcs:ignore
-		$response = Lasso_Helper::send_request( 'post', Constant::LASSO_LINK . '/server/getinfo', $data );
+		$response = Lasso_Helper::send_request( 'post', Constant::LASSO_LINK . '/server-lite/getinfo', $data );
 
 		$site_id = $response['response']->site_id ?? '';
 

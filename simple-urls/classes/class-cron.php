@@ -29,6 +29,8 @@ class Cron {
 		'lasso_lite_tracking_support_status' => 'daily',
 		'lasso_lite_update_license_status'   => 'daily',
 		'lasso_lite_cron_get_snippet'        => 'daily',
+		'lasso_lite_cron_get_js_domain'      => 'daily',
+		'lasso_lite_cron_get_info'           => 'daily',
 	);
 
 	/**
@@ -43,7 +45,8 @@ class Cron {
 		add_action( 'lasso_lite_amazon_shortlink', array( $this, 'lasso_lite_amazon_shortlink' ) );
 		add_action( 'lasso_lite_update_license_status', array( $this, 'lasso_lite_update_license_status' ) );
 		add_action( 'lasso_lite_cron_get_snippet', array( $this, 'lasso_lite_cron_get_snippet' ) );
-
+		add_action( 'lasso_lite_cron_get_js_domain', array( $this, 'lasso_lite_cron_get_js_domain' ) );
+		add_action( 'lasso_lite_cron_get_info', array( $this, 'lasso_lite_cron_get_info' ) );
 		$this->lasso_create_schedule_hook();
 	}
 
@@ -190,5 +193,51 @@ class Cron {
 		} catch ( \Exception $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Fetches the JS domain URL from the remote API and updates the 'js_domain' option if valid.
+	 *
+	 * @return string Returns an empty string. Returns early on exception or after processing.
+	 * @throws \Exception This method catches all exceptions internally and does not throw.
+	 */
+	public function lasso_lite_cron_get_js_domain() {
+		try {
+			$url     = Constant::LASSO_LINK . '/api/js-domain?ver=' . time();
+			$res     = Helper::send_request( 'get', $url );
+			$status_code = intval( $res['status_code'] ?? 500 );
+			$response    = $res['response'] ?? '';
+
+			if ( 200 === $status_code && $response ) {
+				// API returns JSON object that contains a URL to the JS file
+				$file_url = $response->url ?? '';
+				// Only return the URL. Do not fetch or write files here.
+				if ( ! empty( $file_url ) && Helper::validate_url( $file_url ) ) {
+					Helper::update_option( 'js_domain', $file_url );
+				}
+
+				$full_file_url = $response->full_url ?? '';
+				if ( ! empty( $full_file_url ) && Helper::validate_url( $full_file_url ) ) {
+					Helper::update_option( 'full_js_domain', $full_file_url );
+				}
+			}
+		} catch ( \Exception $e ) {
+			return '';
+		}
+
+		return '';
+	}
+
+	/**
+	 * Get info
+	 */
+	public function lasso_lite_cron_get_info() {
+		try {
+			License::lasso_getinfo(['license_key']);
+		} catch ( \Exception $e ) {
+			return false;
+		}
+
+		return true;
 	}
 }

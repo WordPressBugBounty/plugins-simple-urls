@@ -157,7 +157,16 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 								<input type="checkbox" name="auto_upgrade_eligible_links" id="auto_upgrade_eligible_links" <?php echo $auto_upgrade_eligible_links ? 'checked' : ''; ?>>
 								<span class="slider"></span>
 							</label>
-							<label class="m-0">Auto-upgrade Eligible Links</label>
+							<label class="m-0">
+								Auto-upgrade Eligible Links
+								<a
+									href="https://getlasso.co/features/affiliate-plus/"
+									target="_blank"
+									rel="noopener noreferrer"
+									data-tooltip="Learn more"
+									class="ml-1"
+								><i class="far fa-info-circle light-purple"></i></a>
+							</label>
 						</div>
 					</div>
 				</div>

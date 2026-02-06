@@ -8,6 +8,7 @@
 use LassoLite\Classes\Config;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Lasso_DB;
 
@@ -19,7 +20,11 @@ $should_show_import_step = Helper::should_show_import_page();
 ?>
 
 <section class="purple-bg pt-3 pb-5 min-vh-116">
-	<div id="onboarding_container" class="container container-sm lite-container">
+	<div
+		id="onboarding_container"
+		class="container container-sm lite-container"
+		data-dashboard-url="<?php echo htmlspecialchars( Page::get_lite_page_url( Enum::PAGE_DASHBOARD ), ENT_QUOTES, 'UTF-8' ); ?>"
+	>
 		<!-- LOGO -->
 		<div class="pb-5">
 			<div class="logo-large mx-auto">
@@ -56,12 +61,6 @@ $should_show_import_step = Helper::should_show_import_page();
 			<?php if ( $should_show_import_step ) : ?>
 				<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/import-step.php' ); ?>
 			<?php endif; ?>
-			
-			<!-- UPSELL -->
-			<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/upsell-step.php', array(
-				'lasso_options'           => $lasso_options,
-				'should_show_import_step' => $should_show_import_step
-			) ); ?>
 
 		</div>
 	</div>

@@ -1060,6 +1060,13 @@ class Amazon_Api {
 			return $product_url;
 		}
 
+		// If MAAS param exists and the original tag is exactly "maas", leave the URL untouched
+		$__maas_arg = Helper::get_argument_from_url( $product_url, 'maas' );
+		$__orig_tag = Helper::get_argument_from_url( $product_url, 'tag' );
+		if ( $__maas_arg && strtolower( $__orig_tag ) === 'maas' ) {
+			return $product_url;
+		}
+
 		$product_id = self::get_product_id_by_url( $product_url );
 
 		// ? remove all url queries, just keep needed args

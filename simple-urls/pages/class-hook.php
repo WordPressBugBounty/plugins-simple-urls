@@ -77,7 +77,6 @@ class Hook {
 		add_filter( 'rest_pre_echo_response', array( $this, 'update_post_type_gutenberg' ), 200, 3 );
 
 		add_filter( 'wp_link_query', array( $this, 'update_post_type_classic_editor' ), 10, 1 );
-		add_filter( 'admin_footer_text', array( $this, 'admin_footer' ), 100, 2 );
 		add_filter( 'update_footer', '__return_empty_string', 11 );
 
 		// ? WP Rocket
@@ -381,6 +380,9 @@ class Hook {
 			'ajax_url'                  => admin_url( 'admin-ajax.php' ),
 			'site_url'                  => site_url(),
 			'plugin_url'                => SIMPLE_URLS_URL,
+			'lasso_link'                => Constant::LASSO_LINK,
+			'lasso_hub_url'             => Constant::LASSO_HUB_URL,
+			'upgrade_url'               => Constant::LASSO_UPGRADE_URL,
 			'rewrite_slug_default'      => Enum::REWRITE_SLUG_DEFAULT,
 			'simple_urls_slug'          => SIMPLE_URLS_SLUG,
 			'page_url_details'          => Enum::PAGE_URL_DETAILS,
@@ -390,6 +392,7 @@ class Hook {
 			'amazon_tracking_id_regex'  => Amazon_Api::TRACKING_ID_REGEX,
 			'is_onboard_page'           => $setting->is_setting_onboarding_page(),
 			'block_customize'           => Constant::BLOCK_CUSTOMIZE,
+			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID),
 		);
 
 		if ( SIMPLE_URLS_SLUG === $post_type ) {
@@ -440,6 +443,10 @@ class Hook {
 			Helper::enqueue_script( 'lasso-helper', 'lasso-helper.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'url-add', 'url-add.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'support', 'support.js', array( 'jquery' ) );
+			
+			if ( ! $setting->is_setting_onboarding_page() ) {
+				Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
+			}
 
 			if ( SIMPLE_URLS_SLUG . '-' . Enum::PAGE_URL_DETAILS === $page ) {
 				Helper::enqueue_script( 'url-details', 'url-details.js', array( 'jquery' ) );
@@ -452,6 +459,14 @@ class Hook {
 
 		if ( $setting->is_dashboard_page() ) {
 			Helper::enqueue_script( 'dashboard', 'dashboard.js', array( 'jquery' ) );
+		}
+
+		if ( $setting->is_opportunities_page() ) {
+			Helper::enqueue_script( 'opportunities', 'opportunities.js', array( 'jquery' ) );
+		}
+
+		if ( $setting->is_tables_page() ) {
+			Helper::enqueue_script( 'tables', 'tables.js', array( 'jquery' ) );
 		}
 
 		if ( $setting->is_setting_display_page() || $setting->is_setting_onboarding_page() ) {
@@ -471,6 +486,7 @@ class Hook {
 			Helper::enqueue_script( 'onboarding-js', 'onboarding.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'settings-js', 'settings.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'settings-display-js', 'settings-display.js', array( 'jquery' ) );
+			Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
 		}
 
 		if ( $setting->is_setting_general_page() ) {
@@ -956,12 +972,11 @@ class Hook {
 		$is_ip_anonymization = false;
 		$lsid                = Helper::build_lsid();
 
-		$current_date    = gmdate( 'Ymd' );
-		$js_version      = LASSO_LITE_VERSION . '.' . $current_date;
+		$current_date = gmdate( 'Ymd' );
+		$js_version   = LASSO_LITE_VERSION . '.' . $current_date;
 
 		// Prefer clean path when permalinks are enabled; fall back to query when using Plain
 		$snippet_query        = Helper::get_snippet_query();
-		$permalink_struct     = get_option( 'permalink_structure' );
 		$performance_url_hash = add_query_arg(
 			array(
 				$snippet_query => '1',
@@ -970,28 +985,108 @@ class Hook {
 			home_url( '/' )
 		);
 
-		$pretty_perf_url          = add_query_arg( 'ver', $js_version, home_url( LASSO_SNIPPET_VANITY_PATH_LITE ) );
-		$performance_url_local    = empty( $permalink_struct ) ? $performance_url_hash : $pretty_perf_url;
-		$performance_url_external = 'https://js.lasso.link/lasso-performance.min.js?ver=' . $js_version; // load exteral js
+		$default_js_domain = 'https://js.codedrink.com';
+
+		$dynamic_js_domain      = Helper::get_option( 'js_domain', $default_js_domain );
+		$full_dynamic_js_domain = Helper::get_option( 'full_js_domain', "$dynamic_js_domain/snippet.min.js" );
+
+		$dynamic_performance_url_external = $full_dynamic_js_domain . '?ver=' . $js_version; // load external js
 
 		// @codeCoverageIgnoreStart
 		if ( $lasso_options['performance_event_tracking'] ) :
 			?>
 
-			<!-- Lasso tracking events - Performance -->
-			<script type="text/javascript" src="<?php echo $performance_url_external; // phpcs:ignore ?>" defer></script>
-			<script type="text/javascript" src="<?php echo $performance_url_local; // phpcs:ignore ?>" defer></script>
-			<script type="text/javascript" src="<?php echo $performance_url_hash; // phpcs:ignore ?>" defer></script>
-			<script type="text/javascript" defer>
-				document.addEventListener("lassoTrackingEventLoaded", function(e) {
-					e.detail.init({
-						'lsid': '<?php echo $lsid; // phpcs:ignore ?>',
-						'pid': '<?php echo get_the_ID(); // phpcs:ignore ?>',
-						'ipa': '<?php echo $is_ip_anonymization; // phpcs:ignore ?>',
-						'performance': '1',
-						'matching': '<?php echo $lasso_options['auto_upgrade_eligible_links'] ? 1 : 0; ?>',
-					});
-				});
+				<script type="text/javascript">
+					(function () {
+						// Prevent double-insert
+						if (window.LS_AFF_IS_LOADED || window.__LS_SEQ_LOADER__) {
+							return;
+						}
+						window.__LS_SEQ_LOADER__ = true;
+						var lsSources = [
+							<?php echo wp_json_encode( $dynamic_performance_url_external ); ?>,
+							<?php echo wp_json_encode( $performance_url_hash ); ?>
+						];
+
+						var lsScriptLoadTimeoutMs = 2500;
+						var lsIndex = 0, lsTimeoutMs = lsScriptLoadTimeoutMs;
+
+						function lsLoadNext() {
+							if (window.LS_AFF_IS_LOADED || lsIndex >= lsSources.length) {
+								return;
+							}
+
+							var lsUrl = lsSources[lsIndex++];
+							var lsScript = document.createElement('script');
+							lsScript.src = lsUrl;
+							lsScript.onerror = function () {
+								try { lsScript.remove(); } catch (_) {}
+								if (!window.LS_AFF_IS_LOADED) lsLoadNext();
+							};
+							var lsTimer = setTimeout(function () {
+								if (!window.LS_AFF_IS_LOADED) {
+								try { lsScript.remove(); } catch (_) {}
+									lsLoadNext();
+								}
+							}, lsTimeoutMs);
+							lsScript.onload = (function (orig) {
+								return function () {
+									clearTimeout(lsTimer);
+									if (orig) orig();
+								};
+							})(lsScript.onload);
+							(document.head || document.documentElement).appendChild(lsScript);
+						}
+
+							lsLoadNext();
+					})();
+				</script>
+			<script type="text/javascript">
+				(function(){
+					var lsInitialized = false;
+					function lsDoInit(detail){
+						if (lsInitialized) return;
+						lsInitialized = true;
+						try {
+							(detail && detail.init ? detail : (window.LSAFFEvents || {})).init({
+								'lsid': '<?php echo $lsid; // phpcs:ignore ?>',
+								'pid': '<?php echo get_the_ID(); // phpcs:ignore ?>',
+								'ipa': '<?php echo $is_ip_anonymization; // phpcs:ignore ?>',
+								'performance': '1',
+								'matching': '<?php echo $lasso_options['auto_upgrade_eligible_links'] ? 1 : 0; ?>',
+							});
+						} catch (err) {
+						}
+					}
+
+					var lsPollCount = 0;
+					var lsMaxPollAttempts = 50;
+					var lsPollTimer = null;
+					function lsStartPolling() {
+						if (lsPollTimer) return;
+						lsPollTimer = setInterval(function(){
+							if (lsInitialized) { clearInterval(lsPollTimer); return; }
+							if (window.LSAFFEvents && typeof window.LSAFFEvents.init === 'function') {
+									lsDoInit(window.LSAFFEvents);
+									clearInterval(lsPollTimer);
+								return;
+							}
+							lsPollCount++;
+							if (lsPollCount > lsMaxPollAttempts) { // ~5s at 100ms
+								clearInterval(lsPollTimer);
+							}
+						}, 100);
+					}
+
+					if (window.LSAFFEvents && typeof window.LSAFFEvents.init === 'function') {
+						lsDoInit(window.LSAFFEvents);
+					} else {
+							document.addEventListener('LSAFFEventLoaded', function(e){
+							lsDoInit(e.detail);
+							}, { once: true });
+							lsStartPolling();
+					}
+				})();
 			</script>
 			<?php
 		endif;

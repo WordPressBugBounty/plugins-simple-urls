@@ -535,9 +535,17 @@ class Helper {
 		}
 
 		if ( is_wp_error( $res ) ) {
+			// Return structured info so callers can surface what failed (e.g. cURL error).
+			$error_payload = array(
+				'error' => array(
+					'code'    => $res->get_error_code(),
+					'message' => $res->get_error_message(),
+					'data'    => $res->get_error_data(),
+				),
+			);
 			return array(
 				'status_code' => 500,
-				'response'    => array(),
+				'response'    => json_decode( wp_json_encode( $error_payload ) ),
 			);
 		}
 
@@ -1269,7 +1277,8 @@ class Helper {
 
 		$lasso_settings = Setting::get_settings();
 
-		$enable_brag_mode = $lasso_settings['enable_brag_mode'] ?? false;
+		// Brag mode is always enabled in Lite.
+		$enable_brag_mode = true;
 		$lasso_url        = $lasso_settings['lasso_affiliate_URL'] ?? false;
 
 		if ( $lasso_url && ( $force_to_show || $enable_brag_mode ) ) {
@@ -1844,5 +1853,53 @@ class Helper {
 			return 'lasso_connect_snippet_lite';
 		}
 		return md5( $domain );
+	}
+
+	/**
+	 * Derive Intercom user_id from email with optional JWT override.
+	 * If a JWT with a non-empty `user_id` claim is present, that value is used;
+	 * otherwise the md5 hash of the lowercased+trimmed email is returned.
+	 * Callers may pass raw or pre-normalized email; the function normalizes
+	 * defensively to keep the derived user_id deterministic.
+	 *
+	 * @param string $user_email        Email (raw or pre-normalized); trimmed and lowercased internally.
+	 * @param string $intercom_user_jwt Optional Intercom JWT token used to override
+	 *                                  the email-based user_id when valid.
+	 *
+	 * @return string Intercom user_id derived from JWT or email hash.
+	 */
+	public static function get_intercom_user_id( $user_email, $intercom_user_jwt ) {
+		// MD5 is used only for a deterministic Intercom identifier; not for secrets.
+		// Normalize email casing to keep intercom user_id deterministic.
+		$normalized_email = is_string( $user_email ) ? strtolower( trim( $user_email ) ) : '';
+		$intercom_user_id = md5( $normalized_email );
+		if ( ! is_string( $intercom_user_jwt ) || '' === trim( $intercom_user_jwt ) ) {
+			return $intercom_user_id;
+		}
+
+		// JWT is expected to be issued by our backend; no signature verification here.
+		$jwt_parts = explode( '.', $intercom_user_jwt );
+		if ( 3 === count( $jwt_parts ) ) {
+			$payload          = $jwt_parts[1];
+			$payload          = strtr( $payload, '-_', '+/' );
+			$payload_length   = strlen( $payload );
+			$payload_padding  = $payload_length % 4;
+			// Pad base64 payload to the next multiple of 4 so decode succeeds.
+			if ( 0 !== $payload_padding ) {
+				$payload = str_pad( $payload, $payload_length + 4 - $payload_padding, '=', STR_PAD_RIGHT );
+			}
+			$payload_decoded = base64_decode( $payload, true );
+			if ( false !== $payload_decoded ) {
+				$decoded = json_decode( $payload_decoded );
+				if ( JSON_ERROR_NONE === json_last_error() && is_object( $decoded ) && isset( $decoded->user_id ) && is_scalar( $decoded->user_id ) ) {
+					$user_id_claim = (string) $decoded->user_id;
+					if ( '' !== trim( $user_id_claim ) ) {
+						$intercom_user_id = $user_id_claim;
+					}
+				}
+			}
+		}
+
+		return $intercom_user_id;
 	}
 }

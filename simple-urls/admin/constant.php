@@ -27,11 +27,12 @@ class Constant {
 	const DEFAULT_THUMBNAIL = SIMPLE_URLS_URL . '/admin/assets/images/lasso-no-thumbnail.jpg';
 	const LASSO_URL         = 'https://getlasso.co';
 	const LASSO_SUPPORT_URL = 'https://support.getlasso.co/';
-	const LASSO_UPGRADE_URL = 'https://getlasso.co/upgrade/';
+	const LASSO_UPGRADE_URL = 'https://getlasso.co/upgrade/?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress';
 	const SITE_ID_KEY       = 'site_id';
 
-	const LASSO_AFFILIATE_PLUS_URL = 'https://app.getlasso.co/plus/';
-	const LASSO_ANALYTICS_URL      = 'https://app.getlasso.co/analytics/';
+	const LASSO_PLUS_SIGNUP_URL      = 'https://app.getlasso.co/signup/plus?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress';
+	const LASSO_AFFILIATE_PLUS_URL   = 'https://app.getlasso.co/plus/';
+	const LASSO_ANALYTICS_URL        = 'https://app.getlasso.co/analytics/';
 
 	const DEFAULT_SETTINGS = array(
 		// ? display
@@ -50,7 +51,7 @@ class Constant {
 		'disclosure_text'                      => 'We earn a commission if you make a purchase, at no additional cost to you.',
 		'show_price'                           => true,
 		'show_disclosure'                      => true,
-		'enable_brag_mode'                     => false,
+		'enable_brag_mode'                     => true,
 		'badge_text'                           => '',
 
 		// ? amazon
@@ -103,7 +104,12 @@ class Constant {
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
 	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
-	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://getlasso.co/upgrade/';
+	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://getlasso.co/upgrade/?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress';
+
+	const LASSO_HUB_URL         = 'https://app.getlasso.co';
+	const LASSO_ACCOUNT_EMAIL   = 'lasso_account_email';
+	const LASSO_ACCOUNT_API_KEY = 'lasso_account_api_key';
+	const LASSO_ACCOUNT_USER_ID = 'lasso_account_user_id';
 
 	const BLOCK_CUSTOMIZE = array(
 		'single'            => array(

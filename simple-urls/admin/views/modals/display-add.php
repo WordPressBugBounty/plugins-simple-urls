@@ -5,6 +5,8 @@
  * @package Modal
  */
 
+use LassoLite\Admin\Constant;
+
 // phpcs:ignore
 ?>
 
@@ -14,7 +16,7 @@
 		<!-- CHOOSE A DISPLAY TYPE -->
 		<div id="lasso-display-type" class="text-center p-5">
 			<h2 class="mb-4">Choose a Display Type</h2>
-			<p><a href="https://getlasso.co/upgrade/" target="_blank">Unlock premium display types</a></p>
+			<p><a href="<?php echo esc_url( Constant::LASSO_UPGRADE_URL ); ?>" target="_blank">Unlock premium display types</a></p>
 			<div class="row align-items-center">
 				<div class="col-3">
 					<a id="lasso-single" class="lasso-display-type hover-gray" data-tab="single" data-tab-container="lasso-urls">

@@ -380,7 +380,13 @@ jQuery(document).ready(function() {
 			let up_sell_modal_w = up_sell_modal.width();
 			let maximum_left = lite_container.width() + lite_container.offset().left;
 			let lasso_lite_disabled_wrapper = jQuery(event.target).closest('.lasso-lite-disabled');
+			let skip_upsell = jQuery(event.target).closest('.lasso-lite-skip-upsell');
 			let support = lasso_lite_helper.get_url_parameter('support');
+
+			if ( skip_upsell.length !== 0 ) {
+				up_sell_modal.css('display', 'none');
+				return;
+			}
 
 			if ( lasso_lite_disabled_wrapper.length !== 0 && support === null ) {
 				let x = ( event.pageX - 150 );
@@ -494,6 +500,7 @@ function refresh_setup_progress() {
 		.done(function(res) {
 			if (res.success) {
 				let data = res.data;
+				data.upgrade_url = lassoLiteOptionsData.upgrade_url;
 				let setup_progress = data.progress;
 
 				if ( jQuery("#wrapper-circle").length ) {

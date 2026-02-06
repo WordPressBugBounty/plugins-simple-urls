@@ -61,10 +61,12 @@ class Enum {
 	const SUPPORT_ENABLED             = 'support_enabled';
 	const SUPPORT_ENABLED_TIME        = 'support_enabled_time';
 	const USER_HASH                   = 'user_hash';
+	const INTERCOM_JWT                = 'intercom_jwt';
 	const IS_SUBSCRIBE                = 'is_subscribe';
 	const EMAIL_SUPPORT               = 'email_support';
 	const IS_PRE_POPULATED_AMAZON_API = 'is_pre_populated_amazon_api';
 	const CUSTOMER_FLOW_ENABLED       = 'customer_flow_enabled';
+	const SHARE_DIAGNOSTICS           = 'share_diagnostics';
 
 	const SUB_PAGE_GROUP_DETAIL = 'detail';
 	const SUB_PAGE_GROUP_URLS   = 'urls';

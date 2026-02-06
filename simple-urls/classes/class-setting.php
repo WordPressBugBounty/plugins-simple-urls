@@ -205,6 +205,24 @@ class Setting {
 	}
 
 	/**
+	 * Check current page is opportunities page
+	 *
+	 * @return bool
+	 */
+	public function is_opportunities_page() {
+		return $this->is_surls_page() && Helper::add_prefix_page( Enum::PAGE_OPPORTUNITIES ) === $this->current_page;
+	}
+
+	/**
+	 * Check current page is tables page
+	 *
+	 * @return bool
+	 */
+	public function is_tables_page() {
+		return $this->is_surls_page() && Helper::add_prefix_page( Enum::PAGE_TABLES ) === $this->current_page;
+	}
+
+	/**
 	 * Check current page is setting page
 	 *
 	 * @return bool
@@ -292,58 +310,89 @@ class Setting {
 		$post         = Helper::POST();
 		$email        = $post['email'] ?? '';
 		$is_subscribe = $post['is_subscribe'] ?? '';
-		if ( $is_ajax && false === is_email( $email ) ) {
-			wp_send_json_success(
-				array(
-					'success' => false,
-					'msg'     => 'Email is invalid.',
-				)
-			);
+		$share_diagnostics = $post['share_diagnostics'] ?? 1; // Default to 1 (checked)
+
+
+		$settings             = self::get_settings();
+		$share_diagnostics_db = $settings[ Enum::SHARE_DIAGNOSTICS ] ?? '';
+		$email_db             = $settings[ Enum::EMAIL_SUPPORT ] ?? '';
+
+		if ( $is_ajax ) {
+			$settings[ Enum::IS_SUBSCRIBE ]      = $is_subscribe;
+			$settings[ Enum::EMAIL_SUPPORT ]     = $email;
+			$settings[ Enum::SHARE_DIAGNOSTICS ] = $share_diagnostics;
 		} else {
-			$settings = self::get_settings();
+			$email = $settings[ Enum::EMAIL_SUPPORT ];
+		}
+		$support_enable_time = $settings[ Enum::SUPPORT_ENABLED_TIME ] ?? '';
+		$current_date        = date( 'm/d/Y', time() ); // phpcs:ignore
+		if ( ! $is_ajax || empty( $support_enable_time ) || $current_date > $support_enable_time || $share_diagnostics_db !== $share_diagnostics || $email !== $email_db ) {
+			global $wp_version;
+			$jwt_data = array(
+				'email'             => $email,
+				'installed_version' => LASSO_LITE_VERSION,
+				'datetime'          => gmdate( 'Y-m-d H:i:s' ),
+				'site_id'           => Helper::get_option( Constant::SITE_ID_KEY ),
+				'install_url'       => site_url(),
+				'wordpress_version' => $wp_version,
+				'php_version'       => phpversion(),
+				'mysql_version'     => Model::get_wpdb()->db_version(),
+				'is_classic_editor' => Helper::is_classic_editor() ? 1 : 0,
+				'share_diagnostics' => $share_diagnostics,
+			);
 
-			if ( $is_ajax ) {
-				$settings[ Enum::IS_SUBSCRIBE ]    = $is_subscribe;
-				$settings[ Enum::EMAIL_SUPPORT ]   = $email;
-				$settings[ Enum::SUPPORT_ENABLED ] = true;
-			} else {
-				$email = $settings[ Enum::EMAIL_SUPPORT ];
-			}
-			$support_enable_time = $settings[ Enum::SUPPORT_ENABLED_TIME ] ?? '';
-			$current_date                      = date( 'm/d/Y', time() ); // phpcs:ignore
-			if ( ! $is_ajax || empty( $support_enable_time ) || $current_date > $support_enable_time ) {
-				global $wp_version;
-				$jwt_data = array(
-					'email'             => $email,
-					'installed_version' => LASSO_LITE_VERSION,
-					'datetime'          => gmdate( 'Y-m-d H:i:s' ),
-					'site_id'           => Helper::get_option( Constant::SITE_ID_KEY ),
-					'install_url'       => site_url(),
-					'wordpress_version' => $wp_version,
-					'php_version'       => phpversion(),
-					'mysql_version'     => Model::get_wpdb()->db_version(),
-					'is_classic_editor' => Helper::is_classic_editor() ? 1 : 0,
-				);
-
-				$jwt          = JWT::encode( $jwt_data, Constant::JWT_SECRET_KEY, 'HS256' );
-				$data['data'] = $jwt;
-				$response     = Helper::send_request( 'post', Constant::LASSO_LINK . '/lasso-lite/enable-support', $data );
-				$is_succeed   = boolval( $response['response']->succeed );
-				if ( $is_succeed ) {
-					$user_hash                              = $response['response']->user_hash;
-					$settings[ Enum::SUPPORT_ENABLED_TIME ] = date( 'm/d/Y', time() ); // phpcs:ignore
-					$settings[ Enum::USER_HASH ]            = $user_hash;
+			$jwt          = JWT::encode( $jwt_data, Constant::JWT_SECRET_KEY, 'HS256' );
+			$data['data'] = $jwt;
+			$response     = Helper::send_request( 'post', Constant::LASSO_LINK . '/lasso-lite/enable-support', $data );
+			$is_succeed   = boolval( $response['response']->succeed );
+			if ( $is_succeed ) {
+				$user_hash                              = $response['response']->user_hash;
+				$intercom_jwt                           = $response['response']->intercom_jwt;
+				$settings[ Enum::SUPPORT_ENABLED_TIME ] = date( 'm/d/Y', time() ); // phpcs:ignore
+				$settings[ Enum::USER_HASH ]            = $user_hash;
+				if ( ! empty( $intercom_jwt ) ) {
+					$settings[ Enum::INTERCOM_JWT ] = $intercom_jwt;
 				}
 			}
+		}
 
-			self::set_settings( $settings );
-			if ( $is_ajax ) {
-				wp_send_json_success(
-					array(
-						'success' => true,
-					)
+		self::set_settings( $settings );
+		if ( $is_ajax ) {
+			$response_data = array(
+				'success' => true,
+			);
+
+			// Provide Intercom bootstrap payload on AJAX success so frontend can init Intercom immediately
+			if ( ! empty( $settings[ Enum::INTERCOM_JWT ] ) ) {
+				$email_support      = $settings[ Enum::EMAIL_SUPPORT ] ?? $email;
+				$email_support_norm = strtolower( trim( $email_support ) );
+
+				$intercom_user_id = Helper::get_intercom_user_id( $email_support_norm, $settings[ Enum::INTERCOM_JWT ] );
+
+				$user            = get_user_by( 'email', $email_support_norm );
+				$user_name       = isset( $user->display_name ) ? $user->display_name : get_bloginfo( 'name' );
+				$classic_editor  = Helper::is_classic_editor() ? 1 : 0;
+				$lasso_lite_user = 1;
+				if ( Helper::is_lasso_pro_plugin_active() ) {
+					$lasso_lite_user = 0;
+				}
+
+				$response_data['intercom'] = array(
+					'app_id'            => Constant::LASSO_INTERCOM_APP_ID,
+					'name'              => $user_name,
+					'user_id'           => $intercom_user_id,
+					'email'             => $email_support_norm,
+					'lasso_version'     => (int) LASSO_LITE_VERSION,
+					'classic_editor'    => $classic_editor,
+					'wp_admin_url'      => admin_url(),
+					'lasso_lite_user'   => $lasso_lite_user,
+					'intercom_user_jwt' => $settings[ Enum::INTERCOM_JWT ],
 				);
 			}
+
+			wp_send_json_success(
+				$response_data
+			);
 		}
 	}
 
@@ -372,7 +421,7 @@ class Setting {
 	 * @return array|false
 	 */
 	public static function get_import_sources() {
-		$plugin_list = self::$import_sources;
+		$plugin_list = (array) self::$import_sources;
 
 		$result          = array();
 		$plugin_path_abs = dirname( SIMPLE_URLS_DIR );

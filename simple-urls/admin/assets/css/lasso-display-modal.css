@@ -218,7 +218,7 @@ input:focus.form-control, textarea:focus.form-control, select:focus.form-control
 /*********************************************************
     PAGINATION
 *********************************************************/
-.pagination.simple-pagination ul {display: flex; padding: 2rem 2rem 3rem 2rem;}
+.pagination.simple-pagination ul {display: flex; padding: 2rem 2rem 0 2rem;}
 .pagination.simple-pagination ul a{color: #777777 !important; text-decoration: none;}
 .pagination.simple-pagination ul a:hover{color: #5E36CA !important;}
 .pagination.simple-pagination ul li {text-align: center;}

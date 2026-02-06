@@ -366,12 +366,38 @@ jQuery(document).ready(function () {
 
         jQuery("#copy-shortcode").attr("data-tooltip", "Copied!");
 
-        let copyText = document.getElementById("shortcode");
+        const input = document.getElementById("shortcode");
+        const text = input ? input.value : "";
 
-        copyText.select();
-        copyText.setSelectionRange(0, 99999); /*For mobile devices*/
+        if (!text) {
+            return;
+        }
 
-        document.execCommand("copy");
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).catch(function () {
+                fallbackCopy(text);
+            });
+        } else {
+            fallbackCopy(text);
+        }
+
+        function fallbackCopy(value) {
+            const ta = document.createElement("textarea");
+            ta.value = value;
+            ta.style.position = "fixed";
+            ta.style.top = "0";
+            ta.style.left = "0";
+            ta.style.width = "1px";
+            ta.style.height = "1px";
+            ta.style.opacity = "0";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try {
+                document.execCommand("copy");
+            } catch (e) {}
+            document.body.removeChild(ta);
+        }
     }
 
     function affiliate_name_key_up(event) {
@@ -484,6 +510,7 @@ jQuery(document).ready(function () {
                     amazon_primary_tracking_id: amazon_primary_tracking_id,
                     amazon_tracking_id: amazon_tracking_id,
                     license_status: license_status,
+                    upgrade_url: lassoLiteOptionsData.upgrade_url,
                 },
             ];
 
@@ -611,7 +638,7 @@ jQuery(document).ready(function () {
         let license_status = jQuery("#license_status").val();
         if (is_first_link === "true" && license_status !== "1") {
             lasso_lite_helper.do_notification(
-                `Congrats on your first link! <a href="https://getlasso.co/upgrade/" target="_blank" class="white underline"><strong> Upgrade </strong></a>to protect it with link monitoring and Lasso's stable product data API.`,
+                `Congrats on your first link! <a href="${lassoLiteOptionsData.upgrade_url}" target="_blank" class="white underline"><strong> Upgrade </strong></a>to protect it with link monitoring and Lasso's stable product data API.`,
                 "green",
                 "default-template-notification",
                 false
@@ -624,7 +651,7 @@ jQuery(document).ready(function () {
         let amazon_access_key_id = $lite_container.data("amazon-access-key-id");
         if (!amazon_access_key_id) {
             lasso_lite_helper.do_notification(
-                `No API key detected for images and pricing! <a href="https://getlasso.co/upgrade/" target="_blank" class="white underline"><strong> Upgrade to Access Lasso's Amazon product data API </strong></a>`,
+                `No API key detected for images and pricing! <a href="${lassoLiteOptionsData.upgrade_url}" target="_blank" class="white underline"><strong> Upgrade to Access Lasso's Amazon product data API </strong></a>`,
                 "orange",
                 "default-template-notification",
                 false

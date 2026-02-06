@@ -12,7 +12,7 @@ use LassoLite\Classes\Helper;
 
 <!-- IMPORT -->
 <input id="total-posts" class="d-none" value="0" />
-<section class="px-3 py-5">
+<section class="px-3 pt-5 pb-0">
 	<div class="lite-container min-height">
 		<?php require_once 'header.php'; ?>
 

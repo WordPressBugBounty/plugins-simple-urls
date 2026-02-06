@@ -46,6 +46,7 @@ $license_msg = $lasso_options['license_serial'] === ''
 					<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5">
 						<input type="hidden" name="count_all_pages_posts" value="" />
 
+						<?php if ( isset( $_GET['support'] ) && $_GET['support'] === 'true' ): ?>
 						<!-- LICENSE KEY -->
 						<section class="mb-5">
 							<h3>License Key</h3>
@@ -60,6 +61,7 @@ $license_msg = $lasso_options['license_serial'] === ''
 								</div>
 							</div>
 						</section>
+						<?php endif; ?>
 
 						<!-- GOOGLE ANALYTICS -->
 						<section class="mb-5">

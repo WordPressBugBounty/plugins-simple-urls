@@ -42,7 +42,7 @@ use LassoLite\Admin\Constant;
 			</li>
 			<?php endif; ?>
 			<li class="d-inline-block">
-				<input id="shortcode" type="text" style="opacity: 0; width: 0px;" value='[lasso rel="<?php echo $lasso_lite_url->slug; ?>" id="<?php echo $lasso_lite_url->id; ?>"]'">
+				<input id="shortcode" type="text" style="opacity: 0; width: 0px;" value='[lasso rel="<?php echo $lasso_lite_url->slug; ?>" id="<?php echo $lasso_lite_url->id; ?>"]'>
 				<a id="copy-shortcode" class="purple" data-tooltip="Copy this Display to your clipboard.">
 					<i class="far fa-pager"></i> <strong>Copy Shortcode</strong>
 				</a>

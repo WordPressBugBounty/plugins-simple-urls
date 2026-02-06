@@ -12,7 +12,7 @@ use LassoLite\Admin\Constant;
 	</div>
 
 	<div class="mb-3 text-center">
-		<h1 class="font-weight-bold green">Unlock Explosive Growth With <br>API-Free Amazon Data and Pro Features</h1>
+		<h1 class="font-weight-bold green">Unlock Explosive Growth With <br>Unlimited Amazon Data and Pro Features</h1>
 	</div>
 
 	<div class="row feature-list" style="margin:0 auto">
