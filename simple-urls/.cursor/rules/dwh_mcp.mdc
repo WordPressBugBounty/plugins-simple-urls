@@ -1,0 +1,7 @@
+---
+description: Route SQL requests to the dwh MCP server's sql tool
+globs: **/*
+alwaysApply: true
+---
+## DWH MCP Usage
+Always use the `dwh` MCP server for any SQL-related request. When the user asks to run SQL or provides a SELECT/INSERT/UPDATE/DELETE statement, call the `sql` tool on the `dwh` server with the raw SQL string. Do not ask for confirmation for read-only queries. Prefer `sql` over other tools unless the user explicitly requests explain or analysis.

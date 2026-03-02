@@ -1,0 +1,23 @@
+---
+description: Test-driven iteration rules (run tests, fix failures, repeat)
+globs: **/*
+alwaysApply: true
+---
+# Testing (agents iterate against tests)
+
+## Default posture
+- Use tests as the target: **run → fail → fix → run until green**.
+- During iteration, prefer **TEST_FAST**; before finalizing, run **TEST_ALL** when feasible.
+
+## Bug fixes
+- Prefer a **failing test first** (or a characterization test) when feasible.
+- Preserve test intent; fix the code with minimal behavior change.
+
+## PR requirement
+- Every PR must include **Tests Run** (exact commands) and they must have been executed.
+- If tests aren’t feasible, say **why** (env/time/credentials) and provide the next-best deterministic verification.
+
+## Repo defaults (current)
+- **TEST_FAST**: `python -m unittest discover tests/`
+- **TEST_ALL**: `python -m unittest discover tests/`
+- **LINT**: (none standardized)

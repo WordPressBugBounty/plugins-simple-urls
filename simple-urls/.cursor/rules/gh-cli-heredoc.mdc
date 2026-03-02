@@ -1,0 +1,28 @@
+---
+description: Safe patterns for gh CLI bodies (avoid \n + backtick substitution)
+alwaysApply: true
+---
+# GitHub CLI comment/body safety
+
+## Always use a heredoc for `gh ... --body`
+- Do **not** embed `\n` in a quoted string and expect GitHub to render newlines.
+- Do **not** inline Markdown backticks (`` `code` ``) inside a double-quoted shell string; bash will treat backticks as command substitution unless protected.
+
+## Safe template (preferred)
+Use a single-quoted heredoc delimiter to prevent interpolation:
+
+```bash
+gh <cmd> ... --body "$(cat <<'EOF'
+First line
+
+- Bullet 1
+- Bullet 2 with `inline_code`
+
+Refs #1234
+EOF
+)"
+```
+
+## Notes
+- Prefer `Refs #<n>` when you only want a link.
+- Prefer `Fixes #<n>` / `Closes #<n>` when you want GitHub to auto-link in the Issue **Development** section and auto-close the issue on merge.

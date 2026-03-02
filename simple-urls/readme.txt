@@ -71,6 +71,11 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 144 =
+* Released: March 2, 2026
+* Improved site ID retrieval logic
+* Documentation updates
+
 = 143 =
 * Released: January 23, 2026
 * Added simple click counts for links

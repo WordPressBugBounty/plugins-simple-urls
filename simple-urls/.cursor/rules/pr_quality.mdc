@@ -1,0 +1,19 @@
+---
+description: PR quality bar (summary standard, review responses, risk + rollout)
+globs: **/*
+alwaysApply: true
+---
+# PR quality
+
+## PR summary standard
+PRs should include:
+- **What / Why**: what changed, and why now
+- **Tests run**: commands + outcomes
+- **Risks**: what could break, edge cases, blast radius
+- **Rollout / Rollback**: how to ship safely and how to revert
+
+## Responding to review comments
+- Apply what’s correct.
+- If you disagree: explain why, propose an **Alt**, and keep it calm/technical.
+- Re-run relevant tests after changes.
+- Keep the PR description in sync with reality (especially tests/risks).

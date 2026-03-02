@@ -1,0 +1,23 @@
+---
+description: Enforce small diffs, minimal refactors, and plan→implement→verify workflow
+globs: **/*
+alwaysApply: true
+---
+# Change discipline (small diffs)
+
+## Default posture
+- Make the **smallest** change that satisfies the request.
+- Avoid drive-by refactors/renames/reformatting unless explicitly requested.
+- Prefer incremental, reviewable diffs over “big bang” rewrites.
+
+## When exploring vs changing
+- If asked to investigate, stay read-only and report findings only.
+- If asked to change code, keep scope tight to the requested behavior.
+
+## Plan → implement → verify
+- For any non-trivial change: produce a brief plan, list expected file touches, and a test plan.
+- Before concluding work: run the **relevant** tests/checks and report exactly what was run + outcome.
+
+## Guardrails
+- Never add secrets to the repo (keys, tokens, creds, customer data).
+- No production behavior changes unless explicitly approved.

@@ -1,0 +1,20 @@
+---
+description: Core workflow guardrails (minimal diffs, evidence-first, no secrets)
+globs: **/*
+alwaysApply: true
+---
+# Core (agent-manager)
+
+## Change discipline
+- Make the **smallest** correct change that satisfies the request.
+- No drive-by refactors/renames/reformatting unless explicitly requested.
+- Keep diffs reviewable; prefer incremental edits over rewrites.
+- Prefer clarity over cleverness.
+
+## Evidence-first
+- When unsure, **gather evidence** (search, logs, tests, docs) before guessing.
+- Investigations should cite concrete sources (file paths, commands, outputs).
+
+## Secrets & safety
+- Never add secrets (keys/tokens/passwords/customer data) to the repo.
+- Treat production as read-only unless explicitly authorized.

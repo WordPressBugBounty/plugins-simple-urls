@@ -332,7 +332,7 @@ class Setting {
 				'email'             => $email,
 				'installed_version' => LASSO_LITE_VERSION,
 				'datetime'          => gmdate( 'Y-m-d H:i:s' ),
-				'site_id'           => Helper::get_option( Constant::SITE_ID_KEY ),
+				'site_id'           => License::get_site_id(),
 				'install_url'       => site_url(),
 				'wordpress_version' => $wp_version,
 				'php_version'       => phpversion(),
@@ -350,6 +350,7 @@ class Setting {
 				$intercom_jwt                           = $response['response']->intercom_jwt;
 				$settings[ Enum::SUPPORT_ENABLED_TIME ] = date( 'm/d/Y', time() ); // phpcs:ignore
 				$settings[ Enum::USER_HASH ]            = $user_hash;
+				$settings[ Constant::SITE_ID_KEY ]          = $response['response']->site_id;
 				if ( ! empty( $intercom_jwt ) ) {
 					$settings[ Enum::INTERCOM_JWT ] = $intercom_jwt;
 				}
@@ -387,6 +388,7 @@ class Setting {
 					'wp_admin_url'      => admin_url(),
 					'lasso_lite_user'   => $lasso_lite_user,
 					'intercom_user_jwt' => $settings[ Enum::INTERCOM_JWT ],
+					'site_id'           => $settings[ Constant::SITE_ID_KEY ],
 				);
 			}
 

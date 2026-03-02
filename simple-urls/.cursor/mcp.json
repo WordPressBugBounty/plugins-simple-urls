@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "dwh": {
+      "url": "https://mcp-db.lasso.zone/mcp"
+    },
+    "sentry": {
+      "url": "https://mcp.sentry.dev/mcp"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+---
+description: Safety guardrails (no prod changes; safe/idempotent commands)
+globs: **/*
+alwaysApply: true
+---
+# Safety
+
+## Production
+- No production behavior changes without **explicit approval + rollout/rollback**.
+- Default to **read-only** operations for investigation and diagnosis.
+
+## Terminal hygiene
+- Prefer safe, idempotent commands during investigation.
+- Avoid destructive commands unless explicitly required and understood (and explain the blast radius).

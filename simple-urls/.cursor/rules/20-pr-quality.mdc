@@ -1,0 +1,20 @@
+---
+description: PR quality + agent scope (no PR creation; no PR description writing)
+globs: **/*
+alwaysApply: true
+---
+# PR quality
+
+## Ownership
+- Humans create PRs. The agent **does not** create PRs.
+- The agent must **not** pre-populate, auto-write, or modify PR descriptions (existing automations handle this).
+
+## Required sections
+- **What / Why**: what changed and why now.
+- **Tests Run**: exact commands + results (or explicit reason not run).
+- **Risk**: what could break; edge cases; blast radius.
+- **Rollout / Rollback**: how to ship safely; how to revert.
+
+## Scope control
+- Keep PRs small. If scope grows, split into follow-ups.
+- Link work to the driving Issue/PR context and capture key decisions briefly (prefer an Issue comment for shared context when useful).

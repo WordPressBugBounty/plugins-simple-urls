@@ -1,0 +1,7 @@
+---
+description: Deprecated (use 40-house-style.mdc)
+globs: **/*
+alwaysApply: false
+---
+# DEPRECATED
+Use `40-house-style.mdc`.

@@ -47,8 +47,6 @@ class Init {
 	 */
 	public function __construct() {
 
-		$this->init_site_id();
-
 		$this->ajaxes = array(
 			'\LassoLite\Pages\Ajax',
 			'\LassoLite\Pages\Dashboard\Ajax',
@@ -124,18 +122,6 @@ class Init {
 	public function initalize_processes() {
 		foreach ( $this->processes as $process ) {
 			new $process();
-		}
-	}
-
-	/**
-	 * Init Lasso Lite site id
-	 */
-	public function init_site_id() {
-		if ( empty( Helper::get_option( Constant::SITE_ID_KEY ) ) ) {
-			$url_parts    = wp_parse_url( home_url() );
-			$domain       = $url_parts['host'];
-			$hash_site_id = md5( $domain );
-			Helper::update_option( Constant::SITE_ID_KEY, $hash_site_id );
 		}
 	}
 

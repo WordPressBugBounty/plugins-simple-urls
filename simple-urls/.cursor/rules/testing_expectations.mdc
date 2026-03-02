@@ -1,0 +1,19 @@
+---
+description: Testing expectations (run relevant checks; prefer adding tests; bugfixes want failing test first)
+globs: **/*
+alwaysApply: true
+---
+# Testing expectations
+
+## Always verify
+- Run the **smallest relevant** test set (use `docs/TESTING_MATRIX.md` **if present**; otherwise discover repo-specific test commands, e.g. search for `pytest`, `unittest`, `npm test`, `make test`).
+- If you can’t run tests (missing deps, environment limits), say so explicitly and provide the next-best verification.
+
+## Add/adjust tests with code changes
+- Prefer adding tests alongside behavior changes.
+- For bug fixes: add a **failing test first** when feasible (unit, characterization, or regression test), then fix.
+
+## Report tests run
+In the final summary, include:
+- **Tests run**: exact commands
+- **Result**: pass/fail + any notable output

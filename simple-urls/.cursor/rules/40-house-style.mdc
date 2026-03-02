@@ -1,0 +1,34 @@
+---
+description: House style for AI output (concise, actionable, minimal diffs)
+globs: **/*
+alwaysApply: true
+---
+# House style (AI output)
+
+## Priorities
+- Simplicity > everything. Change as little as possible.
+- Be terse, decisive, and concrete. Prefer commands/diffs over prose.
+- Investigations are read-only: report findings only (no changes).
+- Never touch production unless explicitly told to (and include rollout/rollback).
+- Never introduce secrets into the repo.
+
+## Formatting expectations (for AI responses)
+- Use GitHub-flavored Markdown.
+- Prefer H2 headings (`##`). Use H3 when it helps.
+- Bold only short labels (e.g. **Pick**, **Risk**, **Decision**).
+- Prefer small diffs over full-file dumps.
+
+## Required response sections (when summarizing work)
+- In AI responses, include a section titled `## TL;DR` with 2–4 bullets.
+  - Each bullet starts with a **bold short claim**, followed by 1–2 sentences on impact/scope/risk.
+- Optionally include a section titled `## Next steps` with 2–5 imperative bullets when action is implied.
+
+Example format:
+
+```md
+## TL;DR
+- **Key claim**: Why it matters.
+
+## Next steps
+- Do the next thing.
+```

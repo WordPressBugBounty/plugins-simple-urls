@@ -1,0 +1,14 @@
+---
+description: Security + production safety guardrails (no secrets; prod read-only unless approved)
+globs: **/*
+alwaysApply: true
+---
+# Security & production safety
+
+## Secrets
+- Never commit secrets (API keys, tokens, passwords, private URLs, customer data).
+- If you see a likely secret in diff/context: call it out and remove/redact it.
+
+## Production
+- Treat production as **read-only** unless explicitly authorized.
+- If a request implies production changes, stop and ask for explicit approval + rollout plan.

@@ -1,0 +1,19 @@
+---
+description: Dev tooling expectations (prefer rg; if missing, try to install it)
+globs: **/*
+alwaysApply: true
+---
+# Dev tooling
+
+## Search
+- Prefer `rg` (ripgrep) for codebase search.
+- If `rg` is missing (`command not found`), the agent should attempt to install it (and then rerun the search).
+
+## Install ripgrep (`rg`)
+- macOS (Homebrew): `brew install ripgrep`
+- Debian/Ubuntu: `sudo apt-get update && sudo apt-get install -y ripgrep`
+- Fedora: `sudo dnf install -y ripgrep`
+- Arch: `sudo pacman -S ripgrep`
+
+## Verify
+- `rg --version`
