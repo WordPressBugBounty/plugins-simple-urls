@@ -71,6 +71,10 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 145 =
+* Released: March 3, 2026
+* Deployment packaging improvements
+
 = 144 =
 * Released: March 2, 2026
 * Improved site ID retrieval logic
