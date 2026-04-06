@@ -390,6 +390,8 @@ $is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
 	</div>
 </section>
 
+<?php require Helper::get_path_views_folder() . 'modals/unsaved-changes.php'; ?>
+
 <!-- DELETE CONFIRMATION -->
 <div class="modal fade" id="url-delete" tabindex="-1" role="dialog">
 	<div class="modal-dialog" role="document">

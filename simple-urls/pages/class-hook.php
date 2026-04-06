@@ -16,6 +16,7 @@ use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Shortcode;
 use LassoLite\Classes\License;
+use LassoLite\Classes\Realtime_Click;
 
 /**
  * Hook.
@@ -53,6 +54,7 @@ class Hook {
 		add_action( 'admin_head', array( $this, 'lasso_custom_css' ) ); // ? admin
 		add_action( 'admin_head', array( $this, 'lasso_custom_menu' ) ); // ? admin
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts_frontend' ) ); // ? frontend
+		add_filter( 'body_class', array( $this, 'filter_body_class_lasso_lite_version' ) ); // ? frontend
 
 		add_action( 'admin_enqueue_scripts', array( $this, 'add_scripts' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'add_styles' ) );
@@ -392,8 +394,9 @@ class Hook {
 			'amazon_tracking_id_regex'  => Amazon_Api::TRACKING_ID_REGEX,
 			'is_onboard_page'           => $setting->is_setting_onboarding_page(),
 			'block_customize'           => Constant::BLOCK_CUSTOMIZE,
-			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID),
+			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID ),
 		);
+		$data_passed_to_js['realtime'] = Realtime_Click::get_js_config();
 
 		if ( SIMPLE_URLS_SLUG === $post_type ) {
 			wp_dequeue_script( 'up_admin_script' ); // ? fix js conflict with plugin: Download plugin
@@ -491,6 +494,10 @@ class Hook {
 
 		if ( $setting->is_setting_general_page() ) {
 			Helper::enqueue_script( 'settings-general', 'settings-general.js', array( 'jquery' ) );
+		}
+
+		if ( $setting->is_setting_page() ) {
+			Helper::enqueue_script( 'settings-unsaved-guard', 'settings-unsaved-guard.js', array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-helper' ) );
 		}
 
 		if ( $setting->is_group_detail_page() || $setting->is_group_page() ) {
@@ -971,6 +978,21 @@ class Hook {
 		$lasso_options       = Setting::get_settings();
 		$is_ip_anonymization = false;
 		$lsid                = Helper::build_lsid();
+		$realtime_ingest     = null;
+		if ( Realtime_Click::is_ingest_enabled() ) {
+			$ingest_secret = Realtime_Click::get_ingest_secret();
+			$channel_id    = Realtime_Click::get_channel_id();
+			if ( is_string( $ingest_secret ) && '' !== $ingest_secret && is_string( $channel_id ) && '' !== $channel_id ) {
+				$beacon                         = Realtime_Click::get_beacon_credentials( $channel_id, $ingest_secret );
+				$realtime_ingest                = array(
+					'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
+					'action'       => 'lasso_lite_realtime_ingest',
+					'channelId'    => $channel_id,
+					'beaconToken'  => $beacon['token'],
+					'beaconBucket' => $beacon['bucket'],
+				);
+			}
+		}
 
 		$current_date = gmdate( 'Ymd' );
 		$js_version   = LASSO_LITE_VERSION . '.' . $current_date;
@@ -1043,6 +1065,9 @@ class Hook {
 				</script>
 			<script type="text/javascript">
 				(function(){
+					<?php if ( null !== $realtime_ingest ) : ?>
+					window.LASSO_LITE_REALTIME_INGEST = <?php echo wp_json_encode( $realtime_ingest ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>;
+					<?php endif; ?>
 					var lsInitialized = false;
 					function lsDoInit(detail){
 						if (lsInitialized) return;
@@ -1293,5 +1318,31 @@ class Hook {
 		}
 		ob_end_flush();
 		exit;
+	}
+
+	/**
+	 * Add stable frontend body class from LASSO_LITE_VERSION (e.g. lasso-lite-v145).
+	 *
+	 * @param array<int, string> $classes Body classes.
+	 * @return array<int, string>
+	 */
+	public function filter_body_class_lasso_lite_version( $classes ) {
+		$extra = $this->get_lasso_lite_version_body_class();
+		if ( '' !== $extra ) {
+			$classes[] = $extra;
+		}
+		return $classes;
+	}
+
+	/**
+	 * CSS-safe class segment: lasso-lite-v{version}.
+	 *
+	 * @return string
+	 */
+	private function get_lasso_lite_version_body_class() {
+		if ( ! defined( 'LASSO_LITE_VERSION' ) ) {
+			return '';
+		}
+		return 'lasso-lite-v' . sanitize_html_class( str_replace( '.', '-', (string) LASSO_LITE_VERSION ) );
 	}
 }

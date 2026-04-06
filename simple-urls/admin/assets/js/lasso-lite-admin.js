@@ -4,7 +4,7 @@ jQuery(document).ready(function() {
 });
 
 function lasso_lite_dismiss() {
-	jQuery('.lasso-lite-notice').addClass('lasso-lite-d-none');
+	jQuery(this).closest('.lasso-lite-notice').addClass('lasso-lite-d-none');
 	jQuery.ajax({
 		url: '/wp-admin/admin-ajax.php',
 		type: 'post',

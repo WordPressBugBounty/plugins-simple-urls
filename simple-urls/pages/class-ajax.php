@@ -13,6 +13,7 @@ use LassoLite\Classes\Affiliate_Link;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Realtime_Click;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\SURL;
 
@@ -45,6 +46,9 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_disable_review', array( $this, 'lasso_lite_disable_review' ) );
 		add_action( 'wp_ajax_lasso_lite_dismiss_notice', array( $this, 'lasso_lite_dismiss_notice' ) );
 		add_action( 'wp_ajax_lasso_lite_disable_affiliate_promotions', array( $this, 'lasso_lite_disable_affiliate_promotions' ) );
+		add_action( 'wp_ajax_nopriv_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
+		add_action( 'wp_ajax_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
+		add_action( 'wp_ajax_lasso_lite_realtime_pull', array( $this, 'lasso_lite_realtime_pull' ) );
 	}
 
 	/**
@@ -662,7 +666,7 @@ class Ajax {
 	public function lasso_lite_dismiss_notice() {
 		Helper::verify_access_and_nonce();
 		$option_name = Helper::POST()['option_name'] ?? Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE; // phpcs:ignore
-		if ( ! in_array( $option_name, array( Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE, Constant::LASSO_OPTION_DISMISS_PROMOTIONS ), true ) ) {
+		if ( ! in_array( $option_name, array( Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE, Constant::LASSO_OPTION_DISMISS_PROMOTIONS, Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED ), true ) ) {
 			wp_send_json_error( 'Invalid option name.' );
 		}
 
@@ -688,5 +692,171 @@ class Ajax {
 				'status' => 1,
 			)
 		);
+	}
+
+	/**
+	 * Public ingest for front-end click beacon (HMAC + Sig).
+	 */
+	public function lasso_lite_realtime_ingest() {
+		if ( ! Realtime_Click::is_ingest_enabled() ) {
+			wp_send_json_error( array( 'message' => 'Realtime ingest disabled.' ), 403 );
+		}
+
+		if ( ! Realtime_Click::rate_limit_allow() ) {
+			wp_send_json_error( array( 'message' => 'Rate limited.' ), 429 );
+		}
+
+		$post  = Helper::POST();
+		$body  = null;
+		$maybe = $post['channel_id'] ?? null;
+		if ( null !== $maybe && is_scalar( $maybe ) && ! is_bool( $maybe ) && '' !== (string) $maybe ) {
+			$body = array(
+				'channel_id'    => $post['channel_id'] ?? '',
+				'ts'            => $post['ts'] ?? null,
+				'lid'           => $post['lid'] ?? null,
+				'type'          => $post['type'] ?? null,
+				'sig'           => $post['sig'] ?? null,
+				'beacon_token'  => $post['beacon_token'] ?? null,
+				'beacon_bucket' => $post['beacon_bucket'] ?? null,
+			);
+		} else {
+			$raw  = file_get_contents( 'php://input' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+			$body = json_decode( $raw, true );
+		}
+		if ( ! is_array( $body ) ) {
+			wp_send_json_error( array( 'message' => 'Invalid body.' ), 400 );
+		}
+
+		$body = $this->normalize_realtime_ingest_body( $body );
+
+		$channel_id = $body['channel_id'];
+		$ts         = $body['ts'];
+		$lid        = $body['lid'];
+		$type       = $body['type'];
+		$sig        = $body['sig'];
+		$b_token    = $body['beacon_token'];
+		$b_bucket   = $body['beacon_bucket'];
+
+		$now = time();
+		$ok  = false;
+		if ( abs( $now - $ts ) > Realtime_Click::TS_SKEW ) {
+			wp_send_json_error( array( 'message' => 'Stale timestamp.' ), 403 );
+		}
+		if ( '' !== $sig ) {
+			$ok = Realtime_Click::verify_signature( $channel_id, $ts, $lid, $type, $sig );
+		} elseif ( '' !== $b_token ) {
+			$ok = Realtime_Click::verify_beacon_token( $channel_id, $b_bucket, $b_token );
+		}
+		if ( ! $ok ) {
+			wp_send_json_error( array( 'message' => 'Invalid authentication.' ), 403 );
+		}
+
+		$seq = Realtime_Click::enqueue_event( $lid, $type );
+		wp_send_json_success( array( 'seq' => $seq ) );
+	}
+
+	/**
+	 * Admin pull for queued click events (poll transport).
+	 */
+	public function lasso_lite_realtime_pull() {
+		Helper::verify_access_and_nonce();
+
+		if ( ! Realtime_Click::is_ingest_enabled() ) {
+			wp_send_json_error( array( 'message' => 'Disabled.' ), 403 );
+		}
+
+		$post  = Helper::POST();
+		$since = isset( $post['since'] ) ? absint( $post['since'] ) : 0;
+		$data  = Realtime_Click::pull_events_since( $since );
+
+		wp_send_json_success( $data );
+	}
+
+	/**
+	 * Coerce realtime ingest body to scalar strings/ints and sanitize text fields.
+	 *
+	 * @param array $body Raw body from POST subset or JSON decode.
+	 * @return array{
+	 *     channel_id: string,
+	 *     ts: int,
+	 *     lid: int,
+	 *     type: string,
+	 *     sig: string,
+	 *     beacon_token: string,
+	 *     beacon_bucket: int
+	 * }
+	 */
+	private function normalize_realtime_ingest_body( array $body ) {
+		return array(
+			'channel_id'    => $this->realtime_ingest_scalar_string( $body['channel_id'] ?? null ),
+			'ts'            => $this->realtime_ingest_scalar_int( $body['ts'] ?? null ),
+			'lid'           => $this->realtime_ingest_scalar_int( $body['lid'] ?? null ),
+			'type'          => $this->realtime_ingest_scalar_string( $body['type'] ?? null ),
+			'sig'           => $this->realtime_ingest_scalar_string( $body['sig'] ?? null ),
+			'beacon_token'  => $this->realtime_ingest_beacon_token( $body ),
+			'beacon_bucket' => $this->realtime_ingest_beacon_bucket( $body ),
+		);
+	}
+
+	/**
+	 * Ingest string field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private function realtime_ingest_scalar_string( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return sanitize_text_field( wp_unslash( (string) $value ) );
+	}
+
+	/**
+	 * Ingest int field: numeric scalars only.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return int
+	 */
+	private function realtime_ingest_scalar_int( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) || ! is_numeric( $value ) ) {
+			return 0;
+		}
+
+		return (int) $value;
+	}
+
+	/**
+	 * Beacon token from snake_case or camelCase JSON.
+	 *
+	 * @param array $body Raw body.
+	 * @return string
+	 */
+	private function realtime_ingest_beacon_token( array $body ) {
+		if ( isset( $body['beacon_token'] ) ) {
+			return $this->realtime_ingest_scalar_string( $body['beacon_token'] );
+		}
+		if ( isset( $body['beaconToken'] ) ) {
+			return $this->realtime_ingest_scalar_string( $body['beaconToken'] );
+		}
+
+		return '';
+	}
+
+	/**
+	 * Beacon bucket from snake_case or camelCase JSON.
+	 *
+	 * @param array $body Raw body.
+	 * @return int
+	 */
+	private function realtime_ingest_beacon_bucket( array $body ) {
+		if ( isset( $body['beacon_bucket'] ) ) {
+			return $this->realtime_ingest_scalar_int( $body['beacon_bucket'] );
+		}
+		if ( isset( $body['beaconBucket'] ) ) {
+			return $this->realtime_ingest_scalar_int( $body['beaconBucket'] );
+		}
+
+		return 0;
 	}
 }

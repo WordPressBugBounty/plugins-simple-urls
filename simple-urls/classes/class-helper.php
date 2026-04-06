@@ -852,9 +852,15 @@ class Helper {
 				$p->import_permalink = $lasso_amazon_api->get_amazon_link_by_product_id( $p->id );
 			}
 		} elseif ( 'Lasso Pro' === $p->import_source ) {
-			$target_url          = Import::get_lasso_pro_target_url( $p->id );
-			$p->import_permalink = $target_url;
-			$p->shortcode        = '[lasso rel="' . $p->post_name . '" id="' . $p->id . '"]';
+			$target_url           = Import::get_lasso_pro_target_url( $p->id );
+			$p->import_permalink  = $target_url;
+			$p->shortcode         = '[lasso rel="' . $p->post_name . '" id="' . $p->id . '"]';
+		}
+
+		$p->post_title_attr       = esc_attr( $p->post_title ?? '' );
+		$p->import_permalink_attr = esc_attr( $p->import_permalink ?? '' );
+		if ( ! empty( $p->shortcode ) ) {
+			$p->shortcode_attr = esc_attr( $p->shortcode );
 		}
 
 		return $p;
@@ -1441,6 +1447,35 @@ class Helper {
 		}
 
 		return false;
+	}
+
+	/**
+	 * Whether show the Amazon credentials update notice.
+	 *
+	 * @return bool
+	 */
+	public static function show_amazon_credentials_notice() {
+		$dismissed = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' ) );
+		$updated   = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED, '0' ) );
+
+		if ( $dismissed || $updated ) {
+			return false;
+		}
+
+		$settings                 = Setting::get_settings();
+		$amazon_access_key        = trim( (string) ( $settings['amazon_access_key_id'] ?? '' ) );
+		$amazon_secret_key        = trim( (string) ( $settings['amazon_secret_key'] ?? '' ) );
+		$creators_credential_id   = trim( (string) ( $settings['amazon_creators_credential_id'] ?? '' ) );
+		$creators_secret          = trim( (string) ( $settings['amazon_creators_secret'] ?? '' ) );
+		$creators_version         = trim( (string) ( $settings['amazon_creators_version'] ?? '' ) );
+		$creators_partner_tag     = trim( (string) ( $settings['amazon_creators_partner_tag'] ?? '' ) );
+		$has_legacy_credentials   = '' !== $amazon_access_key || '' !== $amazon_secret_key;
+		$has_creators_credentials = '' !== $creators_credential_id
+			&& '' !== $creators_secret
+			&& '' !== $creators_version
+			&& '' !== $creators_partner_tag;
+
+		return $has_legacy_credentials && ! $has_creators_credentials;
 	}
 
 	/**

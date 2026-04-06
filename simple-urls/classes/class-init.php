@@ -7,9 +7,6 @@
 
 namespace LassoLite\Classes;
 
-use LassoLite\Admin\Constant;
-use LassoLite\Classes\Helper;
-
 /**
  * Init
  */
@@ -46,7 +43,6 @@ class Init {
 	 * Init constructor.
 	 */
 	public function __construct() {
-
 		$this->ajaxes = array(
 			'\LassoLite\Pages\Ajax',
 			'\LassoLite\Pages\Dashboard\Ajax',

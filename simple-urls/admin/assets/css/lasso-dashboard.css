@@ -130,6 +130,57 @@ img.rounded{object-fit: cover;}
 .white-bg{background-color: var(--white) !important;}
 .white-border{border-color: var(--white) !important;}
 .purple, .purple a{color: var(--purple) !important;}
+.lasso-header-account-status{white-space:nowrap;text-align:center}
+button.lasso-header-account-status--inactive{
+	display:inline-flex;
+	align-items:center;
+	gap:12px;
+	margin:0;
+	padding:0.5rem 0.75rem 0.5rem 1rem;
+	font-family:var(--helvetica);
+	font-size:0.8125rem;
+	line-height:1.2;
+	font-weight:800;
+	color:var(--white);
+	letter-spacing:0.02em;
+	cursor:pointer;
+	text-decoration:none;
+	background:rgba(255,255,255,.08);
+	border:none;
+	border-radius:0.5rem;
+	box-shadow:0 3px 6px rgba(0,0,0,.2)!important;
+	transition:ease .25s!important;
+	vertical-align:middle;
+}
+.lasso-header-account-status--inactive:hover{
+	background:rgba(255,255,255,.18);
+	color:var(--white)!important;
+	box-shadow:none!important;
+	transform:translateY(3px);
+}
+.lasso-header-account-status--inactive:focus{color:var(--white);outline:none}
+.lasso-header-account-status--inactive:focus-visible{outline:2px solid var(--light-green);outline-offset:3px}
+.lasso-header-account-status__label{
+	text-transform:uppercase;
+	font-size:0.6875rem;
+	font-weight:800;
+	letter-spacing:0.1em;
+	color:var(--white);
+}
+.lasso-header-account-status__badge{
+	display:inline-block;
+	padding:0.35rem 0.65rem;
+	font-size:0.6875rem;
+	font-weight:800;
+	line-height:1.15;
+	text-transform:uppercase;
+	letter-spacing:0.08em;
+	color:var(--red);
+	background:var(--white);
+	border-radius:0.375rem;
+	box-shadow:0 1px 3px rgba(0,0,0,.18)!important;
+}
+
 .purple-bg{background-color: var(--purple) !important;}
 .dark-purple, .dark-purple a{color: var(--dark-purple) !important;}
 .dark-purple-bg{background-color: var(--dark-purple) !important;}
@@ -488,4 +539,44 @@ div.error {padding: 0px; border: 0px; margin: 0px;}
 .lasso-lite-click-snapshot .snapshot-title{margin:0 0 10px 0;font-size:20px;font-weight:600;color:#fff}
 .lasso-lite-click-snapshot .snapshot-message{margin:0 0 12px 0;font-size:16px;line-height:1.4;color:#fff}
 .lasso-lite-click-snapshot .learn-more-link{color:#fff;text-decoration:underline!important;font-size:14px}
+.lasso-lite-realtime-click-toast .close-realtime-live-toast{position:absolute;top:10px;right:12px;border:none;background:transparent;font-size:22px;cursor:pointer;color:rgba(255,255,255,0.75);line-height:1;padding:0}
+.lasso-lite-realtime-click-toast{z-index:9999999992!important;bottom:100px!important}
+.lasso-lite-realtime-click-toast .lasso-lite-realtime-toast-learn-more{display:inline-block;margin-top:8px}
 #lasso-lite-analytics-modal .modal-dialog{max-width:700px}
+
+/*********************************************************
+	Lasso Lite — Import URLs table (title clamp, shortcode preview)
+*********************************************************/
+.lasso-lite-import-urls .import-title {
+	min-width: 0;
+}
+.lasso-lite-import-urls .import-title-text {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	word-break: break-word;
+	line-height: 1.35;
+}
+.lasso-lite-import-urls .import-target {
+	min-width: 0;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+}
+.lasso-lite-import-urls .import-target-clamp {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	line-height: 1.35;
+	word-break: break-word;
+	overflow-wrap: anywhere;
+	max-width: 100%;
+}
+.lasso-lite-import-urls code.import-shortcode-lite.import-target-clamp {
+	font-size: 0.875rem;
+	padding: 0.125rem 0;
+	background: transparent;
+	color: inherit;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}

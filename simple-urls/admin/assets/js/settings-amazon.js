@@ -1,7 +1,12 @@
 
 jQuery(document).ready(function() {
+	const AMAZON_API_MODE_STORAGE_KEY = 'lasso_lite_amazon_api_mode';
+	const AMAZON_CREATORS_CUTOFF_AT = Date.parse('2026-05-01T00:00:00');
+
 	jQuery(document)
 		.on('click', '.btn-save-settings-amazon', save_setting_amazon)
+		.on('change', '.amazon-api-mode-toggle', toggle_amazon_api_mode)
+		.on('click', '.btn-verify-amazon-creators', verify_amazon_creators_credentials)
 		.on('change', 'input[name="amazon_tracking_id"]', validate_tracking_id_format);
 
 	function save_setting_amazon( event ) {
@@ -12,6 +17,10 @@ jQuery(document).ready(function() {
 		let amazon_tracking_id = jQuery('#amazon_tracking_id').val().trim();
 		let amazon_access_key_id = jQuery('#amazon_access_key_id').val().trim();
 		let amazon_secret_key = jQuery('#amazon_secret_key').val().trim();
+		let amazon_creators_credential_id = jQuery('#amazon_creators_credential_id').val().trim();
+		let amazon_creators_secret = jQuery('#amazon_creators_secret').val().trim();
+		let amazon_creators_version = jQuery('#amazon_creators_version').val().trim();
+		let amazon_creators_partner_tag = jQuery('#amazon_creators_partner_tag').val().trim();
 		let amazon_default_tracking_country = jQuery('#amazon_default_tracking_country').val().trim();
 		let amazon_pricing_daily = jQuery('#amazon_pricing_daily:checked').val();
 		let auto_monetize_amazon = jQuery('#auto_monetize_amazon:checked').val();
@@ -32,6 +41,10 @@ jQuery(document).ready(function() {
 					amazon_tracking_id: amazon_tracking_id,
 					amazon_access_key_id: amazon_access_key_id,
 					amazon_secret_key: amazon_secret_key,
+					amazon_creators_credential_id: amazon_creators_credential_id,
+					amazon_creators_secret: amazon_creators_secret,
+					amazon_creators_version: amazon_creators_version,
+					amazon_creators_partner_tag: amazon_creators_partner_tag,
 					amazon_default_tracking_country: amazon_default_tracking_country,
 					amazon_pricing_daily: amazon_pricing_daily,
 					auto_monetize_amazon: auto_monetize_amazon,
@@ -73,6 +86,110 @@ jQuery(document).ready(function() {
 				go_to_next_step_action(btn_save);
 			}
 		}
+	}
+
+	function toggle_amazon_api_mode( event ) {
+		let modeToggle = jQuery(event.currentTarget);
+		let nextMode = modeToggle.is(':checked') ? 'creators' : 'paapi';
+
+		apply_amazon_api_mode(nextMode);
+		window.localStorage.setItem(AMAZON_API_MODE_STORAGE_KEY, JSON.stringify({
+			mode: nextMode,
+			savedAt: new Date().toISOString(),
+		}));
+	}
+
+	function apply_amazon_api_mode( mode ) {
+		jQuery('.amazon-api-card').each(function() {
+			let apiCard = jQuery(this);
+			let paapiFields = apiCard.find('.amazon-paapi-fields');
+			let creatorsFields = apiCard.find('.amazon-creators-fields');
+			let modeToggle = apiCard.find('.amazon-api-mode-toggle');
+			let isCreatorsMode = 'creators' === mode;
+
+			paapiFields.toggleClass('d-none', isCreatorsMode);
+			creatorsFields.toggleClass('d-none', ! isCreatorsMode);
+			modeToggle.prop('checked', isCreatorsMode);
+		});
+	}
+
+	function get_default_amazon_api_mode() {
+		return Date.now() >= AMAZON_CREATORS_CUTOFF_AT ? 'creators' : 'paapi';
+	}
+
+	function get_saved_amazon_api_mode() {
+		let storedValue = window.localStorage.getItem(AMAZON_API_MODE_STORAGE_KEY);
+		let defaultMode = get_default_amazon_api_mode();
+
+		if ( ! storedValue ) {
+			return defaultMode;
+		}
+
+		try {
+			let parsedValue = JSON.parse(storedValue);
+			if ( parsedValue && parsedValue.mode ) {
+				let savedAt = parsedValue.savedAt ? Date.parse(parsedValue.savedAt) : 0;
+				if ( Date.now() >= AMAZON_CREATORS_CUTOFF_AT && savedAt < AMAZON_CREATORS_CUTOFF_AT && parsedValue.mode === 'paapi' ) {
+					return 'creators';
+				}
+
+				return parsedValue.mode;
+			}
+		} catch (e) {
+			if ( Date.now() >= AMAZON_CREATORS_CUTOFF_AT && storedValue === 'paapi' ) {
+				return 'creators';
+			}
+
+			if ( storedValue === 'paapi' || storedValue === 'creators' ) {
+				return storedValue;
+			}
+		}
+
+		return defaultMode;
+	}
+
+	function verify_amazon_creators_credentials( event ) {
+		event.preventDefault();
+
+		let credentialId = jQuery('#amazon_creators_credential_id').val().trim();
+		let secret = jQuery('#amazon_creators_secret').val().trim();
+		let version = jQuery('#amazon_creators_version').val().trim();
+		let partnerTag = jQuery('#amazon_creators_partner_tag').val().trim();
+		let country = jQuery('#amazon_default_tracking_country').val().trim();
+		let btnVerify = jQuery(event.currentTarget);
+		let originalLabel = btnVerify.text().trim();
+
+		lasso_lite_helper.clear_notifications();
+		lasso_lite_helper.add_loading_button(btnVerify, originalLabel);
+
+		jQuery.ajax({
+			url: lassoLiteOptionsData.ajax_url,
+			type: 'post',
+			data: {
+				action: 'lasso_lite_verify_amazon_creators_credentials',
+				nonce: lassoLiteOptionsData.optionsNonce,
+				amazon_creators_credential_id: credentialId,
+				amazon_creators_secret: secret,
+				amazon_creators_version: version,
+				amazon_creators_partner_tag: partnerTag,
+				amazon_default_tracking_country: country,
+			},
+		})
+			.done(function(res) {
+				if ( res.success ) {
+					lasso_lite_helper.do_notification(res.data.msg, 'green', 'default-template-notification-amz');
+				} else {
+					let errorMsg = res.data && res.data.msg ? res.data.msg : 'Unable to verify Creators API credentials.';
+					lasso_lite_helper.do_notification(errorMsg, 'red', 'default-template-notification-amz');
+				}
+			})
+			.fail(function(xhr) {
+				let errorMsg = lasso_lite_helper.get_msg_ajax_error(xhr);
+				lasso_lite_helper.do_notification(errorMsg, 'red', 'default-template-notification-amz');
+			})
+			.always(function() {
+				lasso_lite_helper.add_loading_button(btnVerify, originalLabel, false);
+			});
 	}
 
 	/**
@@ -154,4 +271,5 @@ jQuery(document).ready(function() {
 	}
 
 	auto_monetize_amazon_links();
+	apply_amazon_api_mode(get_saved_amazon_api_mode());
 });

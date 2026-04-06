@@ -46,3 +46,105 @@
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.20) !important;
     padding: 0;
 }
+
+/*
+ * Unsaved changes (link details / settings)
+ */
+#unsaved-changes.modal.show {
+	display: flex !important;
+	align-items: center;
+	justify-content: center;
+	padding: 0.5rem !important;
+	min-height: 100%;
+	box-sizing: border-box;
+}
+
+#unsaved-changes .modal-dialog {
+	margin: 0 auto !important;
+	max-width: min(500px, calc(100vw - 1rem));
+}
+
+#unsaved-changes .modal-content {
+	padding: 0 !important;
+	border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+#unsaved-changes .modal-header {
+	position: relative;
+	justify-content: flex-start;
+	align-items: flex-start;
+	padding: 0.875rem 2.5rem 0.375rem 1rem;
+	border-bottom: none;
+}
+
+#unsaved-changes .modal-header .close {
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 1;
+	margin: 0;
+	padding: 0.35rem 0.5rem;
+	line-height: 1;
+	font-size: 1.5rem;
+	font-weight: 400;
+	opacity: 0.65;
+}
+
+#unsaved-changes .modal-title {
+	margin: 0;
+	font-size: 1.125rem;
+	line-height: 1.35;
+	text-align: left;
+	width: 100%;
+	padding-right: 2rem;
+	box-sizing: border-box;
+}
+
+#unsaved-changes .modal-body {
+	padding: 0.25rem 1.25rem 0.625rem;
+	text-align: left;
+}
+
+#unsaved-changes .modal-body p {
+	margin: 0;
+	line-height: 1.45;
+	font-size: 0.9375rem;
+}
+
+#unsaved-changes .modal-footer {
+	padding: 0.5rem 1rem 1rem;
+	margin-top: 0;
+	border-top: none;
+	gap: 0.5rem;
+	justify-content: flex-end !important;
+	flex-wrap: wrap;
+}
+
+#unsaved-changes .modal-footer .btn {
+	padding: 0.4rem 1rem;
+	font-size: 0.875rem;
+	line-height: 1.25;
+	min-height: 0;
+}
+
+#unsaved-changes .modal-footer .btn.btn-outline-secondary {
+	background-color: #fff !important;
+	color: var(--light-purple, var(--lasso-light-purple, #B09AE5)) !important;
+	border: 1px solid var(--light-purple, var(--lasso-light-purple, #B09AE5)) !important;
+	box-shadow: none !important;
+}
+
+#unsaved-changes .modal-footer .btn.btn-outline-secondary:hover,
+#unsaved-changes .modal-footer .btn.btn-outline-secondary:focus {
+	background-color: #fff !important;
+	color: var(--light-purple, var(--lasso-light-purple, #B09AE5)) !important;
+	border-color: var(--light-purple, var(--lasso-light-purple, #B09AE5)) !important;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+	transform: none;
+}
+
+#unsaved-changes .modal-footer .btn.green-bg {
+	background-color: var(--green, var(--lasso-green, #22baa0)) !important;
+	color: #fff !important;
+	border: 1px solid transparent !important;
+}

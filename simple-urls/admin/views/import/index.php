@@ -17,7 +17,7 @@ use LassoLite\Classes\Helper;
 		<?php require_once 'header.php'; ?>
 
 		<!-- LINKS TO IMPORT -->
-		<div class="white-bg rounded shadow">            
+		<div class="white-bg rounded shadow lasso-lite-import-urls">            
 			<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">
 				<div class="row align-items-center">
 					<div class="col-4">Link Title</div>

@@ -31,6 +31,7 @@ class Cron {
 		'lasso_lite_cron_get_snippet'        => 'daily',
 		'lasso_lite_cron_get_js_domain'      => 'daily',
 		'lasso_lite_cron_get_info'           => 'daily',
+		'lasso_lite_check_lite_user'         => 'daily',
 	);
 
 	/**
@@ -47,6 +48,7 @@ class Cron {
 		add_action( 'lasso_lite_cron_get_snippet', array( $this, 'lasso_lite_cron_get_snippet' ) );
 		add_action( 'lasso_lite_cron_get_js_domain', array( $this, 'lasso_lite_cron_get_js_domain' ) );
 		add_action( 'lasso_lite_cron_get_info', array( $this, 'lasso_lite_cron_get_info' ) );
+		add_action( 'lasso_lite_check_lite_user', array( $this, 'lasso_lite_check_lite_user' ) );
 		$this->lasso_create_schedule_hook();
 	}
 
@@ -65,12 +67,63 @@ class Cron {
 	}
 
 	/**
+	 * Upgrade the stored cron option structure to version 2 (hash-keyed args).
+	 *
+	 * Mirrors WordPress core cron array shape so iteration in this class matches
+	 * `wp_next_scheduled` / `wp_schedule_event` expectations.
+	 *
+	 * @param array $cron Cron info array from lasso_get_stored_cron_array().
+	 * @return array Upgraded cron info array.
+	 */
+	private function lasso_upgrade_stored_cron_array( $cron ) {
+		if ( isset( $cron['version'] ) && 2 === $cron['version'] ) {
+			return $cron;
+		}
+
+		$new_cron = array();
+
+		foreach ( (array) $cron as $timestamp => $hooks ) {
+			foreach ( (array) $hooks as $hook => $args ) {
+				$key = md5( serialize( $args['args'] ) );
+
+				$new_cron[ $timestamp ][ $hook ][ $key ] = $args;
+			}
+		}
+
+		$new_cron['version'] = 2;
+
+		update_option( 'cron', $new_cron );
+
+		return $new_cron;
+	}
+
+	/**
+	 * Load the `cron` option as an array, upgrading legacy shape when needed.
+	 *
+	 * @return array Cron events (no `version` key in the returned array).
+	 */
+	private function lasso_get_stored_cron_array() {
+		$cron = get_option( 'cron' );
+		if ( ! is_array( $cron ) ) {
+			return array();
+		}
+
+		if ( ! isset( $cron['version'] ) ) {
+			$cron = $this->lasso_upgrade_stored_cron_array( $cron );
+		}
+
+		unset( $cron['version'] );
+
+		return $cron;
+	}
+
+	/**
 	 * Create hook for the new cron
 	 */
 	public function lasso_create_schedule_hook() {
 		$crons       = self::CRONS;
 		$events      = array();
-		$crons_array = _get_cron_array();
+		$crons_array = $this->lasso_get_stored_cron_array();
 
 		if ( ! is_array( $crons_array ) ) {
 			return;
@@ -239,5 +292,28 @@ class Cron {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Daily: request lite user record for this site's admin email.
+	 *
+	 * @return bool True when the HTTP request completes with 200.
+	 */
+	public function lasso_lite_check_lite_user() {
+		try {
+			$admin_email = get_option( 'admin_email' );
+			if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+				return false;
+			}
+
+			$url     = Constant::LASSO_LINK . '/plugin/lite/users/' . rawurlencode( $admin_email );
+			$headers = Helper::get_headers();
+			$res     = Helper::send_request( 'get', $url, array(), $headers );
+
+			$status_code = isset( $res['status_code'] ) ? intval( $res['status_code'] ) : 0;
+			return 200 === $status_code;
+		} catch ( \Exception $e ) {
+			return false;
+		}
 	}
 }

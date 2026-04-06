@@ -14,6 +14,7 @@ use LassoLite\Classes\Setting;
 
 $current_page     = $_GET['page'] ?? '';
 $import_page_slug = Helper::add_prefix_page( Enum::PAGE_IMPORT );
+$amazon_page_slug = Helper::add_prefix_page( Enum::PAGE_SETTINGS_AMAZON );
 $ajax_url         = admin_url( 'admin-ajax.php' );
 
 $user_email = get_option( 'admin_email' ); // phpcs:ignore
@@ -34,6 +35,11 @@ $intercom_jwt       = $settings[ Enum::INTERCOM_JWT ] ?? '';
 
 // Normalize email before Intercom usage.
 $user_email = strtolower( trim( $user_email ) );
+$checksum_file = SIMPLE_URLS_DIR . '/checksum.txt';
+$commit_hash   = file_exists( $checksum_file ) && is_readable( $checksum_file ) ? trim( (string) file_get_contents( $checksum_file ) ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
+if ( '' !== $commit_hash ) {
+	$commit_hash = 'lasso-lite-rc' . $commit_hash;
+}
 
 ?>
 <input type="hidden" id="license_status" value="<?php echo $license_active; ?>">
@@ -102,12 +108,18 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 	<footer class="lasso-plugin-footer <?php echo $is_lasso_connected ? 'lasso-plugin-footer--default-only' : 'lasso-plugin-footer--with-cta'; ?>">
 		<div class="lasso-plugin-footer-version">
 			<?php print 'Version ' . LASSO_LITE_VERSION; // phpcs:ignore ?>
+			<?php if ( '' !== $commit_hash ) : ?>
+				<span class="d-block mt-1"><?php echo esc_html( $commit_hash ); ?></span>
+			<?php endif; ?>
 		</div>
 
 		<?php if ( ! $is_lasso_connected ) : ?>
 		<div class="lasso-footer-cta-content">
 			<div class="lasso-plugin-footer-version">
 				<?php print 'Version ' . LASSO_LITE_VERSION; // phpcs:ignore ?>
+				<?php if ( '' !== $commit_hash ) : ?>
+					<span class="d-block mt-1"><?php echo esc_html( $commit_hash ); ?></span>
+				<?php endif; ?>
 			</div>
 
 			<div class="lasso-footer-cta">
@@ -271,6 +283,9 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 <?php
 	echo Helper::wrapper_js_render( 'earnings-notification-jsrender', Helper::get_path_views_folder() . 'notifications/earnings-notification-jsrender.html' );
 ?>
+<?php
+echo Helper::wrapper_js_render( 'amazon-credentials-update-jsrender', Helper::get_path_views_folder() . 'notifications/amazon-credentials-update-jsrender.html' );
+?>
 
 <!-- MODALS -->
 <?php
@@ -325,6 +340,36 @@ if ( $is_show_upsell ) {
 		var newUrl = window.location.href.replace('&is-connect=1', '');
 		window.history.replaceState(null, null, newUrl);
 	}
+</script>
+<?php endif; ?>
+
+<?php if ( $amazon_page_slug !== $current_page && Helper::show_amazon_credentials_notice() ) : ?>
+<script>
+	jQuery(function () {
+		lasso_lite_helper.inject_to_template(
+			jQuery("#lasso_lite_notifications"),
+			'amazon-credentials-update-jsrender',
+			{
+				amazon_settings_url: '<?php echo esc_js( Page::get_lite_page_url( Enum::PAGE_SETTINGS_AMAZON ) ); ?>'
+			},
+			false
+		);
+		jQuery('#lasso-amazon-credentials-update').collapse('show');
+
+		jQuery(document).on('click', '#lasso-amazon-credentials-update button.close', function() {
+			jQuery.ajax({
+				url: '<?php echo $ajax_url; // phpcs:ignore ?>',
+				type: 'post',
+				data: {
+					action: 'lasso_lite_dismiss_notice',
+					nonce: lassoLiteOptionsData.optionsNonce,
+					option_name: '<?php echo esc_js( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED ); ?>',
+				},
+			}).done(function() {
+				jQuery('#lasso-amazon-credentials-update').collapse('hide');
+			});
+		});
+	});
 </script>
 <?php endif; ?>
 

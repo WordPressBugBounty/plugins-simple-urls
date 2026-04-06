@@ -58,6 +58,10 @@ class Constant {
 		'auto_monetize_amazon'                 => true,
 		'amazon_access_key_id'                 => '',
 		'amazon_secret_key'                    => '',
+		'amazon_creators_credential_id'        => '',
+		'amazon_creators_secret'               => '',
+		'amazon_creators_version'              => '',
+		'amazon_creators_partner_tag'          => '',
 		'amazon_tracking_id'                   => '',
 		'amazon_default_tracking_country'      => 'us',
 		'amazon_pricing_daily'                 => true,
@@ -99,12 +103,19 @@ class Constant {
 	const LASSO_OPTION_REVIEW_ALLOW               = 'review_allow_notification';
 	const LASSO_OPTION_REVIEW_SNOOZE              = 'review_snooze';
 	const LASSO_OPTION_REVIEW_LINK_COUNT          = 'review_link_count';
+	const LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED = 'dismiss_amazon_credentials_update_notice';
+	const LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED          = 'updated_amazon_credentials_notice';
 	const LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE = 'dismiss_performance_notice';
 	const LASSO_LITE_NONCE                        = 'simple-urls-nonce';
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
 	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
 	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://getlasso.co/upgrade/?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress';
+
+	/** Option keys (not merged into lassolite_settings) for realtime click queue + secrets. */
+	const OPTION_REALTIME_CHANNEL_ID    = 'lasso_lite_realtime_channel_id';
+	const OPTION_REALTIME_INGEST_SECRET = 'lasso_lite_realtime_ingest_secret';
+	const OPTION_REALTIME_CLICK_QUEUE   = 'lasso_lite_realtime_click_queue';
 
 	const LASSO_HUB_URL         = 'https://app.getlasso.co';
 	const LASSO_ACCOUNT_EMAIL   = 'lasso_account_email';

@@ -2,6 +2,8 @@
  * Load Lasso Lite click snapshot
  * Shows today, week, and month clicks in a bottom-right notification
  */
+var lassoLiteRealtimeToastAutoHideTimer = null;
+
 function get_use_cache_param() {
     var useCache = lasso_lite_helper.get_url_parameter('use_cache');
     if (useCache === null || useCache === undefined || useCache === '') {
@@ -230,6 +232,82 @@ function load_dashboard( page = '', keyword = '') {
     });
 }
 
+/**
+ * Show the teal bottom-right toast when new live clicks arrive (same style as click snapshot).
+ */
+function lasso_lite_show_realtime_click_toast() {
+    var $toast = jQuery('#lasso-lite-realtime-click-toast');
+    if (!$toast.length) {
+        return;
+    }
+    if (lassoLiteRealtimeToastAutoHideTimer) {
+        window.clearTimeout(lassoLiteRealtimeToastAutoHideTimer);
+        lassoLiteRealtimeToastAutoHideTimer = null;
+    }
+    $toast.stop(true, true).fadeIn(200);
+    lassoLiteRealtimeToastAutoHideTimer = window.setTimeout(function () {
+        lassoLiteRealtimeToastAutoHideTimer = null;
+        $toast.fadeOut(200);
+    }, 10000);
+}
+
+/**
+ * Poll WordPress for click events when Advanced Click Tracking is enabled.
+ */
+function init_lasso_lite_dashboard_realtime() {
+    if (typeof window.lassoLiteOptionsData === 'undefined' || !lassoLiteOptionsData.realtime) {
+        return;
+    }
+    var rt = lassoLiteOptionsData.realtime;
+    if (!rt || rt.mode !== 'poll' || !rt.pullAction) {
+        return;
+    }
+    var ajaxUrl = lassoLiteOptionsData.ajax_url;
+    var nonce = lassoLiteOptionsData.optionsNonce;
+    if (!ajaxUrl || !nonce) {
+        return;
+    }
+    var $wrap = jQuery('#lasso-lite-realtime-live');
+    var $count = jQuery('#lasso-lite-realtime-click-count');
+    if (!$wrap.length || !$count.length) {
+        return;
+    }
+
+    $wrap.removeClass('d-none');
+
+    var total = 0;
+    function bump(n) {
+        var add = typeof n === 'number' && n > 0 ? n : 1;
+        total += add;
+        $count.text(total);
+        lasso_lite_show_realtime_click_toast();
+    }
+
+    var since = typeof rt.startSeq === 'number' ? rt.startSeq : parseInt(rt.startSeq, 10) || 0;
+    var pollMs = rt.pollInterval || 12000;
+
+    function pull() {
+        jQuery.post(ajaxUrl, {
+            action: rt.pullAction,
+            nonce: nonce,
+            since: since
+        }).done(function (res) {
+            if (!res || !res.success || !res.data) {
+                return;
+            }
+            var evs = res.data.events || [];
+            if (evs.length) {
+                bump(evs.length);
+            }
+            if (typeof res.data.max_seq === 'number') {
+                since = res.data.max_seq;
+            }
+        });
+    }
+    window.setInterval(pull, pollMs);
+    pull();
+}
+
 jQuery(document).ready(function () {
     if (typeof window.go_to_next_step_action !== 'function') {
         window.go_to_next_step_action = function() {
@@ -270,6 +348,8 @@ jQuery(document).ready(function () {
     // Load dashboard content
     load_dashboard();
 
+    init_lasso_lite_dashboard_realtime();
+
     // Load dashboard alert totals
     load_lasso_lite_links_issues_totals();
     
@@ -285,7 +365,24 @@ jQuery(document).ready(function () {
         jQuery('#lasso-lite-click-snapshot-box').fadeOut();
         jQuery('#lasso-lite-link-issues-snapshot-box').fadeOut();
     });
-    
+
+    jQuery(document).on('click', '.close-realtime-live-toast', function() {
+        if (lassoLiteRealtimeToastAutoHideTimer) {
+            window.clearTimeout(lassoLiteRealtimeToastAutoHideTimer);
+            lassoLiteRealtimeToastAutoHideTimer = null;
+        }
+        jQuery('#lasso-lite-realtime-click-toast').fadeOut(200);
+    });
+
+    // Open Connect to Lasso modal only — no redirect or new tab.
+    jQuery(document).on('click', '.lasso-lite-dashboard-connect-cta', function(e) {
+        e.preventDefault();
+        var $modal = jQuery('#lasso-lite-analytics-modal');
+        if ($modal.length) {
+            $modal.modal('show');
+        }
+    });
+
     // Handle search form
     jQuery("#links-filter").submit(function (e) {
         e.preventDefault();

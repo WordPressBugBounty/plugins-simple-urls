@@ -71,6 +71,12 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 146 =
+* Released: April 6, 2026
+* Realtime click tracking on the dashboard with improved connect CTAs
+* Updated Amazon Creators API validation settings
+* Added banner for Amazon credentials updates when needed
+
 = 145 =
 * Released: March 3, 2026
 * Deployment packaging improvements

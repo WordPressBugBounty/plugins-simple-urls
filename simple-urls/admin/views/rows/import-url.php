@@ -11,18 +11,18 @@
 <!-- SINGLE LINK -->
 <div class="p-4 hover-gray">
 	<div class="row align-items-center">
-		<div class="col-4">
-			<strong>${ element.post_title }</strong>
+		<div class="col-4 import-title" title="${ element.post_title_attr || '' }">
+			<strong class="import-title-text">${ element.post_title }</strong>
 		</div>
 
-		<div class="col">
+		<div class="col import-target">
 			${ element.shortcode != '' ? 
 				`
-					${ element.shortcode }
+					<code class="import-shortcode-lite import-target-clamp" title="${ element.shortcode_attr || '' }">${ element.shortcode }</code>
 				` 
 				: 
 				`
-				<a href="${ element.import_permalink }" target="_blank" class="purple underline">
+				<a href="${ element.import_permalink }" title="${ element.import_permalink_attr || element.import_permalink }" target="_blank" class="purple underline import-target-clamp">
 					${ element.import_permalink }
 				</a>
 				` 

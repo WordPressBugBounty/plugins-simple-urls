@@ -165,6 +165,7 @@ class Lasso_URL {
 			'target' => $this->html_attribute->target,
 			'href'   => $this->public_link,
 			'title'  => $this->name,
+			'data-lasso-name'  => $this->name,
 		);
 		return $attrs;
 	}

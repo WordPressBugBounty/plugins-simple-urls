@@ -58,3 +58,4 @@ $header_menu = array(
 </div>
 
 <?php require Helper::get_path_views_folder() . 'modals/url-save-progress.php'; ?>
+<?php require Helper::get_path_views_folder() . 'modals/unsaved-changes.php'; ?>

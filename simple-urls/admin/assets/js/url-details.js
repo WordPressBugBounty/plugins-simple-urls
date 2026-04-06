@@ -1,5 +1,6 @@
 jQuery(document).ready(function () {
     let is_update = parseInt(jQuery("#is-update").val()) === 1;
+    let initial_value = {};
     jQuery(".lasso-box-2").html(jQuery("#image_editor").html());
 
     jQuery("#basic-categories").select2({
@@ -10,6 +11,158 @@ jQuery(document).ready(function () {
 
     init_event();
     init_quill();
+
+    function get_all_values() {
+        let all_values = {};
+        let all_fields = jQuery(
+            "#url-details :input.form-control:not(:checkbox):not(:hidden):not(:button):not([type=search])"
+        );
+        all_fields.each(function (index, el) {
+            let $el = jQuery(el);
+            if ($el.prop("disabled")) {
+                return;
+            }
+            let id = $el.attr("id");
+            if (!id) {
+                return;
+            }
+            if ($el.is("select") && $el.prop("multiple")) {
+                let v = $el.val();
+                all_values[id] = Array.isArray(v)
+                    ? v.slice().sort().join(",")
+                    : v || "";
+            } else {
+                all_values[id] = $el.val();
+            }
+        });
+        jQuery("#url-details input[type=checkbox]").each(function () {
+            let id = jQuery(this).attr("id");
+            if (id) {
+                all_values[id] = jQuery(this).prop("checked") ? 1 : 0;
+            }
+        });
+        all_values.thumbnail_id = jQuery("#thumbnail_id").val();
+        if (typeof quill !== "undefined" && quill && quill.root) {
+            let qh = quill.root.innerHTML;
+            qh = qh === "<p><br></p>" ? "" : qh;
+            all_values._lasso_quill_description = qh;
+        }
+        return all_values;
+    }
+
+    function check_changes() {
+        let is_changed = false;
+        let new_values = get_all_values();
+        Object.keys(new_values).forEach(function (key) {
+            if (
+                Array.isArray(new_values[key]) &&
+                Array.isArray(initial_value[key])
+            ) {
+                let diff = new_values[key]
+                    .filter(function (x) {
+                        return initial_value[key].indexOf(x) === -1;
+                    })
+                    .concat(
+                        initial_value[key].filter(function (x) {
+                            return new_values[key].indexOf(x) === -1;
+                        })
+                    );
+                if (diff.length > 0) {
+                    is_changed = true;
+                }
+            } else if (new_values[key] != initial_value[key]) {
+                is_changed = true;
+            }
+        });
+        return is_changed;
+    }
+
+    var url_details_leave_guard = {
+        ignore_before_unload: false,
+        pending_action: null,
+    };
+
+    function url_details_run_pending_action() {
+        if (typeof url_details_leave_guard.pending_action !== "function") {
+            return;
+        }
+        let fn = url_details_leave_guard.pending_action;
+        url_details_leave_guard.pending_action = null;
+        fn();
+    }
+
+    function url_details_show_unsaved_modal(action) {
+        let modal = jQuery("#unsaved-changes");
+        if (!modal.length) {
+            action();
+            return;
+        }
+        url_details_leave_guard.pending_action = action;
+
+        modal.find(".close")
+            .off("click.urlDetailsUnsavedClose")
+            .on("click.urlDetailsUnsavedClose", function () {
+                url_details_leave_guard.pending_action = null;
+            });
+
+        modal.find(".btn-outline-secondary")
+            .off("click.urlDetailsUnsaved")
+            .on("click.urlDetailsUnsaved", function () {
+                url_details_leave_guard.ignore_before_unload = true;
+                modal.modal("hide");
+                url_details_run_pending_action();
+                setTimeout(function () {
+                    url_details_leave_guard.ignore_before_unload = false;
+                }, 0);
+            });
+
+        modal.find(".green-bg")
+            .off("click.urlDetailsUnsaved")
+            .on("click.urlDetailsUnsaved", function () {
+                modal.modal("hide");
+                jQuery("#btn-save-url").trigger("click");
+            });
+
+        modal.modal("show");
+    }
+
+    initial_value = get_all_values();
+
+    window.addEventListener("beforeunload", function (event) {
+        if (
+            url_details_leave_guard.ignore_before_unload ||
+            !check_changes()
+        ) {
+            return;
+        }
+        event.preventDefault();
+        event.returnValue = "";
+    });
+
+    jQuery(document)
+        .off("click.urlDetailsLeave")
+        .on("click.urlDetailsLeave", "a[href]", function (e) {
+            let link = jQuery(this);
+            let href = link.attr("href");
+            if (
+                !check_changes() ||
+                !href ||
+                href === "#" ||
+                href.indexOf("javascript:") === 0 ||
+                link.attr("target") === "_blank" ||
+                link.closest("#unsaved-changes").length ||
+                link.closest("#url-save").length ||
+                link.closest("#url-delete").length
+            ) {
+                return;
+            }
+            e.preventDefault();
+            url_details_show_unsaved_modal(function () {
+                url_details_leave_guard.ignore_before_unload = true;
+                window.location.href = href;
+            });
+        });
+
     amazon_notification();
     product_duplicate_notification();
     first_link_notification();
@@ -137,7 +290,17 @@ jQuery(document).ready(function () {
                     }
 
                     if (!is_update) {
+                        url_details_leave_guard.pending_action = null;
                         window.location.replace(post.edit_link);
+                    } else if (url_details_leave_guard.pending_action) {
+                        url_details_leave_guard.ignore_before_unload = true;
+                        initial_value = get_all_values();
+                        url_details_run_pending_action();
+                        setTimeout(function () {
+                            url_details_leave_guard.ignore_before_unload = false;
+                        }, 0);
+                    } else {
+                        initial_value = get_all_values();
                     }
 
                     if (
@@ -172,11 +335,13 @@ jQuery(document).ready(function () {
                         );
                     }
                 } else {
+                    url_details_leave_guard.pending_action = null;
                     // ? Show error notification
                     lasso_lite_helper.do_notification(res.data, "red");
                 }
             })
             .fail(function (xhr, status, error) {
+                url_details_leave_guard.pending_action = null;
                 // ? Show error notification
                 lasso_lite_helper.do_notification(error, "red");
             })

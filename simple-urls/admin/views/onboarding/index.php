@@ -71,4 +71,5 @@ $should_show_import_step = Helper::should_show_import_page();
 
 <!-- LICENSE ACTIVATION MODAL -->
 <?php echo Helper::include_with_variables( SIMPLE_URLS_DIR . '/admin/views/modals/license-activation.php' ); ?>
+<?php echo Helper::wrapper_js_render( 'default-template-notification-amz', Helper::get_path_views_folder() . '/notifications/default-template-jsrender.html' ); ?>
 <?php Config::get_footer(); ?>
