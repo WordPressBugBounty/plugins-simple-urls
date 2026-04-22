@@ -666,7 +666,27 @@ class Ajax {
 	public function lasso_lite_dismiss_notice() {
 		Helper::verify_access_and_nonce();
 		$option_name = Helper::POST()['option_name'] ?? Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE; // phpcs:ignore
-		if ( ! in_array( $option_name, array( Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE, Constant::LASSO_OPTION_DISMISS_PROMOTIONS, Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED ), true ) ) {
+
+		if ( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED === $option_name ) {
+			$dismissed = Helper::cast_to_boolean(
+				Helper::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' )
+			);
+			if ( $dismissed ) {
+				Helper::update_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED_FINAL, '1' );
+			} else {
+				Helper::update_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '1' );
+			}
+
+			wp_send_json_success(
+				array(
+					'status' => 1,
+				)
+			);
+
+			return;
+		}
+
+		if ( ! in_array( $option_name, array( Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE, Constant::LASSO_OPTION_DISMISS_PROMOTIONS ), true ) ) {
 			wp_send_json_error( 'Invalid option name.' );
 		}
 

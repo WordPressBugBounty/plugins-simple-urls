@@ -1450,32 +1450,28 @@ class Helper {
 	}
 
 	/**
-	 * Whether show the Amazon credentials update notice.
+	 * Whether to show the Amazon Creators API migration notice (legacy PA-API keys not required).
 	 *
 	 * @return bool
 	 */
 	public static function show_amazon_credentials_notice() {
-		$dismissed = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' ) );
-		$updated   = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED, '0' ) );
-
-		if ( $dismissed || $updated ) {
-			return false;
-		}
+		$dismissed       = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' ) );
+		$dismissed_final = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED_FINAL, '0' ) );
+		$updated         = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED, '0' ) );
 
 		$settings                 = Setting::get_settings();
-		$amazon_access_key        = trim( (string) ( $settings['amazon_access_key_id'] ?? '' ) );
-		$amazon_secret_key        = trim( (string) ( $settings['amazon_secret_key'] ?? '' ) );
 		$creators_credential_id   = trim( (string) ( $settings['amazon_creators_credential_id'] ?? '' ) );
 		$creators_secret          = trim( (string) ( $settings['amazon_creators_secret'] ?? '' ) );
 		$creators_version         = trim( (string) ( $settings['amazon_creators_version'] ?? '' ) );
 		$creators_partner_tag     = trim( (string) ( $settings['amazon_creators_partner_tag'] ?? '' ) );
-		$has_legacy_credentials   = '' !== $amazon_access_key || '' !== $amazon_secret_key;
 		$has_creators_credentials = '' !== $creators_credential_id
 			&& '' !== $creators_secret
 			&& '' !== $creators_version
 			&& '' !== $creators_partner_tag;
 
-		return $has_legacy_credentials && ! $has_creators_credentials;
+		$dismissed_fully = $dismissed && $dismissed_final;
+
+		return ! $dismissed_fully && ! $updated && ! $has_creators_credentials;
 	}
 
 	/**

@@ -104,7 +104,10 @@ class Constant {
 	const LASSO_OPTION_REVIEW_SNOOZE              = 'review_snooze';
 	const LASSO_OPTION_REVIEW_LINK_COUNT          = 'review_link_count';
 	const LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED = 'dismiss_amazon_credentials_update_notice';
+	/** Second dismiss; banner hides only when both dismiss flags are set. */
+	const LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED_FINAL = 'dismiss_amazon_credentials_update_notice_final';
 	const LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED          = 'updated_amazon_credentials_notice';
+	const LASSO_OPTION_AMAZON_CREATORS_VERIFIED_SIGNATURE  = 'amazon_creators_verified_signature';
 	const LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE = 'dismiss_performance_notice';
 	const LASSO_LITE_NONCE                        = 'simple-urls-nonce';
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';

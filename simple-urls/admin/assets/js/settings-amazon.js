@@ -62,7 +62,15 @@ jQuery(document).ready(function() {
 			})
 				.done(function(res) {
 					if ( res.success ) {
-						lasso_lite_helper.do_notification(res.data.msg, 'green', 'default-template-notification-amz' );
+						if (
+							res.data &&
+							res.data.creators_validation_attempted &&
+							false === res.data.creators_validation_success
+						) {
+							lasso_lite_helper.do_notification(res.data.creators_validation_msg, 'orange', 'default-template-notification-amz' );
+						} else {
+							lasso_lite_helper.do_notification(res.data.msg, 'green', 'default-template-notification-amz' );
+						}
 						lasso_lite_helper.add_loading_button( btn_save, 'Save Changes', false );
 					} else {
 						lasso_lite_helper.do_notification("Unexpected error!", 'red', 'default-template-notification-amz' );

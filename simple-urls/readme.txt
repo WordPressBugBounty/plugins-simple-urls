@@ -71,6 +71,11 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 147 =
+* Released: April 22, 2026
+* Improved persistence for Amazon Creators settings when saving
+* Refined Amazon Creators migration notice with a clearer dismiss flow
+
 = 146 =
 * Released: April 6, 2026
 * Realtime click tracking on the dashboard with improved connect CTAs

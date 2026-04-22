@@ -36,8 +36,7 @@ class Ajax {
 	public function lasso_lite_save_settings_amazon() {
 		Helper::verify_access_and_nonce();
 
-		$post             = Helper::POST();
-		$current_settings = Setting::get_settings();
+		$post = Helper::POST();
 		$amazon_tracking_id              = sanitize_text_field( $post['amazon_tracking_id'] ?? '' );
 		$amazon_access_key_id            = sanitize_text_field( $post['amazon_access_key_id'] ?? '' );
 		$amazon_secret_key               = sanitize_text_field( $post['amazon_secret_key'] ?? '' );
@@ -62,15 +61,16 @@ class Ajax {
 		$options['auto_monetize_amazon']            = 'on' === $auto_monetize_amazon;
 		$options['auto_upgrade_eligible_links']     = 'on' === $auto_upgrade_eligible_links;
 		Setting::set_settings( $options );
-		if ( $this->did_update_amazon_creators_credentials( $current_settings, $options ) && $this->has_complete_amazon_creators_credentials( $options ) ) {
-			$this->mark_amazon_credentials_notice_updated();
-		}
+		$creators_validation = $this->maybe_validate_amazon_creators_credentials_on_save( $options );
 
 		if ( ! empty( $amazon_tracking_id ) ) {
 			update_option( Enum::SETUP_AMZ_TRACKING_ID, true );
 		}
 
-		$data['msg'] = 'All settings saved';
+		$data['msg']                           = 'All settings saved';
+		$data['creators_validation_attempted'] = $creators_validation['attempted'];
+		$data['creators_validation_success']   = $creators_validation['success'];
+		$data['creators_validation_msg']       = $creators_validation['msg'];
 		wp_send_json_success( $data );
 	}
 
@@ -121,33 +121,21 @@ class Ajax {
 			);
 		}
 
-		$headers = Helper::get_headers();
-		$headers['token'] = $token;
-		$verify_payload = array(
-			'credential_id'      => $credential_id,
-			'secret'             => $secret,
-			'credential_version' => $credential_version,
-			'partner_tag'        => $partner_tag,
-			'country'            => $country,
+		$result = $this->verify_amazon_creators_credentials_with_lasso_api(
+			$credential_id,
+			$secret,
+			$credential_version,
+			$partner_tag,
+			$country,
+			$token
 		);
 
-		$response = Helper::send_request(
-			'post',
-			rtrim( Constant::LASSO_LINK, '/' ) . '/amazon/creators/credentials/verify',
-			$verify_payload,
-			$headers
-		);
-
-		$status_code      = intval( $response['status_code'] ?? 500 );
-		$response_body    = $response['response'] ?? null;
-		$error_message    = $this->get_creators_validate_message( $response_body, 'Unable to verify Creators API credentials.' );
-		$success_message  = $this->get_creators_validate_message( $response_body, 'Creators API credentials verified.' );
-
-		if ( $status_code >= 400 || empty( $response_body ) || empty( $response_body->result ) ) {
+		if ( ! $result['success'] ) {
+			$this->clear_stored_amazon_creators_credentials();
 			wp_send_json_error(
 				array(
-					'msg'         => $error_message,
-					'status_code' => $status_code,
+					'msg'         => $result['msg'],
+					'status_code' => $result['status_code'],
 				)
 			);
 		}
@@ -162,12 +150,95 @@ class Ajax {
 			)
 		);
 		$this->mark_amazon_credentials_notice_updated();
+		$this->update_amazon_creators_verified_signature(
+			array(
+				'amazon_creators_credential_id'   => $credential_id,
+				'amazon_creators_secret'          => $secret,
+				'amazon_creators_version'         => $credential_version,
+				'amazon_creators_partner_tag'     => $partner_tag,
+				'amazon_default_tracking_country' => $country,
+			)
+		);
 
 		wp_send_json_success(
 			array(
-				'msg' => $success_message,
+				'msg' => $result['msg'],
 			)
 		);
+	}
+
+	/**
+	 * Validate Creators credentials after save; clears stored Creators fields if remote verification fails.
+	 *
+	 * @param array $settings Saved settings.
+	 * @return array
+	 */
+	private function maybe_validate_amazon_creators_credentials_on_save( $settings ) {
+		$result = array(
+			'attempted'           => false,
+			'success'             => null,
+			'msg'                 => '',
+			'credentials_cleared' => false,
+		);
+
+		if ( ! $this->has_complete_amazon_creators_credentials( $settings ) ) {
+			return $result;
+		}
+
+		if ( $this->has_verified_amazon_creators_signature( $settings ) ) {
+			return $result;
+		}
+
+		$result['attempted'] = true;
+		$email               = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		$normalized_email    = is_string( $email ) ? strtolower( trim( $email ) ) : '';
+
+		if ( empty( $normalized_email ) ) {
+			$result['success'] = false;
+			$result['msg']     = 'Settings were saved, but Creators API credentials could not be validated because your Lite account is not connected.';
+
+			return $result;
+		}
+
+		$result = $this->verify_amazon_creators_credentials_with_lasso_api(
+			$settings['amazon_creators_credential_id'],
+			$settings['amazon_creators_secret'],
+			$settings['amazon_creators_version'],
+			$settings['amazon_creators_partner_tag'],
+			$settings['amazon_default_tracking_country'] ?? '',
+			md5( $normalized_email )
+		);
+		$result['attempted']           = true;
+		$result['credentials_cleared'] = false;
+
+		if ( $result['success'] ) {
+			$this->mark_amazon_credentials_notice_updated();
+			$this->update_amazon_creators_verified_signature( $settings );
+		} else {
+			$result['msg']                 = 'Settings were saved, but Creators API credentials could not be validated. ' . $result['msg'];
+			$result['credentials_cleared'] = true;
+			$this->clear_stored_amazon_creators_credentials();
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Remove persisted Amazon Creators API credential fields after failed verification.
+	 *
+	 * @return void
+	 */
+	private function clear_stored_amazon_creators_credentials() {
+		Setting::set_settings(
+			array(
+				'amazon_creators_credential_id' => '',
+				'amazon_creators_secret'        => '',
+				'amazon_creators_version'       => '',
+				'amazon_creators_partner_tag'   => '',
+			)
+		);
+		Helper::update_option( Constant::LASSO_OPTION_AMAZON_CREATORS_VERIFIED_SIGNATURE, '' );
+		Helper::update_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_UPDATED, '0' );
 	}
 
 	/**
@@ -234,33 +305,6 @@ class Ajax {
 	}
 
 	/**
-	 * Determine whether the submitted request changed any Amazon API credentials.
-	 *
-	 * @param array $current_settings Existing settings.
-	 * @param array $new_settings Submitted settings.
-	 * @return bool
-	 */
-	private function did_update_amazon_creators_credentials( $current_settings, $new_settings ) {
-		$credential_fields = array(
-			'amazon_creators_credential_id',
-			'amazon_creators_secret',
-			'amazon_creators_version',
-			'amazon_creators_partner_tag',
-		);
-
-		foreach ( $credential_fields as $field ) {
-			$current_value = trim( (string) ( $current_settings[ $field ] ?? '' ) );
-			$new_value     = trim( (string) ( $new_settings[ $field ] ?? '' ) );
-
-			if ( $current_value !== $new_value ) {
-				return true;
-			}
-		}
-
-		return false;
-	}
-
-	/**
 	 * Check whether Creators credentials are complete.
 	 *
 	 * @param array $settings Settings values.
@@ -281,6 +325,103 @@ class Ajax {
 		}
 
 		return true;
+	}
+
+	/**
+	 * Whether the current payload matches the last successful verification.
+	 *
+	 * @param array $settings Settings values.
+	 * @return bool
+	 */
+	private function has_verified_amazon_creators_signature( $settings ) {
+		$current_signature = $this->get_amazon_creators_signature( $settings );
+		$saved_signature   = (string) Helper::get_option( Constant::LASSO_OPTION_AMAZON_CREATORS_VERIFIED_SIGNATURE, '' );
+
+		return '' !== $current_signature && '' !== $saved_signature && hash_equals( $saved_signature, $current_signature );
+	}
+
+	/**
+	 * Persist the last successful Creators verification signature.
+	 *
+	 * @param array $settings Settings values.
+	 * @return void
+	 */
+	private function update_amazon_creators_verified_signature( $settings ) {
+		Helper::update_option( Constant::LASSO_OPTION_AMAZON_CREATORS_VERIFIED_SIGNATURE, $this->get_amazon_creators_signature( $settings ) );
+	}
+
+	/**
+	 * Build a stable signature for the Creators payload.
+	 *
+	 * @param array $settings Settings values.
+	 * @return string
+	 */
+	private function get_amazon_creators_signature( $settings ) {
+		if ( ! $this->has_complete_amazon_creators_credentials( $settings ) ) {
+			return '';
+		}
+
+		return hash(
+			'sha256',
+			wp_json_encode(
+				array(
+					'credential_id'      => (string) $settings['amazon_creators_credential_id'],
+					'secret'             => (string) $settings['amazon_creators_secret'],
+					'credential_version' => (string) $settings['amazon_creators_version'],
+					'partner_tag'        => (string) $settings['amazon_creators_partner_tag'],
+					'country'            => (string) ( $settings['amazon_default_tracking_country'] ?? '' ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Send Creators credentials to Lasso API for validation.
+	 *
+	 * @param string $credential_id Credential ID.
+	 * @param string $secret Credential secret.
+	 * @param string $credential_version Credential version.
+	 * @param string $partner_tag Partner tag.
+	 * @param string $country Tracking country.
+	 * @param string $token Lite account token.
+	 * @return array
+	 */
+	private function verify_amazon_creators_credentials_with_lasso_api( $credential_id, $secret, $credential_version, $partner_tag, $country, $token ) {
+		$headers = Helper::get_headers();
+		$headers['token'] = $token;
+		$verify_payload = array(
+			'credential_id'      => $credential_id,
+			'secret'             => $secret,
+			'credential_version' => $credential_version,
+			'partner_tag'        => $partner_tag,
+			'country'            => $country,
+		);
+
+		$response = Helper::send_request(
+			'post',
+			rtrim( Constant::LASSO_LINK, '/' ) . '/amazon/creators/credentials/verify',
+			$verify_payload,
+			$headers
+		);
+
+		$status_code      = intval( $response['status_code'] ?? 500 );
+		$response_body    = $response['response'] ?? null;
+		$error_message    = $this->get_creators_validate_message( $response_body, 'Unable to verify Creators API credentials.' );
+		$success_message  = $this->get_creators_validate_message( $response_body, 'Creators API credentials verified.' );
+
+		if ( $status_code >= 400 || empty( $response_body ) || empty( $response_body->result ) ) {
+			return array(
+				'success'     => false,
+				'msg'         => $error_message,
+				'status_code' => $status_code,
+			);
+		}
+
+		return array(
+			'success'     => true,
+			'msg'         => $success_message,
+			'status_code' => $status_code,
+		);
 	}
 
 	/**
