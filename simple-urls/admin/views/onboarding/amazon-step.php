@@ -90,7 +90,10 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 			<div class="col-lg">
 				<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5 amazon-api-card">
 					<section>
-						<h3>Amazon Product Data API</h3>
+						<h3 class="d-inline-block align-middle mr-2">Amazon Product Data API</h3>
+						<a href="https://support.getlasso.co/en/articles/3182308-how-to-set-up-amazon-creators-api-credentials-with-lasso" target="_blank" rel="noopener noreferrer" class="btn btn-sm learn-btn mb-2">
+							<i class="far fa-info-circle"></i> Learn
+						</a>
 
 						<div class="form-group">
 							<label data-tooltip="Select your Amazon Associates locale."><strong>Default Tracking ID</strong> <i class="far fa-info-circle light-purple"></i></label>

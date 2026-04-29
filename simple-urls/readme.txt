@@ -71,6 +71,10 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 148 =
+* Released: April 29, 2026
+* Added Learn link in Amazon settings for Product Advertising API documentation
+
 = 147 =
 * Released: April 22, 2026
 * Improved persistence for Amazon Creators settings when saving

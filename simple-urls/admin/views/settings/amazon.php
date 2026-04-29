@@ -110,15 +110,14 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 				<div class="col-lg">
 					<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5 amazon-api-card">
 						<section>
-							<div class="row mb-4 align-items-center">
-								<div class="col-7">
-									<h3 class="mb-0">Amazon Product Data API</h3>
-								</div>
-								<div class="col-5 text-right">
-									<a class="btn-upgrade" href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_self" class="purple mr-3">
-										<strong>Get Amazon Images</strong>
-									</a>
-								</div>
+							<h3 class="d-inline-block align-middle mr-2">Amazon Product Data API</h3>
+							<a href="https://support.getlasso.co/en/articles/3182308-how-to-set-up-amazon-creators-api-credentials-with-lasso" target="_blank" rel="noopener noreferrer" class="btn btn-sm learn-btn mb-2">
+								<i class="far fa-info-circle"></i> Learn
+							</a>
+							<div class="text-right mb-3">
+								<a class="btn-upgrade purple mr-3" href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_self">
+									<strong>Get Amazon Images</strong>
+								</a>
 							</div>
 
 							<div class="form-group">
