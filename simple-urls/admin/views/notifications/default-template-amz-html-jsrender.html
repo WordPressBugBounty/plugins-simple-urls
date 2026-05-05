@@ -1,0 +1,10 @@
+<!-- NOTIFICATION AMAZON + Lite CTA: message is plain text only; link is real DOM (no {{html:}}). Outer row is not a collapse trigger so the CTA click does not dismiss the banner. -->
+<div id="{{:alert_id}}" class="row alert {{:alert_bg}} white shadow mb-0 collapse show">
+	<div class="col text-center p-3">
+		<span>{{:message}}</span>
+		<a href="#" class="purple underline lasso-lite-validate-lite-account">Click here to validate your Account</a>.
+		<button class="close white" href="#{{:alert_id}}" data-toggle="collapse" type="button" aria-label="Close">
+			<i class="far fa-times-circle"></i>
+		</button>
+	</div>
+</div>

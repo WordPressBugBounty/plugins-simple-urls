@@ -120,6 +120,7 @@ class Constant {
 	const OPTION_REALTIME_INGEST_SECRET = 'lasso_lite_realtime_ingest_secret';
 	const OPTION_REALTIME_CLICK_QUEUE   = 'lasso_lite_realtime_click_queue';
 
+	/** Default Hub app URL; use {@see self::get_lasso_hub_url()} for the effective base URL. */
 	const LASSO_HUB_URL         = 'https://app.getlasso.co';
 	const LASSO_ACCOUNT_EMAIL   = 'lasso_account_email';
 	const LASSO_ACCOUNT_API_KEY = 'lasso_account_api_key';
@@ -217,6 +218,22 @@ class Constant {
 		),
 		'notice'            => 'For a detailed list of all customization options, visit our <a href="https://support.getlasso.co/en/articles/4575092-shortcode-reference-guide" target="_blank">Shortcode Reference Guide</a>.',
 	);
+
+	/**
+	 * Hub base URL without trailing slash. Override via `LASSO_LITE_HUB_URL` (wp-config.php) or `lasso_lite_hub_url`.
+	 *
+	 * @return string
+	 */
+	public static function get_lasso_hub_url() {
+		$url = self::LASSO_HUB_URL;
+		if ( defined( 'LASSO_LITE_HUB_URL' ) && is_string( LASSO_LITE_HUB_URL ) && LASSO_LITE_HUB_URL !== '' ) {
+			$url = LASSO_LITE_HUB_URL;
+		}
+		if ( function_exists( 'apply_filters' ) ) {
+			$url = (string) apply_filters( 'lasso_lite_hub_url', $url );
+		}
+		return rtrim( $url, '/' );
+	}
 }
 
 // Path for vanity JS served by the plugin and its source file location

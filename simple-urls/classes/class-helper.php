@@ -559,6 +559,36 @@ class Helper {
 	}
 
 	/**
+	 * Plain-text error from send_request() output (WP_Error payload or API JSON body).
+	 *
+	 * @param array  $response Return value from send_request().
+	 * @param string $default  Default message.
+	 * @return string
+	 */
+	public static function hub_request_error_message( $response, $default = 'Request failed.' ) {
+		$default = (string) $default;
+		if ( empty( $response ) || ! is_array( $response ) ) {
+			return $default;
+		}
+		$r = $response['response'] ?? null;
+		if ( empty( $r ) || ! is_object( $r ) ) {
+			return $default;
+		}
+		if ( isset( $r->error ) ) {
+			if ( is_object( $r->error ) && isset( $r->error->message ) ) {
+				return (string) $r->error->message;
+			}
+			if ( is_string( $r->error ) && $r->error !== '' ) {
+				return $r->error;
+			}
+		}
+		if ( isset( $r->message ) && is_string( $r->message ) && $r->message !== '' ) {
+			return $r->message;
+		}
+		return $default;
+	}
+
+	/**
 	 * Get Lasso Lite - WP option
 	 *
 	 * @param string $option_name Option name.
@@ -1677,13 +1707,25 @@ class Helper {
 	 * @return array
 	 */
 	public static function get_headers( $license_id = null ) {
+		$license = $license_id ? $license_id : License::get_license();
+		if ( ! is_string( $license ) && ! is_numeric( $license ) ) {
+			$license = '';
+		}
+		$license = (string) $license;
+
+		$site_id = License::get_site_id();
+		if ( ! is_string( $site_id ) && ! is_numeric( $site_id ) ) {
+			$site_id = '';
+		}
+		$site_id = (string) $site_id;
+
 		$headers = array(
 			'Content-Type'  => 'application/json',
-			'license'       => $license_id ? $license_id : License::get_license(),
-			'site_id'       => License::get_site_id(),
+			'license'       => $license,
+			'site_id'       => $site_id,
 			'site_url'      => rawurlencode( site_url() ),
-			'is_lasso_lite' => 1,
-			'email'         => get_option( 'admin_email' ),
+			'is_lasso_lite' => '1',
+			'email'         => (string) get_option( 'admin_email', '' ),
 		);
 
 		return $headers;

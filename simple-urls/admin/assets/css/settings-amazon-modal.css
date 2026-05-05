@@ -1,0 +1,41 @@
+/* Lite account link modal: Amazon settings page only (see class-hook enqueue). */
+#lasso-lite-account-existing-modal .lasso-lite-account-modal-dialog {
+	max-width: 28rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+#lasso-lite-account-existing-modal .lasso-lite-login-actions {
+	gap: 0.75rem;
+}
+#lasso-lite-account-existing-modal .lasso-lite-login-action-primary.lasso-signup-btn {
+	width: auto;
+	min-width: 6.5rem;
+	padding: 8px 20px;
+	font-size: 15px;
+}
+#lasso-lite-account-existing-modal .lasso-lite-login-action-secondary.lasso-lite-modal-cancel {
+	min-width: 6.5rem;
+	padding: 8px 20px;
+	font-size: 15px;
+	line-height: 1.35;
+}
+#lasso-lite-account-existing-modal #lasso-lite-cta-login-submit.lasso-signup-btn {
+	background-color: var(--green) !important;
+	color: #ffffff !important;
+}
+#lasso-lite-account-existing-modal #lasso-lite-cta-login-submit.lasso-signup-btn:hover:not(:disabled) {
+	background-color: #1da896 !important;
+	color: #ffffff !important;
+}
+#lasso-lite-account-existing-modal .lasso-lite-modal-cancel {
+	background: #ffffff !important;
+	color: #374151 !important;
+	border: 1px solid #d1d5db !important;
+	font-weight: 600;
+	box-shadow: none !important;
+	border-radius: 6px;
+}
+#lasso-lite-account-existing-modal .lasso-lite-modal-cancel:hover {
+	background: #f9fafb !important;
+	color: #111827 !important;
+}

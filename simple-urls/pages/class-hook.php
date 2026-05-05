@@ -345,6 +345,10 @@ class Hook {
 			Helper::enqueue_style( 'lasso-lite-custom', 'lite-custom.css' );
 		}
 
+		if ( $setting->is_setting_amazon_page() ) {
+			Helper::enqueue_style( 'settings-amazon-modal', 'settings-amazon-modal.css', array( SIMPLE_URLS_SLUG . '-lasso-lite-custom' ) );
+		}
+
 		if ( $setting->is_setting_display_page() || $setting->is_setting_onboarding_page() ) {
 			Helper::enqueue_style( 'spectrum', 'spectrum.min.css' );
 		}
@@ -383,7 +387,7 @@ class Hook {
 			'site_url'                  => site_url(),
 			'plugin_url'                => SIMPLE_URLS_URL,
 			'lasso_link'                => Constant::LASSO_LINK,
-			'lasso_hub_url'             => Constant::LASSO_HUB_URL,
+			'lasso_hub_url'             => Constant::get_lasso_hub_url(),
 			'upgrade_url'               => Constant::LASSO_UPGRADE_URL,
 			'rewrite_slug_default'      => Enum::REWRITE_SLUG_DEFAULT,
 			'simple_urls_slug'          => SIMPLE_URLS_SLUG,
@@ -397,6 +401,12 @@ class Hook {
 			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID ),
 		);
 		$data_passed_to_js['realtime'] = Realtime_Click::get_js_config();
+
+		if ( $setting->is_setting_amazon_page() ) {
+			// Amazon settings only: edit.php?post_type=surl&page=surl-settings-amazon
+			$data_passed_to_js['lite_account_existing_always_post']           = true;
+			$data_passed_to_js['lite_amazon_settings_post_signup_verify_creators'] = true;
+		}
 
 		if ( SIMPLE_URLS_SLUG === $post_type ) {
 			wp_dequeue_script( 'up_admin_script' ); // ? fix js conflict with plugin: Download plugin
@@ -447,7 +457,7 @@ class Hook {
 			Helper::enqueue_script( 'url-add', 'url-add.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'support', 'support.js', array( 'jquery' ) );
 			
-			if ( ! $setting->is_setting_onboarding_page() ) {
+			if ( ! $setting->is_setting_onboarding_page() && ! $setting->is_setting_amazon_page() ) {
 				Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
 			}
 
@@ -477,7 +487,10 @@ class Hook {
 			Helper::enqueue_script( 'settings-display-js', 'settings-display.js', array( 'jquery' ) );
 		}
 
-		if ( $setting->is_setting_amazon_page() || $setting->is_setting_onboarding_page() ) {
+		if ( $setting->is_setting_amazon_page() ) {
+			Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
+			Helper::enqueue_script( 'settings-amazon', 'settings-amazon.js', array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-signup' ) );
+		} elseif ( $setting->is_setting_onboarding_page() ) {
 			Helper::enqueue_script( 'settings-amazon', 'settings-amazon.js', array( 'jquery' ) );
 		}
 

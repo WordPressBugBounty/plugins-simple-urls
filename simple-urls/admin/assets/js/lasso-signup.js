@@ -11,6 +11,45 @@ jQuery(document).ready(function($) {
     var googleSignupPopupWatcher = null;
     var lastSignupWrapper = null;
 
+    /**
+     * Readable message from wp_send_json_error data (msg / error / WP HTTP error shape).
+     *
+     * @param {*} data response.data from jQuery AJAX
+     * @return {string}
+     */
+    function lassoLiteAjaxErrorText(data) {
+        if (!data || typeof data !== 'object') {
+            return '';
+        }
+        if (typeof data.msg === 'string' && data.msg.length) {
+            return data.msg;
+        }
+        if (typeof data.error === 'string' && data.error.length) {
+            return data.error;
+        }
+        if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
+            return data.error.message;
+        }
+        if (typeof data.message === 'string' && data.message.length) {
+            return data.message;
+        }
+        return '';
+    }
+
+    /**
+     * Signup root: analytics/footer (#lasso-signup-wrapper) or Amazon Creators CTA modal (#lasso-lite-cta-signup-wrapper).
+     *
+     * @param {JQuery} $el Any element inside the signup block.
+     * @return {JQuery}
+     */
+    function getSignupWrapper($el) {
+        var $w = $el.closest('#lasso-signup-wrapper');
+        if ($w.length) {
+            return $w;
+        }
+        return $el.closest('#lasso-lite-cta-signup-wrapper');
+    }
+
     function clearGoogleSignupPopupReference() {
         if (googleSignupPopupWatcher) {
             window.clearInterval(googleSignupPopupWatcher);
@@ -81,32 +120,52 @@ jQuery(document).ready(function($) {
     })();
 
     $(document)
-        .on('click', '#btn-google-signup', handleGoogleSignup)
-        .on('click', '#btn-email-signup-toggle', handleEmailFormToggle)
-        .on('click', '#btn-create-account', handleEmailSignup)
-        .on('click', '#lasso-toggle-password', togglePasswordVisibility)
+        .on('click', '#btn-google-signup, #lasso-lite-cta-btn-google-signup', handleGoogleSignup)
+        .on('click', '#btn-email-signup-toggle, #lasso-lite-cta-btn-email-signup-toggle', handleEmailFormToggle)
+        .on('click', '#btn-create-account, #lasso-lite-cta-btn-create-account', handleEmailSignup)
+        .on('click', '#lasso-toggle-password, #lasso-lite-cta-toggle-password', togglePasswordVisibility)
         .on('click', '#lasso-skip-signup', handleSkipSignup)
-        .on('blur', '#lasso-signup-email', validateEmail)
-        .on('blur', '#lasso-signup-password', validatePassword)
-        .on('input', '#lasso-signup-email', function() {
+        .on('blur', '#lasso-signup-email, #lasso-lite-cta-signup-email', function() {
             var $input = $(this);
-            var $wrapper = $input.closest('#lasso-signup-wrapper');
-            clearEmailError($input, $wrapper.find('#lasso-email-error'), $wrapper.find('#lasso-general-error'));
+            var $w = getSignupWrapper($input);
+            validateEmail($input, $w.find('#lasso-email-error, #lasso-lite-cta-email-error').first());
         })
-        .on('input', '#lasso-signup-password', function() {
+        .on('blur', '#lasso-signup-password, #lasso-lite-cta-signup-password', function() {
             var $input = $(this);
-            var $wrapper = $input.closest('#lasso-signup-wrapper');
-            clearPasswordError($input, $wrapper.find('#lasso-password-error'), $wrapper.find('#lasso-general-error'));
+            var $w = getSignupWrapper($input);
+            validatePassword($input, $w.find('#lasso-password-error, #lasso-lite-cta-password-error').first());
         })
-        .on('keyup', '#lasso-signup-password', function(e) {
+        .on('input', '#lasso-signup-email, #lasso-lite-cta-signup-email', function() {
+            var $input = $(this);
+            var $wrapper = getSignupWrapper($input);
+            clearEmailError(
+                $input,
+                $wrapper.find('#lasso-email-error, #lasso-lite-cta-email-error').first(),
+                $wrapper.find('#lasso-general-error, #lasso-lite-cta-general-error').first()
+            );
+        })
+        .on('input', '#lasso-signup-password, #lasso-lite-cta-signup-password', function() {
+            var $input = $(this);
+            var $wrapper = getSignupWrapper($input);
+            clearPasswordError(
+                $input,
+                $wrapper.find('#lasso-password-error, #lasso-lite-cta-password-error').first(),
+                $wrapper.find('#lasso-general-error, #lasso-lite-cta-general-error').first()
+            );
+        })
+        .on('keyup', '#lasso-signup-password, #lasso-lite-cta-signup-password', function(e) {
             if (e.key === 'Enter' || e.keyCode === 13) {
-                handleEmailSignup(e);
+                var $w = getSignupWrapper($(this));
+                var $create = $w.find('#btn-create-account, #lasso-lite-cta-btn-create-account').first();
+                if ($create.length) {
+                    $create.trigger('click');
+                }
             }
         });
 
     function handleGoogleSignup(e) {
         e.preventDefault();
-        lastSignupWrapper = $(e.currentTarget).closest('#lasso-signup-wrapper');
+        lastSignupWrapper = getSignupWrapper($(e.currentTarget));
 
         $.ajax({
             url: lassoLiteOptionsData.ajax_url,
@@ -131,11 +190,15 @@ jQuery(document).ready(function($) {
                         startGoogleSignupPopupWatcher();
                     }
                 } else {
-                    showGeneralError('Unable to initiate Google signup. Please try again.');
+                    showGeneralError(
+                        lassoLiteAjaxErrorText(response && response.data) || 'Unable to initiate Google signup. Please try again.'
+                    );
                 }
             },
-            error: function() {
-                showGeneralError('Unable to connect to Lasso. Please try again later.');
+            error: function(xhr) {
+                showGeneralError(
+                    lassoLiteAjaxErrorText(xhr.responseJSON && xhr.responseJSON.data) || 'Unable to connect to Lasso. Please try again later.'
+                );
             }
         });
     }
@@ -143,8 +206,8 @@ jQuery(document).ready(function($) {
     function handleEmailFormToggle(e) {
         e.preventDefault();
         var $toggleBtn = $(e.currentTarget);
-        var $wrapper = $toggleBtn.closest('#lasso-signup-wrapper');
-        var $form = $wrapper.length ? $wrapper.find('#lasso-email-signup-form') : $('#lasso-email-signup-form');
+        var $wrapper = getSignupWrapper($toggleBtn);
+        var $form = $wrapper.find('#lasso-email-signup-form, #lasso-lite-cta-email-signup-form').first();
         $toggleBtn.addClass('d-none');
         $form.removeClass('d-none');
     }
@@ -155,13 +218,13 @@ jQuery(document).ready(function($) {
         if (isLoading) return;
 
         var $btn = $(e.currentTarget);
-        var $wrapper = $btn.closest('#lasso-signup-wrapper');
+        var $wrapper = getSignupWrapper($btn);
         lastSignupWrapper = $wrapper;
-        var $email = $wrapper.length ? $wrapper.find('#lasso-signup-email') : $('#lasso-signup-email');
-        var $password = $wrapper.length ? $wrapper.find('#lasso-signup-password') : $('#lasso-signup-password');
-        var $emailError = $wrapper.length ? $wrapper.find('#lasso-email-error') : $('#lasso-email-error');
-        var $passwordError = $wrapper.length ? $wrapper.find('#lasso-password-error') : $('#lasso-password-error');
-        var $generalError = $wrapper.length ? $wrapper.find('#lasso-general-error') : $('#lasso-general-error');
+        var $email = $wrapper.find('#lasso-signup-email, #lasso-lite-cta-signup-email').first();
+        var $password = $wrapper.find('#lasso-signup-password, #lasso-lite-cta-signup-password').first();
+        var $emailError = $wrapper.find('#lasso-email-error, #lasso-lite-cta-email-error').first();
+        var $passwordError = $wrapper.find('#lasso-password-error, #lasso-lite-cta-password-error').first();
+        var $generalError = $wrapper.find('#lasso-general-error, #lasso-lite-cta-general-error').first();
 
         clearAllErrors($email, $emailError, $password, $passwordError, $generalError);
         var isValid = true;
@@ -201,7 +264,7 @@ jQuery(document).ready(function($) {
                     saveAccountCredentials(signupData);
                     showSuccessAndContinue(signupData, $wrapper);
                 } else {
-                    var errorMsg = (response && response.data && response.data.error) ? response.data.error : 'Signup failed. Please try again.';
+                    var errorMsg = lassoLiteAjaxErrorText(response && response.data) || 'Signup failed. Please try again.';
                     showGeneralError(errorMsg);
                 }
             },
@@ -210,10 +273,7 @@ jQuery(document).ready(function($) {
                 $btn.text(originalText);
                 $btn.prop('disabled', false);
 
-                var errorMsg = 'Signup failed. Please try again.';
-                if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.error) {
-                    errorMsg = xhr.responseJSON.data.error;
-                }
+                var errorMsg = lassoLiteAjaxErrorText(xhr.responseJSON && xhr.responseJSON.data) || 'Signup failed. Please try again.';
                 showGeneralError(errorMsg);
             }
         });
@@ -245,6 +305,9 @@ jQuery(document).ready(function($) {
             $wrapper = $('#lasso-lite-analytics-modal #lasso-signup-wrapper:visible').first();
         }
         if (!$wrapper.length) {
+            $wrapper = $('#lasso-lite-account-existing-modal #lasso-lite-cta-signup-wrapper:visible').first();
+        }
+        if (!$wrapper.length) {
             $wrapper = $('#lasso-signup-wrapper:visible').first();
         }
         if (!$wrapper.length) {
@@ -260,10 +323,28 @@ jQuery(document).ready(function($) {
         hasShownSignupSuccess = true;
         var isFooterCta = $wrapper.closest('.lasso-footer-cta-inner').length > 0;
         var isOnboarding = !!(window.lassoLiteOptionsData && window.lassoLiteOptionsData.is_onboard_page);
+        var isLiteCtaModal = $wrapper.is('#lasso-lite-cta-signup-wrapper');
         var messageClass = isFooterCta ? 'text-white' : 'text-muted';
         var successMessage = 'Your Lasso account has been created successfully.'
 
-        $wrapper.html(
+        var $replaceTarget = $wrapper.find('#lasso-lite-cta-signup-inner').first();
+        if (!$replaceTarget.length) {
+            $replaceTarget = $wrapper;
+        }
+
+        var $existingModal = $('#lasso-lite-account-existing-modal');
+        var fromValidateCreatorsFlag = $existingModal.length && !!$existingModal.data('litePostSignupCreatorsVerify');
+        var amazonSettingsPostSignupVerify = !!(window.lassoLiteOptionsData && window.lassoLiteOptionsData.lite_amazon_settings_post_signup_verify_creators);
+        var runPostSignupCreators = isLiteCtaModal && $existingModal.length && (fromValidateCreatorsFlag || amazonSettingsPostSignupVerify);
+        if (fromValidateCreatorsFlag) {
+            $existingModal.removeData('litePostSignupCreatorsVerify');
+        }
+
+        var afterSuccessCta = isLiteCtaModal
+            ? (runPostSignupCreators ? '' : '<button type="button" class="lasso-signup-btn w-100 mt-2" data-dismiss="modal">Done</button>')
+            : (isOnboarding ? '' : '<a id="btn-login-after-signup" class="lasso-signup-btn lasso-login-btn w-100" href="' + LASSO_HUB_URL + '/login" target="_blank" rel="noopener noreferrer">Log in</a>');
+
+        $replaceTarget.html(
             '<div class="lasso-signup-success">' +
                 '<div class="lasso-success-icon mb-3">' +
                     '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#22BAA0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
@@ -273,9 +354,18 @@ jQuery(document).ready(function($) {
                 '</div>' +
                 '<h3 class="mb-2">Account Created!</h3>' +
                 '<p class="' + messageClass + ' mb-4">' + successMessage + '</p>' +
-                (isOnboarding ? '' : '<a id="btn-login-after-signup" class="lasso-signup-btn lasso-login-btn w-100" href="' + LASSO_HUB_URL + '/login" target="_blank" rel="noopener noreferrer">Log in</a>') +
+                afterSuccessCta +
             '</div>'
         );
+
+        if (runPostSignupCreators) {
+            $existingModal.data('litePendingCreatorsVerifyAfterSignup', true);
+            var postT = window.setTimeout(function() {
+                $existingModal.removeData('litePostSignupVerifyTimeout');
+                $existingModal.modal('hide');
+            }, 3000);
+            $existingModal.data('litePostSignupVerifyTimeout', postT);
+        }
 
         if (isOnboarding) {
             $('#lasso-signup-success').removeClass('d-none');
@@ -303,17 +393,14 @@ jQuery(document).ready(function($) {
                     saveAccountCredentials(signupData);
                     showSuccessAndContinue(signupData, lastSignupWrapper);
                 } else {
-                    var errorMsg = (response && response.data && response.data.error)
-                        ? response.data.error
-                        : 'Signup completed, but we could not connect your account. Please try again.';
+                    var errorMsg = lassoLiteAjaxErrorText(response && response.data)
+                        || 'Signup completed, but we could not connect your account. Please try again.';
                     showGeneralError(errorMsg);
                 }
             },
             error: function(xhr) {
-                var errorMsg = 'Signup completed, but we could not connect your account. Please try again.';
-                if (xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.error) {
-                    errorMsg = xhr.responseJSON.data.error;
-                }
+                var errorMsg = lassoLiteAjaxErrorText(xhr.responseJSON && xhr.responseJSON.data)
+                    || 'Signup completed, but we could not connect your account. Please try again.';
                 showGeneralError(errorMsg);
             }
         });
@@ -324,19 +411,20 @@ jQuery(document).ready(function($) {
         go_to_next_step_action($('#lasso-skip-signup'));
     }
 
-    function togglePasswordVisibility() {
-        var $input = $('#lasso-signup-password');
-        var $eyeIcon = $('#lasso-eye-icon');
-        var $eyeOffIcon = $('#lasso-eye-off-icon');
-
+    function togglePasswordVisibility(e) {
+        e.preventDefault();
+        var $btn = $(e.currentTarget);
+        var $wrap = $btn.closest('.lasso-password-wrapper');
+        var $input = $wrap.find('input').first();
+        var $icons = $btn.find('svg');
         if ($input.attr('type') === 'password') {
             $input.attr('type', 'text');
-            $eyeIcon.addClass('d-none');
-            $eyeOffIcon.removeClass('d-none');
+            $icons.eq(0).addClass('d-none');
+            $icons.eq(1).removeClass('d-none');
         } else {
             $input.attr('type', 'password');
-            $eyeIcon.removeClass('d-none');
-            $eyeOffIcon.addClass('d-none');
+            $icons.eq(0).removeClass('d-none');
+            $icons.eq(1).addClass('d-none');
         }
     }
 
@@ -400,18 +488,49 @@ jQuery(document).ready(function($) {
     }
 
     function clearAllErrors($emailInput, $emailError, $passwordInput, $passwordError, $generalError) {
+        if (arguments.length === 0 && lastSignupWrapper && lastSignupWrapper.length) {
+            var $w = lastSignupWrapper;
+            clearAllErrors(
+                $w.find('#lasso-signup-email, #lasso-lite-cta-signup-email').first(),
+                $w.find('#lasso-email-error, #lasso-lite-cta-email-error').first(),
+                $w.find('#lasso-signup-password, #lasso-lite-cta-signup-password').first(),
+                $w.find('#lasso-password-error, #lasso-lite-cta-password-error').first(),
+                $w.find('#lasso-general-error, #lasso-lite-cta-general-error').first()
+            );
+            return;
+        }
         clearEmailError($emailInput, $emailError, $generalError);
         clearPasswordError($passwordInput, $passwordError, $generalError);
         hideGeneralError($generalError);
     }
 
     function showGeneralError(message, $generalError) {
-        var $error = $generalError && $generalError.length ? $generalError : $('#lasso-general-error');
+        var $error = $generalError && $generalError.length ? $generalError : null;
+        if (!$error || !$error.length) {
+            if (lastSignupWrapper && lastSignupWrapper.length) {
+                $error = lastSignupWrapper.find('#lasso-general-error, #lasso-lite-cta-general-error').first();
+            }
+        }
+        if (!$error || !$error.length) {
+            $error = $('#lasso-general-error');
+        }
         $error.text(message).removeClass('d-none');
     }
 
     function hideGeneralError($generalError) {
-        var $error = $generalError && $generalError.length ? $generalError : $('#lasso-general-error');
+        var $error = $generalError && $generalError.length ? $generalError : null;
+        if (!$error || !$error.length) {
+            if (lastSignupWrapper && lastSignupWrapper.length) {
+                $error = lastSignupWrapper.find('#lasso-general-error, #lasso-lite-cta-general-error').first();
+            }
+        }
+        if (!$error || !$error.length) {
+            $error = $('#lasso-general-error');
+        }
         $error.addClass('d-none').text('');
     }
+
+    window.lassoLiteSignupResetSuccessGuard = function() {
+        hasShownSignupSuccess = false;
+    };
 });

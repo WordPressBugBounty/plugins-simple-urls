@@ -71,6 +71,12 @@ Documentation and support are available at [support.getlasso.co](https://support
 
 === Changelog ===
 
+= 149 =
+Amazon settings: Lite account flow — validate/connect flow in the Amazon settings context, with clearer Creators UX and signup handoff.
+Hub URL override support for the Lite/hub integration path used from Amazon settings.
+Lite account email can fall back to the WordPress admin_email when needed.
+Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansion).
+
 = 148 =
 * Released: April 29, 2026
 * Added Learn link in Amazon settings for Product Advertising API documentation

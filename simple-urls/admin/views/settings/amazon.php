@@ -38,6 +38,8 @@ $license_active              = License::get_license_status();
 $class_license_active        = $license_active ? '' : 'lasso-lite-disabled no-hint';
 $class_license_display       = !empty( $license_active ) ? 'd-none' : '';
 $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? true;
+
+$lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
 ?>
 
 <?php Config::get_header(); ?>
@@ -173,10 +175,10 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 
 							<div class="form-group">
 								<label class="toggle m-0 mr-1">
-									<input type="checkbox" class="amazon-api-mode-toggle">
+									<input type="checkbox" id="lasso-amazon-api-use-creators" class="amazon-api-mode-toggle">
 									<span class="slider"></span>
 								</label>
-								<label class="m-0">Use Creators API</label>
+								<label class="m-0" for="lasso-amazon-api-use-creators">Use Creators API</label>
 							</div>
 						</section>
 
@@ -226,5 +228,18 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 		</form>
 	</div>
 </section>
-<?php echo Helper::wrapper_js_render( 'default-template-notification-amz', Helper::get_path_views_folder() . '/notifications/default-template-jsrender.html' )?>
+<?php
+echo Helper::include_with_variables(
+	SIMPLE_URLS_DIR . '/admin/views/modals/lite-account-existing-login.php',
+	array(
+		'prefill_email' => $lite_account_cta_prefill_email,
+	)
+);
+?>
+<?php
+// Amazon notices: keep legacy banner UX (click row / X to dismiss) on default-template-jsrender.html.
+// Lite-account CTA only uses default-template-amz-html-jsrender.html (row is not a collapse trigger; link is real <a>).
+echo Helper::wrapper_js_render( 'default-template-notification-amz', Helper::get_path_views_folder() . '/notifications/default-template-jsrender.html' );
+echo Helper::wrapper_js_render( 'default-template-notification-amz-html', Helper::get_path_views_folder() . '/notifications/default-template-amz-html-jsrender.html' );
+?>
 <?php Config::get_footer(); ?>

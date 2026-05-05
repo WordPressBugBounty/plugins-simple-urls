@@ -24,6 +24,8 @@ class Ajax {
 	 */
 	public function register_hooks() {
 		add_action( 'wp_ajax_lasso_lite_save_settings_amazon', array( $this, 'lasso_lite_save_settings_amazon' ) );
+		add_action( 'wp_ajax_lasso_lite_validate_lite_account_email', array( $this, 'lasso_lite_validate_lite_account_email' ) );
+		add_action( 'wp_ajax_lasso_lite_sync_lite_account_via_existing_login', array( $this, 'lasso_lite_sync_lite_account_via_existing_login' ) );
 		add_action( 'wp_ajax_lasso_lite_verify_amazon_creators_credentials', array( $this, 'lasso_lite_verify_amazon_creators_credentials' ) );
 		add_action( 'wp_ajax_lasso_lite_save_settings_general', array( $this, 'lasso_lite_save_settings_general' ) );
 		add_action( 'wp_ajax_lasso_lite_store_settings', array( $this, 'lasso_lite_store_settings' ) );
@@ -67,11 +69,188 @@ class Ajax {
 			update_option( Enum::SETUP_AMZ_TRACKING_ID, true );
 		}
 
-		$data['msg']                           = 'All settings saved';
-		$data['creators_validation_attempted'] = $creators_validation['attempted'];
-		$data['creators_validation_success']   = $creators_validation['success'];
-		$data['creators_validation_msg']       = $creators_validation['msg'];
+		$data['msg']                                  = 'All settings saved';
+		$data['creators_validation_attempted']        = $creators_validation['attempted'];
+		$data['creators_validation_success']          = $creators_validation['success'];
+		$data['creators_validation_msg']              = $creators_validation['msg'];
+		$data['creators_validation_lite_account_cta'] = ! empty( $creators_validation['lite_account_validate_cta'] );
 		wp_send_json_success( $data );
+	}
+
+	/**
+	 * Step 1: GET {LASSO_LINK}/account/existing — same as FastAPI `lite_existing_account_endpoint` for GET.
+	 * Required outbound headers: `site-url`, `email` (see lambda_redir_post_token `app.py`).
+	 *
+	 * @return void
+	 */
+	public function lasso_lite_validate_lite_account_email() {
+		Helper::verify_access_and_nonce();
+
+		$post  = Helper::POST();
+		$email = sanitize_email( $post['email'] ?? '' );
+		if ( empty( $email ) ) {
+			wp_send_json_error( array( 'msg' => 'Email is required.' ) );
+		}
+
+		$lookup = Helper::send_request(
+			'get',
+			rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing',
+			array(),
+			array(
+				'site-url' => site_url(),
+				'email'    => $email,
+			)
+		);
+
+		$body   = $lookup['response'] ?? null;
+		$status = (int) ( $lookup['status_code'] ?? 500 );
+
+		if ( $status >= 400 || empty( $body ) ) {
+			$msg = 'Unable to verify your email. Try again.';
+			if ( is_object( $body ) && ! empty( $body->message ) && is_string( $body->message ) ) {
+				$msg = $body->message;
+			}
+			wp_send_json_error( array( 'msg' => $msg ) );
+		}
+
+		$data = $this->normalize_lite_account_existing_response_data( $body );
+		if ( null === $data ) {
+			wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
+		}
+
+		if ( ! empty( $data->needs_signup ) ) {
+			wp_send_json_success(
+				array(
+					'needs_signup' => true,
+					'msg'          => 'No Lasso account was found for that email. Create a free account below.',
+				)
+			);
+		}
+
+		if ( ! empty( $data->exists ) ) {
+			$account_email = sanitize_email( $data->email ?? '' );
+			$user_id       = intval( $data->user_id ?? 0 );
+			if ( empty( $account_email ) || $user_id <= 0 ) {
+				wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
+			}
+			Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $account_email );
+			Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+			Setting::set_setting( Enum::EMAIL_SUPPORT, $account_email );
+			wp_send_json_success(
+				array(
+					'linked'                  => true,
+					'needs_signup'            => false,
+					'link_account_required'   => false,
+					'msg'                     => 'Your Lasso account is already linked for this site.',
+					'email'                   => $account_email,
+				)
+			);
+		}
+
+		wp_send_json_success(
+			array(
+				'needs_signup'            => false,
+				'linked'                  => false,
+				'link_account_required'   => true,
+				'msg'                     => 'Click the button again to link this site.',
+			)
+		);
+	}
+
+	/**
+	 * Step 2: POST {LASSO_LINK}/account/existing — same as FastAPI `lite_existing_account_endpoint` for POST.
+	 * JSON body: `email`, `site_url`, `mode` = `creators_api` (Lambda skips dim_sites binding when mode matches).
+	 *
+	 * @return void
+	 */
+	public function lasso_lite_sync_lite_account_via_existing_login() {
+		Helper::verify_access_and_nonce();
+
+		$post  = Helper::POST();
+		$email = sanitize_email( $post['email'] ?? '' );
+
+		if ( empty( $email ) ) {
+			wp_send_json_error( array( 'msg' => 'Email is required.' ) );
+		}
+
+		$url             = rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing';
+		$request_payload = array(
+			'email'    => $email,
+			'site_url' => site_url(),
+			'mode'     => 'creators_api',
+		);
+
+		$response = Helper::send_request(
+			'post',
+			$url,
+			$request_payload,
+			array(
+				'Content-Type' => 'application/json',
+			)
+		);
+
+		$lookup_body = $response['response'] ?? null;
+		$status      = (int) ( $response['status_code'] ?? 500 );
+
+		if ( empty( $lookup_body ) || $status >= 400 ) {
+			$error_message = 'Unable to verify your Lasso account. Try again.';
+			if ( is_object( $lookup_body ) && ! empty( $lookup_body->message ) && is_string( $lookup_body->message ) ) {
+				$error_message = $lookup_body->message;
+			} elseif ( is_object( $lookup_body ) && ! empty( $lookup_body->error ) && is_string( $lookup_body->error ) ) {
+				$error_message = $lookup_body->error;
+			}
+			wp_send_json_error( array( 'msg' => $error_message ) );
+		}
+
+		$data = $this->normalize_lite_account_existing_response_data( $lookup_body );
+		if ( null === $data ) {
+			wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
+		}
+
+		if ( ! empty( $data->needs_signup ) ) {
+			wp_send_json_success(
+				array(
+					'needs_signup' => true,
+					'msg'          => 'No Lasso account was found for that email. Create a free account below.',
+				)
+			);
+		}
+
+		if ( ! empty( $data->exists ) ) {
+			$account_email = sanitize_email( $data->email ?? '' );
+			$user_id       = intval( $data->user_id ?? 0 );
+
+			if ( empty( $account_email ) || $user_id <= 0 ) {
+				wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
+			}
+
+			Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $account_email );
+			Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+			Setting::set_setting( Enum::EMAIL_SUPPORT, $account_email );
+
+			wp_send_json_success(
+				array(
+					'linked'                  => true,
+					'needs_signup'            => false,
+					'link_account_required'   => false,
+					'msg'                     => 'Your Lasso account is now linked for this site.',
+					'email'                   => $account_email,
+				)
+			);
+		}
+
+		if ( ! empty( $data->link_account_required ) ) {
+			wp_send_json_success(
+				array(
+					'needs_signup'            => false,
+					'linked'                  => false,
+					'link_account_required'   => true,
+					'msg'                     => 'Click the button again to link this site.',
+				)
+			);
+		}
+
+		wp_send_json_error( array( 'msg' => 'No Lasso account was found for this site for that email.' ) );
 	}
 
 	/**
@@ -87,7 +266,7 @@ class Ajax {
 		$credential_version  = sanitize_text_field( $post['amazon_creators_version'] ?? '' );
 		$partner_tag         = sanitize_text_field( $post['amazon_creators_partner_tag'] ?? '' );
 		$country             = sanitize_text_field( $post['amazon_default_tracking_country'] ?? '' );
-		$email               = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		$email               = $this->get_lite_account_email();
 		$normalized_email    = is_string( $email ) ? strtolower( trim( $email ) ) : '';
 		$token               = md5( $normalized_email );
 
@@ -116,7 +295,8 @@ class Ajax {
 		if ( empty( $normalized_email ) ) {
 			wp_send_json_error(
 				array(
-					'msg' => 'Connect your Lite account to app.getlasso.co before validating Creators API credentials.',
+					'msg'                       => 'Connect your Lite account to app.getlasso.co before validating Creators API credentials.',
+					'lite_account_validate_cta' => true,
 				)
 			);
 		}
@@ -168,6 +348,50 @@ class Ajax {
 	}
 
 	/**
+	 * Lite account email from plugin options (LASSO_ACCOUNT_EMAIL).
+	 *
+	 * @return string Normalized use: empty string when not linked.
+	 */
+	private function get_lite_account_email() {
+		$email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		if ( is_string( $email ) && '' !== trim( $email ) ) {
+			return $email;
+		}
+		return '';
+	}
+
+	/**
+	 * Extract the `data` object from lasso.link /account/existing JSON (Lambda/FastAPI).
+	 *
+	 * Supports: wrapped `{ "message", "data": { ... } }`, flattened `{ "exists", ... }`,
+	 * and `data` as associative array from json_decode.
+	 *
+	 * @param mixed $body Decoded JSON root from Helper::send_request().
+	 * @return object|null Normalized object for Lite validate logic, or null if unusable.
+	 */
+	private function normalize_lite_account_existing_response_data( $body ) {
+		if ( ! is_object( $body ) ) {
+			return null;
+		}
+		$data = null;
+		if ( property_exists( $body, 'data' ) ) {
+			$data = $body->data;
+		} elseif ( property_exists( $body, 'exists' ) || property_exists( $body, 'needs_signup' ) || property_exists( $body, 'email_exists' ) ) {
+			$data = $body;
+		}
+		if ( null === $data ) {
+			return null;
+		}
+		if ( is_array( $data ) ) {
+			return (object) $data;
+		}
+		if ( ! is_object( $data ) ) {
+			return null;
+		}
+		return $data;
+	}
+
+	/**
 	 * Validate Creators credentials after save; clears stored Creators fields if remote verification fails.
 	 *
 	 * @param array $settings Saved settings.
@@ -175,10 +399,11 @@ class Ajax {
 	 */
 	private function maybe_validate_amazon_creators_credentials_on_save( $settings ) {
 		$result = array(
-			'attempted'           => false,
-			'success'             => null,
-			'msg'                 => '',
-			'credentials_cleared' => false,
+			'attempted'                 => false,
+			'success'                   => null,
+			'msg'                       => '',
+			'credentials_cleared'       => false,
+			'lite_account_validate_cta' => false,
 		);
 
 		if ( ! $this->has_complete_amazon_creators_credentials( $settings ) ) {
@@ -190,12 +415,13 @@ class Ajax {
 		}
 
 		$result['attempted'] = true;
-		$email               = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		$email               = $this->get_lite_account_email();
 		$normalized_email    = is_string( $email ) ? strtolower( trim( $email ) ) : '';
 
 		if ( empty( $normalized_email ) ) {
-			$result['success'] = false;
-			$result['msg']     = 'Settings were saved, but Creators API credentials could not be validated because your Lite account is not connected.';
+			$result['success']                   = false;
+			$result['msg']                       = 'Settings were saved, but Creators API credentials could not be validated because your Lite account is not connected.';
+			$result['lite_account_validate_cta'] = true;
 
 			return $result;
 		}

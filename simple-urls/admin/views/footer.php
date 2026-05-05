@@ -206,7 +206,7 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 		</div>
 
 		<input type="hidden" id="footer-prefill-email" value="<?php echo esc_attr( $prefill_email ); ?>">
-		<input type="hidden" id="footer-lasso-hub-url" value="<?php echo esc_attr( Constant::LASSO_HUB_URL ); ?>">
+		<input type="hidden" id="footer-lasso-hub-url" value="<?php echo esc_attr( Constant::get_lasso_hub_url() ); ?>">
 		<?php endif; ?>
 
 		<?php if ( $is_lasso_connected ) : ?>

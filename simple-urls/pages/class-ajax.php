@@ -407,15 +407,18 @@ class Ajax {
 				'source'       => $source,
 				'callback_url' => $callback_url,
 			),
-			Constant::LASSO_HUB_URL . '/api/account/external/config'
+			Constant::get_lasso_hub_url() . '/api/account/external/config'
 		);
 
 		$response = Helper::send_request( 'get', $request_url );
 
 		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			$error_message = Helper::hub_request_error_message( $response, 'Unable to fetch signup config.' );
+
 			wp_send_json_error(
 				array(
-					'msg' => 'Unable to fetch signup config.',
+					'msg'   => $error_message,
+					'error' => $error_message,
 				)
 			);
 		}
@@ -450,19 +453,18 @@ class Ajax {
 		$headers  = array(
 			'Content-Type' => 'application/json',
 		);
-		$response = Helper::send_request( 'post', Constant::LASSO_HUB_URL . '/api/signup/external', $data, $headers );
+		$signup_url = Constant::get_lasso_hub_url() . '/api/signup/external';
+
+		$response = Helper::send_request( 'post', $signup_url, $data, $headers );
 
 		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
-			$error_message = 'Signup failed.';
-			if ( ! empty( $response['response'] ) ) {
-				$error_message = $response['response']->error ?? $response['response']->message ?? $error_message;
-			}
+			$error_message = Helper::hub_request_error_message( $response, 'Signup failed.' );
 
 			wp_send_json_error(
 				array(
 					'msg'         => $error_message,
+					'error'       => $error_message,
 					'status_code' => $response['status_code'],
-					'response'    => $response['response'],
 				)
 			);
 		}
@@ -493,12 +495,18 @@ class Ajax {
 		$headers  = array(
 			'Content-Type' => 'application/json',
 		);
-		$response = Helper::send_request( 'post', Constant::LASSO_HUB_URL . '/api/signup/external/exchange', $data, $headers );
+		$exchange_url = Constant::get_lasso_hub_url() . '/api/signup/external/exchange';
+
+		$response = Helper::send_request( 'post', $exchange_url, $data, $headers );
 
 		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+			$error_message = Helper::hub_request_error_message( $response, 'Exchange failed.' );
+
 			wp_send_json_error(
 				array(
-					'msg' => 'Exchange failed.',
+					'msg'         => $error_message,
+					'error'       => $error_message,
+					'status_code' => $response['status_code'],
 				)
 			);
 		}
