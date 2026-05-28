@@ -51,13 +51,13 @@ class License {
 		$res = Lasso_Helper::send_request( 'get', $request_url, array(), $headers );
 
 		$status_code = $res['status_code'];
-		$response    = $res['response'];
+		$response    = ( isset( $res['response'] ) && is_object( $res['response'] ) ) ? $res['response'] : null;
 
 		$error_code    = 'other';
 		$error_message = 'Error!';
 		$status        = false;
 
-		if ( 200 === $status_code ) {
+		if ( 200 === $status_code && null !== $response ) {
 			// ? store user email
 			if ( isset( $response->email ) && '' !== $response->email ) {
 				update_option( 'lasso_lite_license_email', $response->email );
@@ -67,7 +67,7 @@ class License {
 			}
 
 			$status = true;
-		} elseif ( 401 === $status_code ) {
+		} elseif ( 401 === $status_code && null !== $response ) {
 			$error_code    = $response->error_code ?? $error_code;
 			$error_message = $response->message ?? $error_message;
 			$status        = false;
@@ -80,17 +80,17 @@ class License {
 		}
 
 		// ? store user hash
-		if ( isset( $response->hash ) && '' !== $response->hash ) {
+		if ( null !== $response && isset( $response->hash ) && '' !== $response->hash ) {
 			update_option( 'lasso_lite_license_hash', $response->hash );
 		}
 
 		// ? update license status in DB
-		if ( $update_db ) {
+		if ( $update_db && null !== $response ) {
 			$db_status = $status && 1 == $response->is_startup_plan ? 1 : 0; // phpcs:ignore
 			update_option( 'lasso_lite_license_status', $db_status, true );
 		}
 
-		if ( 1 !== $response->is_startup_plan ) {
+		if ( null === $response || 1 !== $response->is_startup_plan ) {
 			$status = false;
 		}
 
@@ -160,7 +160,8 @@ class License {
 		// phpcs:ignore
 		$response = Lasso_Helper::send_request( 'post', Constant::LASSO_LINK . '/server-lite/getinfo', $data );
 
-		$site_id = $response['response']->site_id ?? '';
+		$response_body = ( isset( $response['response'] ) && is_object( $response['response'] ) ) ? $response['response'] : null;
+		$site_id       = ( null !== $response_body ) ? ( $response_body->site_id ?? '' ) : '';
 
 		if ( $site_id ) {
 			self::save_site_id( $site_id ); // ? save site_id from DB

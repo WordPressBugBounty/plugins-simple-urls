@@ -114,6 +114,14 @@ function add_short_code_single(obj) {
 	let post_id = jQuery(obj).data('post-id');
 	let shortcode = '[lasso ref="' + link_slug + '" id="' + post_id + '"]';
 
+	// Elementor: always use add_short_code_elementor (panel + lasso_lite_get_shortcode_content). TinyMCE insert alone skips AJAX preview.
+	if ( typeof add_short_code_elementor === 'function'
+		&& typeof lasso_elementor_active_widget_id !== 'undefined'
+		&& lasso_elementor_active_widget_id !== null ) {
+		add_short_code_elementor(shortcode);
+		return;
+	}
+
 	try {
 		tiny_mce_editor.insertContent(shortcode);
 	} catch (e) {

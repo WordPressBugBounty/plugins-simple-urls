@@ -3,6 +3,21 @@ jQuery(document).ready(function () {
 		let limit       = 5;
 		let currentPage = 1;
 		let tab         = 'single';
+		/** Same as lasso-lite-gutenberg-block.js (inline SVG — no .loader / .py-5 in block editor). */
+		var LASSO_LITE_INLINE_LOADING_HTML =
+			'<div class="lasso-lite-inline-loading" style="display:flex!important;align-items:center!important;justify-content:center!important;min-height:min(40vh,220px)!important;width:100%!important;box-sizing:border-box!important;padding:12px;">' +
+			'<svg width="40" height="40" viewBox="0 0 50 50" style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+			'<circle cx="25" cy="25" r="20" fill="none" stroke="#E2E2E2" stroke-width="5"/>' +
+			'<circle cx="25" cy="25" r="20" fill="none" stroke="#22baa0" stroke-width="5" stroke-dasharray="31.4 94.2" stroke-linecap="round">' +
+			'<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.85s" repeatCount="indefinite"/>' +
+			'</circle></svg></div>';
+		/** Block editor + other screens: never use global #id (ambiguous). Always scope to the Lasso modal root. */
+		var $lassoDisplayModal = function() {
+			return jQuery( '#lasso-display-add' );
+		};
+		var $lassoDisplayAllLinks = function() {
+			return $lassoDisplayModal().find( '#all_links' );
+		};
 
 		jQuery(document)
 			.on('click', '.lasso-display-type', add_display)
@@ -30,11 +45,12 @@ jQuery(document).ready(function () {
 		 * @param tab_container
 		 */
 		function show_tab(tab_container) {
-			let tab_container_el = jQuery('#' + tab_container);
-			jQuery('#lasso-display-type').addClass('d-none');
-			tab_container_el.removeClass('d-none');
-			tab_container_el.find('.search-keys input').addClass('d-none');
-			tab_container_el.find('.search-keys input#search-key-' + tab).removeClass('d-none');
+			var $m = $lassoDisplayModal();
+			let tab_container_el = $m.find( '#' + tab_container );
+			$m.find( '#lasso-display-type' ).addClass( 'd-none' );
+			tab_container_el.removeClass( 'd-none' );
+			tab_container_el.find( '.search-keys input' ).addClass( 'd-none' );
+			tab_container_el.find( '.search-keys input#search-key-' + tab ).removeClass( 'd-none' );
 
 			if(tab === 'single') {
 				single_list();
@@ -42,7 +58,8 @@ jQuery(document).ready(function () {
 		}
 
 		function single_list(entering_search = false) {
-			let keyword      = jQuery('.search-keys input#search-key-' + tab).val();
+			var $m = $lassoDisplayModal();
+			let keyword      = $m.find( '.search-keys input#search-key-' + tab ).val();
 			let current_page = get_current_page(entering_search);
 
 			jQuery.ajax({
@@ -66,7 +83,7 @@ jQuery(document).ready(function () {
 						let single_total    = parseInt(data.total);
 						let page            = data.page;
 						let html_pagination = '<div id="pagination-container" class="pagination"></div>';
-						let el_all_link     = jQuery("#all_links");
+						let el_all_link     = $lassoDisplayAllLinks();
 						currentPage         = page;
 
 						try {
@@ -90,14 +107,16 @@ jQuery(document).ready(function () {
 		}
 
 		function show_loading() {
-			let html = '<div class="py-5"><div class="loader"></div></div>';
 			if(tab === 'single') {
-				jQuery("#all_links").html(html);
+				var $links = $lassoDisplayAllLinks();
+				if ( $links.length ) {
+					$links.html( LASSO_LITE_INLINE_LOADING_HTML );
+				}
 			}
 		}
 
 		function paginator(count) {
-			let paginator = jQuery('#pagination-container').pagination({
+			let paginator = $lassoDisplayModal().find( '#pagination-container' ).pagination({
 				items: count,
 				itemsOnPage: limit,
 				currentPage: currentPage,
@@ -126,9 +145,10 @@ jQuery(document).ready(function () {
 		 * Reset pop-up on close
 		 */
 		function reset_pop_up_display_modal() {
-			jQuery("#lasso-display-type").removeClass("d-none");
-			jQuery("#lasso-display-add .tab-container").addClass("d-none");
-			jQuery("#lasso-display-add .tab-container .lasso-items").html('');
+			var $m = $lassoDisplayModal();
+			$m.find( '#lasso-display-type' ).removeClass( 'd-none' );
+			$m.find( '.tab-container' ).addClass( 'd-none' );
+			$m.find( '.tab-container .lasso-items' ).html( '' );
 			single_list();
 		}
 	});

@@ -343,14 +343,15 @@ class Setting {
 
 			$jwt          = JWT::encode( $jwt_data, Constant::JWT_SECRET_KEY, 'HS256' );
 			$data['data'] = $jwt;
-			$response     = Helper::send_request( 'post', Constant::LASSO_LINK . '/lasso-lite/enable-support', $data );
-			$is_succeed   = boolval( $response['response']->succeed );
+			$response      = Helper::send_request( 'post', Constant::LASSO_LINK . '/lasso-lite/enable-support', $data );
+			$response_body = ( isset( $response['response'] ) && is_object( $response['response'] ) ) ? $response['response'] : null;
+			$is_succeed    = null !== $response_body && boolval( $response_body->succeed ?? false );
 			if ( $is_succeed ) {
-				$user_hash                              = $response['response']->user_hash;
-				$intercom_jwt                           = $response['response']->intercom_jwt;
+				$user_hash                              = $response_body->user_hash;
+				$intercom_jwt                           = $response_body->intercom_jwt;
 				$settings[ Enum::SUPPORT_ENABLED_TIME ] = date( 'm/d/Y', time() ); // phpcs:ignore
 				$settings[ Enum::USER_HASH ]            = $user_hash;
-				$settings[ Constant::SITE_ID_KEY ]          = $response['response']->site_id;
+				$settings[ Constant::SITE_ID_KEY ]      = $response_body->site_id;
 				if ( ! empty( $intercom_jwt ) ) {
 					$settings[ Enum::INTERCOM_JWT ] = $intercom_jwt;
 				}

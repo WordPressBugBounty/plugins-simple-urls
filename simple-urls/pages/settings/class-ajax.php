@@ -9,6 +9,7 @@ namespace LassoLite\Pages\Settings;
 
 use LassoLite\Admin\Constant;
 
+use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
@@ -583,22 +584,7 @@ class Ajax {
 	 * @return string
 	 */
 	private function get_amazon_creators_signature( $settings ) {
-		if ( ! $this->has_complete_amazon_creators_credentials( $settings ) ) {
-			return '';
-		}
-
-		return hash(
-			'sha256',
-			wp_json_encode(
-				array(
-					'credential_id'      => (string) $settings['amazon_creators_credential_id'],
-					'secret'             => (string) $settings['amazon_creators_secret'],
-					'credential_version' => (string) $settings['amazon_creators_version'],
-					'partner_tag'        => (string) $settings['amazon_creators_partner_tag'],
-					'country'            => (string) ( $settings['amazon_default_tracking_country'] ?? '' ),
-				)
-			)
-		);
+		return Amazon_Api::get_amazon_creators_signature( $settings );
 	}
 
 	/**

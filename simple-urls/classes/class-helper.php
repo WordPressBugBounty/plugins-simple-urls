@@ -1552,13 +1552,20 @@ class Helper {
 		$data    = array(
 			'url' => $url,
 		);
-		$res     = self::send_request( 'get', Constant::LASSO_LINK . '/link/status/?url=' . $url, array(), $headers );
+		$res = self::send_request( 'get', Constant::LASSO_LINK . '/link/status/?url=' . $url, array(), $headers );
 
 		// phpcs:ignore
-		// $res              = self::send_request( 'get', LASSO_LINK . '/link/status/?' . $encrypted_base64, array(), $headers );
-		$status_temp = intval( $res['response']->status ?? $status );
+		// $res = self::send_request( 'get', LASSO_LINK . '/link/status/?' . $encrypted_base64, array(), $headers );
+		if ( $get_res ) {
+			return $res;
+		}
 
-		return $get_res ? $res : $status_temp;
+		$bls_response = $res['response'] ?? null;
+		if ( ! is_object( $bls_response ) ) {
+			return 500;
+		}
+
+		return intval( $bls_response->status ?? $status );
 	}
 
 	/**
@@ -1751,7 +1758,7 @@ class Helper {
 	 * @return bool
 	 */
 	public static function is_wp_elementor_plugin_actived() {
-		return is_plugin_active( 'elementor/elementor.php' );
+		return self::get_is_plugin_active( 'elementor/elementor.php' );
 	}
 
 	/**
@@ -1818,11 +1825,21 @@ class Helper {
 			$encrypted_base64 = http_build_query( $data );
 			$res              = self::send_request( 'get', Constant::LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
 
-			$final_url  = $res['response']->finalUrl ?? $url;
-			$page_title = $res['response']->pageTitle ?? '';
+			$bls_response = ( isset( $res['response'] ) && is_object( $res['response'] ) ) ? $res['response'] : null;
+			$final_url    = ( null !== $bls_response ) ? ( $bls_response->finalUrl ?? $url ) : $url;
+			$page_title   = ( null !== $bls_response ) ? ( $bls_response->pageTitle ?? '' ) : '';
+
+			$bls_status = ( null !== $bls_response && isset( $bls_response->status ) ) ? intval( $bls_response->status ) : 0;
+			if ( $bls_status ) {
+				$response_status = $bls_status;
+			} elseif ( 200 === intval( $res['status_code'] ?? 0 ) ) {
+				$response_status = 500;
+			} else {
+				$response_status = intval( $res['status_code'] ?? 500 );
+			}
 
 			// ? Set the response status code for add new link process
-			Cache_Per_Process::get_instance()->set_cache( Affiliate_Link::ADD_NEW_LINK_RESPONSE_STATUS . md5( $origin_url ), $res['response']->status ?? 200 );
+			Cache_Per_Process::get_instance()->set_cache( Affiliate_Link::ADD_NEW_LINK_RESPONSE_STATUS . md5( $origin_url ), $response_status );
 
 			$tmp_url = self::get_final_url_from_url_param( $final_url );
 			if ( $tmp_url ) {

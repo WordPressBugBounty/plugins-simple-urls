@@ -9,6 +9,49 @@ var focus_customize_data = [];
 var window_url_detail;
 var shortcodes_reload = [];
 
+/** Self-contained loading markup (no .loader / .py-5 — those clash with WP editor + iframe). */
+var LASSO_LITE_INLINE_LOADING_HTML =
+	'<div class="lasso-lite-inline-loading" style="display:flex!important;align-items:center!important;justify-content:center!important;min-height:min(40vh,220px)!important;width:100%!important;box-sizing:border-box!important;padding:12px;">' +
+	'<svg width="40" height="40" viewBox="0 0 50 50" style="flex-shrink:0" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+	'<circle cx="25" cy="25" r="20" fill="none" stroke="#E2E2E2" stroke-width="5"/>' +
+	'<circle cx="25" cy="25" r="20" fill="none" stroke="#22baa0" stroke-width="5" stroke-dasharray="31.4 94.2" stroke-linecap="round">' +
+	'<animateTransform attributeName="transform" type="rotate" from="0 25 25" to="360 25 25" dur="0.85s" repeatCount="indefinite"/>' +
+	'</circle></svg></div>';
+
+/**
+ * Block canvas often lives in an iframe; editor scripts run in the parent window.
+ *
+ * @param {string} blockId clientId without "block-" prefix.
+ * @return {jQuery}
+ */
+function lassoLiteGutenbergBlockRoot( blockId ) {
+	var bid = 'block-' + blockId;
+	var el = document.getElementById( bid );
+	if ( el ) {
+		return jQuery( el );
+	}
+	var iframes = document.querySelectorAll( 'iframe' );
+	for ( var i = 0; i < iframes.length; i++ ) {
+		try {
+			var doc = iframes[ i ].contentDocument;
+			if ( ! doc ) {
+				continue;
+			}
+			el = doc.getElementById( bid );
+			if ( el ) {
+				return jQuery( el );
+			}
+		} catch ( err ) {
+			continue;
+		}
+	}
+	return jQuery( [] );
+}
+
+function lassoLiteGutenbergShortcodeHtml$( blockId ) {
+	return lassoLiteGutenbergBlockRoot( blockId ).find( 'div.shortcode-html' ).first();
+}
+
 jQuery(document).ready(function() {
 	// EVERYTHING HERE IS A UNIQUE SCOPE
 	function this_init(){
@@ -29,7 +72,19 @@ jQuery(document).ready(function() {
 	}, 500);
 
 	function scan_lasso_shortcodes(){
-		let lasso_shortcode_blocks = jQuery('div[data-type="affiliate-plugin/lasso"]');
+		var lasso_shortcode_blocks = jQuery( 'div[data-type="affiliate-plugin/lasso"]' );
+		if ( ! lasso_shortcode_blocks.length ) {
+			jQuery( 'iframe' ).each( function() {
+				try {
+					var doc = this.contentDocument;
+					if ( ! doc ) {
+						return;
+					}
+					lasso_shortcode_blocks = lasso_shortcode_blocks.add( jQuery( doc ).find( 'div[data-type="affiliate-plugin/lasso"]' ) );
+				} catch ( err ) {
+				}
+			} );
+		}
 		if(lasso_shortcode_blocks.length > 0) {
 			for (let index = 0; index < lasso_shortcode_blocks.length; index++) {
 				const element = jQuery(lasso_shortcode_blocks[index]);
@@ -52,26 +107,29 @@ function add_short_code_single_block(obj) {
 }
 
 function getLassoShortcodeHtml(blockId, shortcode) {
-	let loading_img = '<div class="py-5"><div class="loader"></div></div>';
+	var $preview = lassoLiteGutenbergShortcodeHtml$( blockId );
 	jQuery.ajax({
 		url: lassoLiteOptionsData.ajax_url,
-		type: 'get',
+		type: 'post',
 		data: {
 			action: 'lasso_lite_get_shortcode_content',
 			nonce: lassoLiteOptionsData.optionsNonce,
 			shortcode: shortcode,
 		},
 		beforeSend: function( xhr ) {
-			jQuery('#block-' + blockId).find('div.shortcode-html').html(loading_img);
+			$preview = lassoLiteGutenbergShortcodeHtml$( blockId );
+			$preview.html( LASSO_LITE_INLINE_LOADING_HTML );
 		}
 	})
 		.done(function(res) {
-			res = res.data;
-			html = res.html;
-			jQuery('#block-' + blockId).find('div.shortcode-html').html(html);
+			if ( ! res || ! res.success || ! res.data ) {
+				return;
+			}
+			var html = res.data.html || '';
+			lassoLiteGutenbergShortcodeHtml$( blockId ).html( html );
 		})
 		.always(function() {
-			jQuery('#block-' + blockId).find('div.py-5').remove();
+			lassoLiteGutenbergShortcodeHtml$( blockId ).find( '.lasso-lite-inline-loading, div.py-5' ).remove();
 		});
 }
 
@@ -85,7 +143,7 @@ function setBlockAttributes(block_id, shortcode) {
 	});
 
 	// if blockLiteProps.setAttributes doesn't work, it will update the shortcode
-	jQuery('#block-' + block_id).find('input').val(shortcode);
+	lassoLiteGutenbergBlockRoot( block_id ).find( 'input' ).val( shortcode );
 
 	// hide the popup
 	let lasso_block = jQuery('#lasso-display-add');
@@ -232,7 +290,7 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
                 // Build new shortcode content
                 var new_short_code = customize_shortcode(attr_code, value);
                 props.setAttributes( { short_code: new_short_code } );
-                jQuery('#block-' + props.clientId).find('input.shortcode-input').val(new_short_code);
+                lassoLiteGutenbergBlockRoot( props.clientId ).find( 'input.shortcode-input' ).val( new_short_code );
             } catch (e) {
                 console.log('Error: On change customize data', e);
             }
@@ -277,7 +335,7 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
                 let new_short_code = customize_shortcode(attr_code, value);
                 props.attributes[attr_code] = value;
                 props.setAttributes( { short_code: new_short_code } );
-                jQuery('#block-' + props.clientId).find('input.shortcode-input').val(new_short_code);
+                lassoLiteGutenbergBlockRoot( props.clientId ).find( 'input.shortcode-input' ).val( new_short_code );
                 this.getLassoShortcodeHtml(props.clientId, new_short_code);
             } catch (e) {
                 console.log('Error: On change customize data', e);
@@ -460,8 +518,9 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
 							background: 'white',
 							padding: '1px 0',
 							'text-align': 'initial',
+							minHeight: props.attributes.show_short_code ? '180px' : undefined,
 						},
-						class: 'shortcode-html'
+						className: 'shortcode-html lasso-lite-shortcode-html'
 					},
 					''
 				),

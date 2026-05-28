@@ -7,6 +7,7 @@
 
 namespace LassoLite\Classes;
 
+use LassoLite\Admin\Constant;
 use LassoLite\Classes\Affiliate_Link;
 use LassoLite\Classes\Cache_Per_Process;
 use LassoLite\Classes\Helper;
@@ -464,9 +465,26 @@ class Amazon_Api {
 
 		$lasso_settings       = Setting::get_settings();
 		$is_amazon_configured = $lasso_settings['amazon_access_key_id'] && $lasso_settings['amazon_secret_key'] && $lasso_settings['amazon_tracking_id'];
-		$result               = $is_amazon_configured && $this->is_same_domain( $amz_link ) ? $this->get_product_by_id_v5( $product_id ) : false;
+
+		if (
+			self::is_amazon_creators_verified( $lasso_settings )
+			&& $this->is_same_domain( $amz_link )
+		) {
+			$creators_result = $this->fetch_product_info_from_creators_api(
+				$product_id,
+				$store_product,
+				$updated_at,
+				$amz_link,
+				$lasso_settings
+			);
+			if ( null !== $creators_result ) {
+				return $creators_result;
+			}
+		}
+
+		$result = $is_amazon_configured && $this->is_same_domain( $amz_link ) ? $this->get_product_by_id_v5( $product_id ) : false;
 		// phpcs:ignore
-		if ( isset( $result->Errors[0] ) && (
+		if ( is_object( $result ) && isset( $result->Errors[0] ) && (
 				"The ItemId $product_id provided in the request is invalid." === $result->Errors[0]->Message // phpcs:ignore
 				|| "The value [$product_id] provided in the request for ItemIds is invalid." === $result->Errors[0]->Message // phpcs:ignore
 			)
@@ -478,7 +496,7 @@ class Amazon_Api {
 				'status'     => 'failed',
 				'error_code' => 'NotFound',
 			);
-		} elseif ( isset( $result->ItemsResult->Items[0] ) ) { // phpcs:ignore
+		} elseif ( is_object( $result ) && isset( $result->ItemsResult->Items[0] ) ) { // phpcs:ignore
 			$item = $result->ItemsResult->Items[0]; // phpcs:ignore
 
 			$product                = $this->extract_search_result_v5( $item, true );
@@ -495,20 +513,7 @@ class Amazon_Api {
 				}
 			}
 
-			// ? Get Lasso ID
-			$query               = '
-                SELECT post_id 
-                FROM ' . $lasso_db->postmeta . "
-                WHERE meta_key = 'amazon_product_id' AND meta_value = '" . $product['product_id'] . "'
-            ";
-			$lasso_id            = $lasso_db->get_var( $query );
-			$product['lasso_id'] = ( isset( $lasso_id ) ) ? $lasso_id : 0;
-
-			if ( $store_product ) {
-				$amazon_tracking_id     = Setting::get_setting( 'amazon_tracking_id', '' );
-				$product['default_url'] = '' === $amazon_tracking_id ? $amz_link : $product['default_url'];
-				$this->update_amazon_product_in_db( $product, $updated_at );
-			}
+			$product = $this->enrich_fetched_amazon_product( $product, $store_product, $updated_at, $amz_link );
 
 			return array(
 				'product'    => $product,
@@ -528,6 +533,14 @@ class Amazon_Api {
 				'error_code' => 404 === $status ? 'NotFound' : '',
 			);
 		}
+
+		return array(
+			'product'    => array(),
+			'api'        => 'no',
+			'full_item'  => array(),
+			'status'     => 'failed',
+			'error_code' => 'NotFound',
+		);
 	}
 
 	/**
@@ -554,17 +567,28 @@ class Amazon_Api {
 			'savings_basis'   => 0,
 		);
 
-		$res = Helper::get_url_status_code_by_broken_link_service( $url, true );
-		if ( 200 === $res['status_code'] && 200 === $res['response']->status ) {
-			$img_url      = $res['response']->imgUrl ?? '';
+		try {
+			$res = Helper::get_url_status_code_by_broken_link_service( $url, true );
+		} catch ( \Throwable $e ) {
+			$res = array(
+				'status_code' => 500,
+				'response'    => null,
+			);
+		}
+
+		$bls_response = ( isset( $res['response'] ) && is_object( $res['response'] ) ) ? $res['response'] : null;
+		$bls_status   = ( null !== $bls_response && isset( $bls_response->status ) ) ? intval( $bls_response->status ) : 0;
+
+		if ( 200 === $res['status_code'] && 200 === $bls_status ) {
+			$img_url      = $bls_response->imgUrl ?? '';
 			$img_url      = '' !== $img_url ? $img_url : '';
-			$product_name = $res['response']->productName ?? '';
-			$product_name = '' === $product_name ? ( $res['response']->pageTitle ?? '' ) : $product_name;
-			$quantity     = $res['response']->quantity ?? 200;
-			$price        = $res['response']->price ?? '';
+			$product_name = $bls_response->productName ?? '';
+			$product_name = '' === $product_name ? ( $bls_response->pageTitle ?? '' ) : $product_name;
+			$quantity     = $bls_response->quantity ?? 200;
+			$price        = $bls_response->price ?? '';
 			$product_id   = self::get_product_id_by_url( $url );
 
-			$temp_url = $res['response']->finalUrl ?? $url;
+			$temp_url = $bls_response->finalUrl ?? $url;
 			$url      = '' !== $temp_url ? $temp_url : $url;
 			$m_link   = self::get_amazon_product_url( $amz_link ? $amz_link : $url );
 
@@ -586,16 +610,16 @@ class Amazon_Api {
 				);
 
 				// ? Set additional data for amazon product
-				if ( isset( $res['response']->additionalData ) && ! empty( $res['response']->additionalData ) ) {
-					$basis_price    = $res['response']->additionalData->basis_price ?? '';
+				if ( isset( $bls_response->additionalData ) && ! empty( $bls_response->additionalData ) ) {
+					$basis_price    = $bls_response->additionalData->basis_price ?? '';
 					$basis_price    = Helper::get_price_value_from_price_text( $basis_price );
-					$savings_amount = $res['response']->additionalData->saving_amount ?? '';
+					$savings_amount = $bls_response->additionalData->saving_amount ?? '';
 					$savings_amount = Helper::get_price_value_from_price_text( $savings_amount );
 
-					$store_data['currency']        = $res['response']->additionalData->currency_name ?? '';
+					$store_data['currency']        = $bls_response->additionalData->currency_name ?? '';
 					$store_data['savings_basis']   = $basis_price;
 					$store_data['savings_amount']  = $savings_amount;
-					$store_data['savings_percent'] = $res['response']->additionalData->saving_amount_percent ?? '';
+					$store_data['savings_percent'] = $bls_response->additionalData->saving_amount_percent ?? '';
 
 					$amazon_product['currency']        = $store_data['currency'];
 					$amazon_product['savings_basis']   = $store_data['savings_basis'];
@@ -611,16 +635,22 @@ class Amazon_Api {
 			$amazon_product['url']         = $m_link;
 			$amazon_product['price']       = $price;
 			$amazon_product['quantity']    = $quantity;
-			$amazon_product['status_code'] = $res['response']->status;
+			$amazon_product['status_code'] = $bls_status;
 		}
-		if ( 404 === $res['status_code'] || ( 200 === $res['status_code'] && 404 === $res['response']->status ) ) {
+		if ( 404 === $res['status_code'] || ( 200 === $res['status_code'] && 404 === $bls_status ) ) {
 			$amz_model    = new Amazon_Products();
 			$last_updated = gmdate( 'Y-m-d H:i:s', time() );
 			$amz_model->update_amazon_field( $product_id, 'last_updated', $last_updated );
 			$amz_model->update_amazon_field( $product_id, 'out_of_stock', 0 );
 		}
 
-		$status = $res['response']->status ?? 200;
+		if ( $bls_status ) {
+			$status = $bls_status;
+		} elseif ( 200 === intval( $res['status_code'] ?? 0 ) ) {
+			$status = 500;
+		} else {
+			$status = intval( $res['status_code'] ?? 500 );
+		}
 
 		return array( $amazon_product, intval( $status ) );
 	}
@@ -1472,7 +1502,235 @@ class Amazon_Api {
 		$lasso_settings       = Setting::get_settings();
 		$is_amazon_configured = $lasso_settings['amazon_access_key_id'] && $lasso_settings['amazon_secret_key'] && $lasso_settings['amazon_tracking_id'];
 
-		return $is_amazon_configured;
+		return $is_amazon_configured || self::is_amazon_creators_verified( $lasso_settings );
+	}
+
+	/**
+	 * Whether Amazon Creators API credentials are complete in settings.
+	 *
+	 * @param array|false $lasso_settings Settings array. Default false loads current settings.
+	 * @return bool
+	 */
+	public static function is_amazon_creators_configured( $lasso_settings = false ) {
+		if ( ! is_array( $lasso_settings ) ) {
+			$lasso_settings = Setting::get_settings();
+		}
+
+		$fields = array(
+			'amazon_creators_credential_id',
+			'amazon_creators_secret',
+			'amazon_creators_version',
+			'amazon_creators_partner_tag',
+		);
+
+		foreach ( $fields as $field ) {
+			if ( '' === trim( (string) ( $lasso_settings[ $field ] ?? '' ) ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Whether Creators credentials were verified successfully (signature matches stored settings).
+	 *
+	 * @param array|false $lasso_settings Settings array. Default false loads current settings.
+	 * @return bool
+	 */
+	public static function is_amazon_creators_verified( $lasso_settings = false ) {
+		if ( ! self::is_amazon_creators_configured( $lasso_settings ) ) {
+			return false;
+		}
+
+		if ( ! is_array( $lasso_settings ) ) {
+			$lasso_settings = Setting::get_settings();
+		}
+
+		$current_signature = self::get_amazon_creators_signature( $lasso_settings );
+		$saved_signature   = (string) Helper::get_option( Constant::LASSO_OPTION_AMAZON_CREATORS_VERIFIED_SIGNATURE, '' );
+
+		return '' !== $current_signature && '' !== $saved_signature && hash_equals( $saved_signature, $current_signature );
+	}
+
+	/**
+	 * Build a stable signature for the Creators payload.
+	 *
+	 * @param array $settings Settings values.
+	 * @return string Empty when Creators credentials are incomplete.
+	 */
+	public static function get_amazon_creators_signature( $settings ) {
+		if ( ! self::is_amazon_creators_configured( $settings ) ) {
+			return '';
+		}
+
+		return hash(
+			'sha256',
+			wp_json_encode(
+				array(
+					'credential_id'      => (string) ( $settings['amazon_creators_credential_id'] ?? '' ),
+					'secret'             => (string) ( $settings['amazon_creators_secret'] ?? '' ),
+					'credential_version' => (string) ( $settings['amazon_creators_version'] ?? '' ),
+					'partner_tag'        => (string) ( $settings['amazon_creators_partner_tag'] ?? '' ),
+					'country'            => (string) ( $settings['amazon_default_tracking_country'] ?? '' ),
+				)
+			)
+		);
+	}
+
+	/**
+	 * Lite account token for lasso.link (md5 of linked account email).
+	 *
+	 * @return string Empty when Lite account email is not linked.
+	 */
+	private static function get_lite_account_token() {
+		$email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		if ( ! is_string( $email ) || '' === trim( $email ) ) {
+			return '';
+		}
+
+		return md5( strtolower( trim( $email ) ) );
+	}
+
+	/**
+	 * Fetch product data via lasso.link Creators API proxy (replaces deprecated PA-API GetItems).
+	 *
+	 * @param string      $product_id    Amazon ASIN.
+	 * @param bool        $store_product Store in local DB.
+	 * @param bool|string $updated_at    Optional updated timestamp.
+	 * @param string      $amz_link      Amazon URL.
+	 * @param array       $lasso_settings Plugin settings.
+	 * @return array|null Same shape as fetch_product_info success/failure, or null to fall back.
+	 */
+	private function fetch_product_info_from_creators_api( $product_id, $store_product, $updated_at, $amz_link, $lasso_settings ) {
+		$token = self::get_lite_account_token();
+		if ( '' === $token ) {
+			return null;
+		}
+
+		$headers = Helper::get_headers();
+		$headers['token'] = $token;
+
+		$payload = array(
+			'country' => $lasso_settings['amazon_default_tracking_country'] ?? '',
+			'asin'    => $product_id,
+			'url'     => $amz_link,
+		);
+
+		$response = Helper::send_request(
+			'post',
+			rtrim( Constant::LASSO_LINK, '/' ) . '/amazon/creators/product',
+			$payload,
+			$headers
+		);
+
+		$status_code   = intval( $response['status_code'] ?? 500 );
+		$response_body = $response['response'] ?? null;
+
+		if ( empty( $response_body ) ) {
+			return null;
+		}
+
+		if ( ! empty( $response_body->error_code ) && 'CredentialsNotFound' === $response_body->error_code ) {
+			return null;
+		}
+
+		$fetch_status  = isset( $response_body->status ) ? (string) $response_body->status : '';
+		$error_code    = isset( $response_body->error_code ) ? (string) $response_body->error_code : '';
+		$api_flag      = isset( $response_body->api ) ? (string) $response_body->api : 'yes';
+		$product_data  = isset( $response_body->product ) ? json_decode( wp_json_encode( $response_body->product ), true ) : array();
+		$product_data  = is_array( $product_data ) ? $product_data : array();
+		$full_item     = isset( $response_body->full_item ) ? $response_body->full_item : array();
+
+		if ( 'failed' === $fetch_status || 'NotFound' === $error_code ) {
+			return $this->build_fetch_product_info_response( array(), $api_flag, $full_item, 'failed', $error_code );
+		}
+
+		if ( $status_code >= 400 || empty( $response_body->result ) || empty( $product_data ) ) {
+			return null;
+		}
+
+		$product = $this->finalize_fetch_product_info_product(
+			$product_data,
+			$product_id,
+			$store_product,
+			$updated_at,
+			$amz_link
+		);
+
+		return $this->build_fetch_product_info_response( $product, $api_flag, $full_item, 'success', '' );
+	}
+
+	/**
+	 * Build fetch_product_info() return array (same contract as get_product_by_id_v5 path).
+	 *
+	 * @param array       $product     Product fields.
+	 * @param string      $api         API source flag.
+	 * @param array|object $full_item  Raw item payload.
+	 * @param string      $status      success|failed.
+	 * @param string      $error_code  Error code.
+	 * @return array
+	 */
+	private function build_fetch_product_info_response( $product, $api, $full_item, $status, $error_code ) {
+		return array(
+			'product'    => $product,
+			'api'        => $api,
+			'full_item'  => $full_item,
+			'status'     => $status,
+			'error_code' => $error_code,
+		);
+	}
+
+	/**
+	 * Apply the same post-processing as the PA-API branch in fetch_product_info().
+	 *
+	 * @param array       $product       Product fields from API.
+	 * @param string      $product_id    Amazon ASIN.
+	 * @param bool        $store_product Store in local DB.
+	 * @param bool|string $updated_at    Optional updated timestamp.
+	 * @param string      $amz_link      Amazon URL.
+	 * @return array
+	 */
+	private function finalize_fetch_product_info_product( $product, $product_id, $store_product, $updated_at, $amz_link ) {
+		if ( empty( $product['product_id'] ) ) {
+			$product['product_id'] = $product_id;
+		}
+
+		return $this->enrich_fetched_amazon_product( $product, $store_product, $updated_at, $amz_link );
+	}
+
+	/**
+	 * Shared post-fetch enrichment for PA-API and Creators product payloads.
+	 *
+	 * @param array       $product       Product fields.
+	 * @param bool        $store_product Store in local DB.
+	 * @param bool|string $updated_at    Optional updated timestamp.
+	 * @param string      $amz_link      Amazon URL.
+	 * @return array
+	 */
+	private function enrich_fetched_amazon_product( $product, $store_product, $updated_at, $amz_link ) {
+		global $wpdb;
+
+		$lasso_db               = new Lasso_DB();
+		$product_url            = $amz_link ? $amz_link : ( $product['url'] ?? '' );
+		$product['status_code'] = 200;
+		$product['url']         = self::get_amazon_product_url( $product_url );
+
+		$amazon_product_id = (string) ( $product['product_id'] ?? '' );
+		$query             = $wpdb->prepare(
+			'SELECT post_id FROM ' . $lasso_db->postmeta . " WHERE meta_key = 'amazon_product_id' AND meta_value = %s",
+			$amazon_product_id
+		);
+		$lasso_id            = $lasso_db->get_var( $query );
+		$product['lasso_id'] = ( isset( $lasso_id ) ) ? $lasso_id : 0;
+
+		if ( $store_product ) {
+			$amazon_tracking_id     = Setting::get_setting( 'amazon_tracking_id', '' );
+			$product['default_url'] = '' === $amazon_tracking_id ? $amz_link : ( $product['default_url'] ?? '' );
+			$this->update_amazon_product_in_db( $product, $updated_at );
+		}
+
+		return $product;
 	}
 
 	/**

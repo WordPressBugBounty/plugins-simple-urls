@@ -85,9 +85,7 @@ use LassoLite\Admin\Constant;
 
 			<!-- SINGLE URL -->
 			<div class="link_wrapper">
-				<div id="all_links" class="text-break lasso-items">
-					<div class="py-5"><div class="loader"></div></div>
-				</div>
+				<div id="all_links" class="text-break lasso-items"></div>
 			</div>
 
 		</div>

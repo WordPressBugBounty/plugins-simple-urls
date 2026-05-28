@@ -209,6 +209,11 @@ input:focus.form-control, textarea:focus.form-control, select:focus.form-control
 /*********************************************************
     LOADER
 *********************************************************/
+/* Link list area: stable height while AJAX runs (spinner is inline SVG in JS). */
+#lasso-display-add #all_links {
+	position: relative;
+	min-height: 12rem;
+}
 .loader{border: 10px solid #E2E2E2; border-radius: 50%; border-top: 10px solid #22baa0; width: 100px; height: 100px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; margin: 0 auto; }
 @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -218,7 +223,24 @@ input:focus.form-control, textarea:focus.form-control, select:focus.form-control
 /*********************************************************
     PAGINATION
 *********************************************************/
-.pagination.simple-pagination ul {display: flex; padding: 2rem 2rem 0 2rem;}
+/* Elementor / theme `ul` rules often reintroduce bullets on simplePagination markup. */
+#lasso-display-add .pagination.simple-pagination ul,
+#lasso-display-add .pagination.simple-pagination ul li {
+	list-style: none !important;
+	list-style-type: none !important;
+	list-style-image: none !important;
+}
+#lasso-display-add .pagination.simple-pagination ul {
+	display: flex;
+	padding: 2rem !important;
+	margin-block: 0;
+	margin-inline: 0;
+}
+#lasso-display-add .pagination.simple-pagination ul li::marker {
+	content: none;
+	font-size: 0;
+}
+.pagination.simple-pagination ul {display: flex; padding: 2rem;}
 .pagination.simple-pagination ul a{color: #777777 !important; text-decoration: none;}
 .pagination.simple-pagination ul a:hover{color: #5E36CA !important;}
 .pagination.simple-pagination ul li {text-align: center;}

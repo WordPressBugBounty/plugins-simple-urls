@@ -2,6 +2,16 @@
 
 This runbook is the **canonical** guidance for AI-assisted UI work on **Affiliate Hub** (Vue 3 + Vite under `vue-app/`). Consumer repos receive it via `cursor-config` propagation; repo-specific experiments belong in `.cursor/local/**` (see root `README.md`).
 
+## Skill triggers / synonyms (hub-ai-ui)
+
+The Cursor skill `.cursor/skills/hub-ai-ui/SKILL.md` loads this document for detail. Invoke **`/hub-ai-ui`**, **`@` the skill**, or treat Hub UI work as in scope when the user mentions **Affiliate Hub**, **vue-app**, **v0**, **codegen**, **AI UI**, or any of the following **themes** (non-exhaustive; same intent counts):
+
+- **Product / surface:** UI, UX, GUI, screen, page, view, dashboard, component, widget, panel, modal, drawer, sheet, navigation, nav, header, footer, sidebar, form, table, card, button, badge, chip, tabs, menu.
+- **Layout / responsive:** layout, grid, flex, spacing, alignment, breakpoint, responsive, mobile, tablet, desktop, media query, touch.
+- **Look / system:** style, styles, styling, styled, theme, typography, font, color, palette, token, design system, polish, visual, aesthetics, shadcn, Tailwind, CSS, mockup, wireframe, screenshot.
+
+**Repo scope:** `lassoanalytics/affiliate-hub` Vue under `vue-app/` (integrating v0 or similar output, shadcn/Tailwind UI, layout/style changes).
+
 ## Reference layout (Affiliate Hub)
 
 Use these paths when aligning v0 or agent output with the real Hub tree:

@@ -5,6 +5,7 @@
  * @package Lasso URL links
  */
 
+use LassoLite\Admin\Constant;
 use LassoLite\Classes\Config;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
@@ -116,11 +117,11 @@ $license_msg = $lasso_options['license_serial'] === ''
 						</section>
 
 
-						<!-- Force Performance JS always turn on client by default -->
-						<!-- PERFORMANCE -->
+						<!-- Force Analytics JS always turn on client by default -->
+						<!-- ANALYTICS -->
 						<section class="mb-5">
 							<h3>Advanced Click Tracking</h3>
-							<p>Send click tracking data to <a href="https://app.getlasso.co/performance/" target="_blank">Performance</a> for easy-to-understand analytics.</p>
+							<p>Send click tracking data to <a href="<?php echo esc_url( Constant::LASSO_ANALYTICS_URL ); ?>" target="_blank" rel="noopener noreferrer">Analytics</a> for easy-to-understand analytics.</p>
 
 							<div class="form-group">
 								<label class="toggle m-0 mb-3 mr-1">

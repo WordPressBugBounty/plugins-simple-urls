@@ -103,8 +103,19 @@ class Ajax {
 	public function lasso_lite_get_shortcode_content() {
 		Helper::verify_access_and_nonce( true );
 
-		$shortcode = stripslashes( Helper::GET()['shortcode'] ?? '' ); // phpcs:ignore
-		$html      = '';
+		// Prefer POST so long [lasso ref="…"] strings are not truncated by URL/proxy limits in the Elementor editor.
+		$shortcode = '';
+		$post_data = Helper::POST();
+		if ( is_array( $post_data ) && ! empty( $post_data['shortcode'] ) && is_string( $post_data['shortcode'] ) ) {
+			$shortcode = wp_unslash( $post_data['shortcode'] );
+		}
+		if ( '' === $shortcode ) {
+			$get_data = Helper::GET();
+			if ( is_array( $get_data ) && ! empty( $get_data['shortcode'] ) && is_string( $get_data['shortcode'] ) ) {
+				$shortcode = wp_unslash( $get_data['shortcode'] );
+			}
+		}
+		$html = '';
 
 		if ( '' !== $shortcode ) {
 			$html = do_shortcode( $shortcode );

@@ -1,5 +1,6 @@
 <?php
 use Elementor\Controls_Manager;
+use Elementor\Plugin as Elementor_Plugin;
 use Elementor\Widget_Base;
 
 use LassoLite\Admin\Constant;
@@ -16,7 +17,7 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	}
 
 	public function get_title() {
-		return esc_html__( 'Lasso' );
+		return esc_html__( 'Lasso Lite', 'simple-urls' );
 	}
 
 	public function get_icon() {
@@ -28,7 +29,35 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	}
 
 	public function get_keywords() {
-		return [ 'lasso', 'shortcode', 'code' ];
+		return [ 'lasso', 'lasso lite', 'shortcode', 'code', 'affiliate', 'link' ];
+	}
+
+	/**
+	 * Editor panel + preview iframe need widget assets. HTTP_REFERER-only checks miss the preview document.
+	 *
+	 * @return bool
+	 */
+	private static function load_elementor_builder_assets() {
+		// ? elementor-preview request: get_script_depends() often runs before preview->is_preview_mode() is true.
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		if ( isset( $_GET['elementor-preview'] ) ) {
+			return true;
+		}
+		$req_uri = Lasso_Helper::get_server_param( 'REQUEST_URI' );
+		if ( is_string( $req_uri ) && false !== strpos( $req_uri, 'elementor-preview' ) ) {
+			return true;
+		}
+		if ( ! class_exists( Elementor_Plugin::class ) ) {
+			return false;
+		}
+		$elementor = Elementor_Plugin::$instance;
+		if ( $elementor->editor && $elementor->editor->is_edit_mode() ) {
+			return true;
+		}
+		if ( isset( $elementor->preview ) && $elementor->preview && $elementor->preview->is_preview_mode() ) {
+			return true;
+		}
+		return self::is_editor();
 	}
 
 	public function get_custom_help_url() {
@@ -41,7 +70,7 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	 * @return array
 	 */
 	public function get_style_depends() {
-		if ( self::is_editor() ) {
+		if ( self::load_elementor_builder_assets() ) {
 			Lasso_Helper::enqueue_style( 'lasso-live', 'lasso-live.min.css' );
 			Lasso_Helper::enqueue_style( 'bootstrap-grid-css', 'bootstrap-grid.min.css' );
 			Lasso_Helper::enqueue_style( 'simple-panigation-css', 'simplePagination.css' );
@@ -61,8 +90,9 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	 * @return array
 	 */
 	public function get_script_depends() {
-		if ( self::is_editor() ) {
-			$setting = new Lasso_Setting();
+		if ( self::load_elementor_builder_assets() ) {
+			$setting           = new Lasso_Setting();
+			$setting_data      = Lasso_Setting::get_settings();
 			$support_enabled   = $setting_data[ Enum::SUPPORT_ENABLED ] ?? false;
 			$data_passed_to_js = array(
 				'registerNonce'              => wp_create_nonce( 'lasso_registration' ),
@@ -168,10 +198,31 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	}
 
 	protected function render() {
+		// ? In the Elementor editor, content_template + JS own the chrome (.shortcode-html, buttons). Server render here replaces that after refresh.
+		if ( $this->should_skip_frontend_render_in_elementor_builder() ) {
+			return;
+		}
+
 		$shortcode = $this->get_settings_for_display( 'lasso_shortcode' );
 		$shortcode = do_shortcode( shortcode_unautop( $shortcode ) );
 
 		echo $shortcode; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+	}
+
+	/**
+	 * True while editing in Elementor (avoid echoing shortcode HTML — it hides content_template chrome).
+	 *
+	 * @return bool
+	 */
+	private function should_skip_frontend_render_in_elementor_builder() {
+		if ( class_exists( Elementor_Plugin::class ) && Elementor_Plugin::$instance->editor && Elementor_Plugin::$instance->editor->is_edit_mode() ) {
+			return true;
+		}
+		if ( class_exists( Elementor_Plugin::class ) && isset( Elementor_Plugin::$instance->preview ) && Elementor_Plugin::$instance->preview && Elementor_Plugin::$instance->preview->is_preview_mode() ) {
+			return true;
+		}
+		// ? Referer fallback when editor bootstrap hasn't set edit mode yet (refresh / iframe race).
+		return self::is_editor();
 	}
 
 	/**
@@ -198,9 +249,10 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 	 */
 	protected function content_template() {
 		?>
-		<div style="text-align: center; background-color: rgb(94, 54, 202); border-radius: 10px; padding: 0px 0px 20px; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif;">
-			<div class="shortcode-html" style="display: block; margin: 0px auto; background: white; padding: 1px 0px; text-align: initial;">
+		<div class="lasso-lite-elementor-shell" style="display: flex; flex-direction: column; align-items: stretch; text-align: center; background-color: rgb(94, 54, 202); border-radius: 10px; padding: 0px 0px 20px; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif;">
+			<div class="shortcode-html lasso-lite-elementor-preview" style="display: block; flex: 0 1 auto; margin: 0px auto; width: 100%; max-width: 100%; box-sizing: border-box; background: white; padding: 1px 0px; text-align: initial;">
 			</div>
+			<div class="lasso-lite-elementor-chrome" style="flex-shrink: 0; margin-top: 8px;">
 			<div style="display: flex; align-items: center; padding: 10px 0px 0px; justify-content: center;">
 				<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 500 500">
 					<defs>
@@ -222,10 +274,11 @@ class Widget_Lasso_Shortcode extends Widget_Base {
 				<span style="font-size: 26px; font-weight: 700;"></span>
 			</div>
 			<span style="display: <# if ( settings.lasso_shortcode ) { #>none<# } else { #>block<# } #>; margin-bottom: 20px; margin-top: 10px; font-size: 18px; color: rgb(255, 255, 255); font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif;">Choose a Lasso Link to display.</span>
-			<input type="text" class="shortcode-input" value='{{{ settings.lasso_shortcode }}}' style="display: <# if ( settings.lasso_shortcode ) { #> block <# } else { #> none <# } #>; background-color: white; margin: 10px auto 20px; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid rgb(206, 212, 218); width: 85%; height: auto; line-height: 2; font-size: 1rem; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif;">
+			<input type="text" class="shortcode-input" value='{{{ settings.lasso_shortcode }}}' style="display: <# if ( settings.lasso_shortcode ) { #>block<# } else { #>none<# } #>; background-color: white; margin: 10px auto 20px; padding: 0.5rem 0.75rem; border-radius: 0.5rem; border: 1px solid rgb(206, 212, 218); width: 85%; height: auto; line-height: 2; font-size: 1rem; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif;">
 			<button class="lasso-update-display" style="display: <# if ( settings.lasso_shortcode ) { #>inline-block<# } else { #>none<# } #>; background-color: rgb(34, 186, 160); color: rgb(255, 255, 255); padding: 0.75rem 2rem; border-radius: 100rem; font-size: 1rem; margin: 0.5rem; font-weight: 800; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif; border: 0px; cursor: pointer;">Update Display</button>
 			<button class="btn-modal-add-display" style="background-color: rgb(34, 186, 160); color: rgb(255, 255, 255); padding: 0.75rem 2rem; border-radius: 100rem; font-size: 1rem; margin: 0.5rem; font-weight: 800; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif; border: 0px; cursor: pointer;"><# if ( settings.lasso_shortcode ) { #>Select a New Display<# } else { #>Add a Display<# } #></button>
 			<button class="lasso-edit-display" style="display: <# if ( settings.lasso_shortcode ) { #>inline-block<# } else { #>none<# } #>; background-color: rgb(34, 186, 160); color: rgb(255, 255, 255); padding: 0.75rem 2rem; border-radius: 100rem; font-size: 1rem; margin: 0.5rem; font-weight: 800; font-family: &quot;Helvetica Neue&quot;, Helvetica, Arial, &quot;Lucida Grande&quot;, sans-serif; border: 0px; cursor: pointer;">Edit Display</button>
+			</div>
 		</div>
 		<div class="lasso-display-modal-wrapper"></div>
 		<?php

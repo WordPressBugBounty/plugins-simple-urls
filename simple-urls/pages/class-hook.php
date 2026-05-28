@@ -464,10 +464,6 @@ class Hook {
 			if ( SIMPLE_URLS_SLUG . '-' . Enum::PAGE_URL_DETAILS === $page ) {
 				Helper::enqueue_script( 'url-details', 'url-details.js', array( 'jquery' ) );
 			}
-
-			if ( self::is_editor() ) {
-				Helper::enqueue_script( 'lasso-elementor', 'lasso-elementor.js', array( 'jquery' ), true );
-			}
 		}
 
 		if ( $setting->is_dashboard_page() ) {
@@ -1137,16 +1133,20 @@ class Hook {
 	 * @codeCoverageIgnore Coverage ignore.
 	 */
 	public function elementor_init() {
-		// ? Check if the user has a valid license for the Startup plan
-		if ( Helper::is_wp_elementor_plugin_actived() && ! Helper::is_lasso_pro_installed() && License::get_license_status() ) {
-			if ( class_exists( 'Elementor\Widget_Base' ) && class_exists( 'Elementor\Controls_Manager' ) ) {
-				add_action( 'elementor/widgets/register', array( $this, 'register_widget_lasso_shortcode' ) );
-				add_action( 'elementor/editor/before_enqueue_styles', array( $this, 'elementor_editor_styles' ) );
-			}
-
-			// ? Move the scan post into the  "elementor/document/after_save" action
-			add_action( 'elementor/document/after_save', array( $this, 'after_elementor_document_save' ), 10, 1 );
+		// ? This runs on elementor/init only — Pro owns Elementor when affiliate-plugin is active.
+		if ( Helper::is_lasso_pro_installed() ) {
+			return;
 		}
+
+		// ? Do not gate on is_plugin_active( 'elementor/elementor.php' ): custom paths / load order can false-negative while Elementor is clearly bootstrapped (this hook).
+		if ( class_exists( 'Elementor\Widget_Base' ) && class_exists( 'Elementor\Controls_Manager' ) ) {
+			add_action( 'elementor/widgets/register', array( $this, 'register_widget_lasso_shortcode' ) );
+			add_action( 'elementor/editor/before_enqueue_styles', array( $this, 'elementor_editor_styles' ) );
+			add_action( 'elementor/editor/before_enqueue_scripts', array( $this, 'elementor_editor_scripts' ) );
+		}
+
+		// ? Move the scan post into the  "elementor/document/after_save" action
+		add_action( 'elementor/document/after_save', array( $this, 'after_elementor_document_save' ), 10, 1 );
 	}
 
 	/**
@@ -1167,7 +1167,24 @@ class Hook {
 	 * @codeCoverageIgnore Coverage ignore.
 	 */
 	public function elementor_editor_styles() {
+		wp_enqueue_style( 'wp-pointer' );
 		Helper::enqueue_style( 'lasso-elementor', 'lasso-elementor.css' );
+	}
+
+	/**
+	 * Elementor editor scripts (parity with Pro wp-pointer).
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function elementor_editor_scripts() {
+		wp_enqueue_script( 'wp-pointer' );
+		if ( ! Helper::is_lite_using_new_ui() ) {
+			return;
+		}
+		wp_enqueue_script( 'jquery' );
+		Helper::enqueue_script( 'lasso-modal-js', 'lasso-modal.js', array( 'jquery' ), true );
+		Helper::enqueue_script( 'lasso-elementor', 'lasso-elementor.js', array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-modal-js' ), true );
+		Helper::enqueue_script( 'lasso-lite-display-modal', 'lasso-lite-display-modal.js', array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-elementor' ), true );
 	}
 
 	/**
