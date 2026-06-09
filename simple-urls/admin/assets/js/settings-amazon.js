@@ -92,7 +92,7 @@ jQuery(document).ready(function() {
 
 	jQuery(document)
 		.on('click', '.btn-save-settings-amazon', save_setting_amazon)
-		.on('click', '.btn-verify-amazon-creators', verify_amazon_creators_credentials)
+		.on('click', '.btn-lasso-lite-verify-amazon-creators', verify_amazon_creators_credentials)
 		.on('change', 'input[name="amazon_tracking_id"]', validate_tracking_id_format)
 		.on('click', '.lasso-lite-validate-lite-account', function(event) {
 			event.preventDefault();
@@ -154,7 +154,7 @@ jQuery(document).ready(function() {
 	});
 
 	function maybe_trigger_creators_verify_after_link() {
-		let verifyBtn = jQuery('.btn-verify-amazon-creators').first();
+		let verifyBtn = jQuery('.btn-lasso-lite-verify-amazon-creators').first();
 		if (verifyBtn.length) {
 			setTimeout(function() {
 				verifyBtn.trigger('click');
@@ -491,6 +491,7 @@ jQuery(document).ready(function() {
 
 	function verify_amazon_creators_credentials( event ) {
 		event.preventDefault();
+		event.stopImmediatePropagation();
 
 		let credentialId = jQuery('#amazon_creators_credential_id').val().trim();
 		let secret = jQuery('#amazon_creators_secret').val().trim();

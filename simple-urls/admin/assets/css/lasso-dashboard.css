@@ -308,6 +308,42 @@ select.form-control {font-size: 16px;}
 #search-links .form-control { max-width: 400px !important; margin: 0 0 0 auto; }
 .form-control:focus{border: 1px solid var(--light-purple) !important;}
 .form-control-append{border-top-right-radius: 0 !important; border-bottom-right-radius: 0 !important;}
+/* URL details: Amazon Image — input + Refresh as one append control (match Pro). */
+#url-details .thumbnail-wrapper.col-md {
+	flex: 1 1 0%;
+	min-width: 0;
+	max-width: 100%;
+}
+#url-details .thumbnail-wrapper .lasso-amazon-image-field,
+#url-details .thumbnail-wrapper .lasso-amazon-refresh-row {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+#url-details .lasso-amazon-refresh-row {
+	display: flex;
+	flex-wrap: nowrap;
+	align-items: stretch;
+	column-gap: 0;
+}
+#url-details .lasso-amazon-image-input {
+	min-width: 0;
+	flex: 1 1 auto;
+}
+#url-details .lasso-amazon-image-input.form-control-append {
+	border-top-right-radius: 0 !important;
+	border-bottom-right-radius: 0 !important;
+}
+#url-details .lasso-amazon-refresh-row > .btn-append,
+#url-details .lasso-amazon-refresh-row > a.btn-append {
+	flex: 0 0 auto;
+	min-height: calc(1.5em + 0.75rem + 2px);
+	padding-top: 0 !important;
+	padding-bottom: 0 !important;
+	box-sizing: border-box;
+	border-top-left-radius: 0 !important;
+	border-bottom-left-radius: 0 !important;
+}
 .form-control .btn {background: white; box-shadow: none !important; color: var(--black) !important; border: 1px solid #ced4da !important; font-weight: normal;}
 .form-control .btn:hover, .form-control .btn:focus, .form-control .btn[tabindex="-1"] {transform: none; outline: none !important; background-color: white !important; border: 1px solid var(--light-purple) !important; font-weight: normal;}
 .form-control .btn[aria-expanded="false"] {border: 1px solid #ced4da !important;}

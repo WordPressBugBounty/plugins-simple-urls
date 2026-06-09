@@ -47,7 +47,7 @@ function active_license_key(){
 			type:'post',
 			data : {
 				action: 'lasso_lite_activate_license',
-				security: lassoLiteOptionsData.optionsNonce,
+				nonce: lassoLiteOptionsData.optionsNonce,
 				license: license,
 				settings: settings,
 				onboarding: current_page === 'install',

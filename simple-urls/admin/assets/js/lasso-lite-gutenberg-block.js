@@ -8,6 +8,45 @@ var customize_attribute_codes = [];
 var focus_customize_data = [];
 var window_url_detail;
 var shortcodes_reload = [];
+var lassoBlockRootElements = {};
+
+function lassoRegisterBlockRoot( blockId, element ) {
+	if ( ! blockId ) {
+		return;
+	}
+	if ( element ) {
+		lassoBlockRootElements[ blockId ] = element;
+	} else {
+		delete lassoBlockRootElements[ blockId ];
+	}
+}
+
+function lassoQueryBlock( blockId ) {
+	var root = lassoBlockRootElements[ blockId ];
+	if ( root ) {
+		return jQuery( root );
+	}
+
+	var iframe = document.querySelector( 'iframe[name="editor-canvas"]' );
+	if ( iframe && iframe.contentDocument ) {
+		var blockEl = iframe.contentDocument.getElementById( 'block-' + blockId );
+		if ( blockEl ) {
+			return jQuery( blockEl );
+		}
+	}
+
+	return jQuery( '#block-' + blockId );
+}
+
+function lassoFindLassoBlockElements() {
+	var iframe = document.querySelector( 'iframe[name="editor-canvas"]' );
+	if ( iframe && iframe.contentDocument ) {
+		return jQuery( iframe.contentDocument ).find(
+			'div[data-type="affiliate-plugin/lasso"]'
+		);
+	}
+	return jQuery( 'div[data-type="affiliate-plugin/lasso"]' );
+}
 
 /** Self-contained loading markup (no .loader / .py-5 — those clash with WP editor + iframe). */
 var LASSO_LITE_INLINE_LOADING_HTML =
@@ -25,27 +64,7 @@ var LASSO_LITE_INLINE_LOADING_HTML =
  * @return {jQuery}
  */
 function lassoLiteGutenbergBlockRoot( blockId ) {
-	var bid = 'block-' + blockId;
-	var el = document.getElementById( bid );
-	if ( el ) {
-		return jQuery( el );
-	}
-	var iframes = document.querySelectorAll( 'iframe' );
-	for ( var i = 0; i < iframes.length; i++ ) {
-		try {
-			var doc = iframes[ i ].contentDocument;
-			if ( ! doc ) {
-				continue;
-			}
-			el = doc.getElementById( bid );
-			if ( el ) {
-				return jQuery( el );
-			}
-		} catch ( err ) {
-			continue;
-		}
-	}
-	return jQuery( [] );
+	return lassoQueryBlock( blockId );
 }
 
 function lassoLiteGutenbergShortcodeHtml$( blockId ) {
@@ -72,19 +91,7 @@ jQuery(document).ready(function() {
 	}, 500);
 
 	function scan_lasso_shortcodes(){
-		var lasso_shortcode_blocks = jQuery( 'div[data-type="affiliate-plugin/lasso"]' );
-		if ( ! lasso_shortcode_blocks.length ) {
-			jQuery( 'iframe' ).each( function() {
-				try {
-					var doc = this.contentDocument;
-					if ( ! doc ) {
-						return;
-					}
-					lasso_shortcode_blocks = lasso_shortcode_blocks.add( jQuery( doc ).find( 'div[data-type="affiliate-plugin/lasso"]' ) );
-				} catch ( err ) {
-				}
-			} );
-		}
+		var lasso_shortcode_blocks = lassoFindLassoBlockElements();
 		if(lasso_shortcode_blocks.length > 0) {
 			for (let index = 0; index < lasso_shortcode_blocks.length; index++) {
 				const element = jQuery(lasso_shortcode_blocks[index]);
@@ -218,6 +225,7 @@ function LassoIcon(props) {
 }
 
 wp.blocks.registerBlockType('affiliate-plugin/lasso', {
+	apiVersion: 3,
 	title: 'Lasso Lite',
 	icon: React.createElement(LassoIcon, null),
 	category: 'common',
@@ -245,14 +253,18 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
                     for (const property in current_attributes) {
                         if ((default_attributes.indexOf(property) === -1) && (typeof props.attributes[property] != 'undefined')) {
                             props.setAttributes( { [property]: current_attributes[property] } );
-                            jQuery('input.cuz-attr-' + property).val(current_attributes[property]);
+                            lassoQueryBlock( props.clientId )
+                                .find( 'input.cuz-attr-' + property )
+                                .val( current_attributes[property] );
                         }
                     }
 
                     // Delete customize data if don't exist in shortcode
                     for (const index in customize_attribute_code_missing) {
                         props.setAttributes( { [customize_attribute_code_missing[index]]: '' } );
-                        jQuery('input.cuz-attr-' + customize_attribute_code_missing[index]).val('');
+                        lassoQueryBlock( props.clientId )
+                            .find( 'input.cuz-attr-' + customize_attribute_code_missing[index] )
+                            .val( '' );
                     }
                 }
             } catch (e) {
@@ -482,6 +494,36 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
             return shortcode;
         }
 
+		var blockRootRef = wp.compose.useRefEffect(
+			function ( element ) {
+				lassoRegisterBlockRoot( props.clientId, element );
+				return function () {
+					lassoRegisterBlockRoot( props.clientId, null );
+				};
+			},
+			[ props.clientId ]
+		);
+
+		var blockProps = wp.blockEditor.useBlockProps( {
+			ref: blockRootRef,
+			style: {
+				textAlign: 'center',
+				backgroundColor: '#5E36CA',
+				borderRadius: '10px',
+				padding: '0px 0px 20px 0px',
+				fontFamily: '"Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif',
+			},
+		} );
+
+		wp.element.useEffect(
+			function () {
+				if ( props.attributes.short_code ) {
+					getLassoShortcodeHtml( props.clientId, props.attributes.short_code );
+				}
+			},
+			[ props.clientId, props.attributes.short_code ]
+		);
+
 		return wp.element.createElement(
 			wp.element.Fragment,
 			null,
@@ -499,16 +541,8 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
                 )
             ),
 			React.createElement(
-				"div",
-				{
-					style: {
-						textAlign: 'center',
-						backgroundColor: "#5E36CA",
-						borderRadius: "10px",
-						padding: "0px 0px 20px 0px",
-						fontFamily: '"Helvetica Neue", Helvetica, Arial, "Lucida Grande", sans-serif',
-					}
-				},
+				'div',
+				blockProps,
 				React.createElement(
 					"div",
 					{
@@ -652,9 +686,10 @@ wp.blocks.registerBlockType('affiliate-plugin/lasso', {
 		);
 	},
 	save: function(props) {
+		var blockProps = wp.blockEditor.useBlockProps.save();
 		return wp.element.createElement(
-			"div",
-			null,
+			'div',
+			blockProps,
 			props.attributes.short_code
 		);
 	}

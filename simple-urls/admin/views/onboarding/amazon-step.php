@@ -142,7 +142,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 							</div>
 
 							<div class="form-group mb-3 text-right">
-								<button type="button" class="btn btn-sm btn-verify-amazon-creators">Validate</button>
+								<button type="button" class="btn btn-sm btn-lasso-lite-verify-amazon-creators">Validate</button>
 							</div>
 						</div>
 

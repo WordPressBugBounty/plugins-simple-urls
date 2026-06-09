@@ -1456,6 +1456,30 @@ class Helper {
 	}
 
 	/**
+	 * CSS custom properties for Lasso display colors (shared admin + block editor iframe).
+	 *
+	 * @param bool $important Append `!important` to each variable value.
+	 * @return string
+	 */
+	public static function get_lasso_display_css_variables( $important = false ) {
+		$settings = Setting::get_settings();
+		$suffix   = $important ? ' !important' : '';
+
+		// @codingStandardsIgnoreStart
+		return ':root{
+			--lasso-main: ' . $settings['display_color_main'] . $suffix . ';
+			--lasso-title: ' . $settings['display_color_title'] . $suffix . ';
+			--lasso-button: ' . $settings['display_color_button'] . $suffix . ';
+			--lasso-secondary-button: ' . $settings['display_color_secondary_button'] . $suffix . ';
+			--lasso-button-text: ' . $settings['display_color_button_text'] . $suffix . ';
+			--lasso-background: ' . $settings['display_color_background'] . $suffix . ';
+			--lasso-pros: ' . $settings['display_color_pros'] . $suffix . ';
+			--lasso-cons: ' . $settings['display_color_cons'] . $suffix . ';
+		}';
+		// @codingStandardsIgnoreEnd
+	}
+
+	/**
 	 * Whether show Request Review at the top of the page
 	 */
 	public static function show_request_review() {
@@ -1542,17 +1566,34 @@ class Helper {
 	 * @param string $url     URL.
 	 * @param bool   $get_res Get response or not. Default to false.
 	 * @param bool   $is_lasso_save Is Lasso save data action. Default to false.
+	 * @param bool   $url_version_param Is add version param to request api url to ignore cache. Default to false.
+	 * @param bool   $force_bls Force fetch product from BLS or not. Default to false.
+	 * @param bool   $refresh_image Bypass cache and fetch fresh product image/metadata. Default to false.
 	 */
-	public static function get_url_status_code_by_broken_link_service( $url, $get_res = false, $is_lasso_save = false ) {
+	public static function get_url_status_code_by_broken_link_service( $url, $get_res = false, $is_lasso_save = false, $url_version_param = false, $force_bls = false, $refresh_image = false ) {
 		$status = 200;
 		$url    = Amazon_Api::get_amazon_product_url( $url, false );
 		$url    = self::format_url_before_requesting( $url );
 
 		$headers = self::get_headers();
-		$data    = array(
+		$query   = array(
 			'url' => $url,
 		);
-		$res = self::send_request( 'get', Constant::LASSO_LINK . '/link/status/?url=' . $url, array(), $headers );
+
+		if ( $url_version_param ) {
+			$query['ver'] = time();
+		}
+
+		if ( $force_bls ) {
+			$query['force_bls'] = 1;
+		}
+
+		if ( $refresh_image ) {
+			$query['refresh_image'] = 1;
+		}
+
+		$request_url = Constant::LASSO_LINK . '/link/status/?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
+		$res         = self::send_request( 'get', $request_url, array(), $headers );
 
 		// phpcs:ignore
 		// $res = self::send_request( 'get', LASSO_LINK . '/link/status/?' . $encrypted_base64, array(), $headers );

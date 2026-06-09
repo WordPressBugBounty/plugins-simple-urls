@@ -11,7 +11,6 @@ use LassoLite\Classes\Config;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Group;
 use LassoLite\Classes\Helper;
-use LassoLite\Classes\License;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 
@@ -58,9 +57,9 @@ if ( isset( $lasso_lite_url->category ) ) {
 	}
 }
 
-$price_disabled = $is_amazon_link ? 'disabled' : '';
-$license_status = License::get_license_status();
-$is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
+$price_disabled         = $is_amazon_link ? 'disabled' : '';
+$is_amazon_configured   = Amazon_Api::is_amazon_setting_configured();
+$is_amazon_configured_attr = $is_amazon_configured ? '1' : '0';
 ?>
 
 <?php Config::get_header(); ?>
@@ -72,6 +71,7 @@ $is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
 		data-amazon-tracking-id="<?php echo $amazon_tracking_id; ?>"
 		data-disable-amazon-notification="<?php echo $disable_amazon_notification; ?>"
 		data-amazon-access-key-id="<?php echo $amazon_access_key_id; ?>"
+		data-is-amazon-configured="<?php echo esc_attr( $is_amazon_configured_attr ); ?>"
 	>
 		<?php require Helper::get_path_views_folder() . 'dashboard/header.php'; ?>
 		<form id="url-details" autocomplete="off">
@@ -267,18 +267,12 @@ $is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
 								</div>
 							</div>
 
-							<div class="col-md thumbnail-wrapper <?php echo $is_amazon_configured || $license_status ? "" : "lasso-lite-disabled" ?> <?php echo $amazon_product_id && $is_update ? "" : "d-none" ?> ">
-								<div class="input-group">
+							<div class="col-md thumbnail-wrapper <?php echo $amazon_product_id && $is_update ? '' : 'd-none'; ?>">
+								<div class="input-group lasso-amazon-image-field w-100">
 									<label data-tooltip="Click the button below to grab an updated image from Amazon."><strong>Amazon Image</strong> <i class="far fa-info-circle light-purple"></i></label>
-
-									<div class="row">
-										<div class="col pr-0">
-											<input type="text" id="thumbnail_image_url" class="form-control form-control-append" value="<?php echo esc_html( $lasso_lite_url->image_src ); ?>" readonly>
-										</div>
-
-										<div class="col-2 p-0">
-											<a href="#" id="<?php echo $is_amazon_configured || $license_status ? "lasso-render-image" : "lasso-lite-disabled" ?>" class="btn btn-append refresh-image">Refresh</a>
-										</div>
+									<div class="d-flex flex-nowrap w-100 align-items-stretch lasso-amazon-refresh-row">
+										<input type="text" id="thumbnail_image_url" class="form-control form-control-append flex-grow-1 lasso-amazon-image-input" value="<?php echo esc_html( $lasso_lite_url->image_src ); ?>" readonly>
+										<a href="#" id="<?php echo $is_amazon_configured ? 'lasso-render-image' : 'lasso-lite-disabled'; ?>" class="btn btn-append refresh-image flex-shrink-0 d-flex align-items-center justify-content-center">Refresh</a>
 									</div>
 								</div>
 							</div>

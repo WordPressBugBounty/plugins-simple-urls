@@ -511,6 +511,11 @@ jQuery(document).ready(function () {
                 jQuery(image_editor)
                     .find("#render_thumbnail")
                     .attr("src", attachment.url);
+                jQuery(".lasso-box-2").html(jQuery("#image_editor").html());
+                jQuery("#demo_display_box .lasso-image img").attr(
+                    "src",
+                    attachment.url
+                );
                 jQuery("#thumbnail_id").val(attachment.id);
                 jQuery("#thumbnail_image_url").val("");
             });
@@ -668,6 +673,10 @@ jQuery(document).ready(function () {
             return;
         }
 
+        if (is_amazon_link) {
+            amazon_image_refresh_credentials_notification();
+        }
+
         if (0 === amazon_tracking_id.length && is_amazon_link) {
             let json_data = [
                 {
@@ -684,9 +693,6 @@ jQuery(document).ready(function () {
                 "amazon-url-detected",
                 json_data
             );
-        } else {
-            // ? check if no API key after check tracking id
-            no_api_key_notification();
         }
     }
 
@@ -811,34 +817,65 @@ jQuery(document).ready(function () {
         }
     }
 
-    function no_api_key_notification() {
+    function amazon_image_refresh_credentials_notification() {
         let $lite_container = jQuery(".lite-container.container");
-        let amazon_access_key_id = $lite_container.data("amazon-access-key-id");
-        if (!amazon_access_key_id) {
-            lasso_lite_helper.do_notification(
-                `No API key detected for images and pricing! <a href="${lassoLiteOptionsData.upgrade_url}" target="_blank" class="white underline"><strong> Upgrade to Access Lasso's Amazon product data API </strong></a>`,
-                "orange",
-                "default-template-notification",
-                false
-            );
+        let is_amazon_link = $lite_container.data("is-amazon-link") === 1;
+        let is_amazon_configured =
+            $lite_container.data("is-amazon-configured") === 1;
+        let settings_url =
+            (lassoLiteOptionsData.setup_progress &&
+                lassoLiteOptionsData.setup_progress.setting_amz_url) ||
+            lassoLiteOptionsData.site_url +
+                "/wp-admin/edit.php?post_type=" +
+                lassoLiteOptionsData.simple_urls_slug +
+                "&page=" +
+                lassoLiteOptionsData.simple_urls_slug +
+                "-settings-amazon";
+
+        if (!is_amazon_link || is_amazon_configured) {
+            return;
         }
+
+        lasso_lite_helper.do_notification(
+            'Valid Amazon Creators API credentials not detected. Add them in your <a href="' +
+                settings_url +
+                '" class="white underline"><strong>Lasso Settings</strong></a>.',
+            "orange",
+            "default-template-notification",
+            false
+        );
     }
 
-    jQuery("#lasso-render-image").click(function () {
+    jQuery("#lasso-render-image").click(function (e) {
+        e.preventDefault();
         render_image();
     });
+
+    function update_thumbnail_preview(thumbnail_src) {
+        jQuery(".render_thumbnail").attr("src", thumbnail_src);
+        jQuery("#demo_display_box .lasso-image img").attr("src", thumbnail_src);
+        jQuery("#image_editor")
+            .find(".render_thumbnail")
+            .attr("src", thumbnail_src);
+        jQuery(".lasso-box-2").html(jQuery("#image_editor").html());
+    }
+
     function render_image() {
         let affiliate_url = jQuery("#surl_redirect").val();
-        var regex = /(?:[/dp/|/gp/product/|/ASIN/]|$)([A-Z0-9]{10})/;
-        var m = affiliate_url.match(regex);
+        let regex = /(?:\/dp\/|\/gp\/product\/|\/ASIN\/|$)([A-Z0-9]{10})/;
+        let m = affiliate_url.match(regex);
         let amazon_product_id = m !== null ? m[1] : "";
         let urlRegex =
             /^((([A-Za-z]{3,9}:(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?).(jpeg|jpg|gif|png)/i;
         let image_link = jQuery("#thumbnail_image_url").val();
         image_link = image_link.split("?")[0];
-        if (image_link.trim() == "") {
-            // set_thumbnail();
-        } else if (urlRegex.test(image_link) || amazon_product_id != "") {
+        let can_refresh_amazon = amazon_product_id != "";
+
+        if (!can_refresh_amazon && image_link.trim() == "") {
+            return;
+        }
+
+        if (can_refresh_amazon || urlRegex.test(image_link)) {
             let lassoData = get_payload_to_save_url();
             jQuery
                 .ajax({
@@ -846,6 +883,7 @@ jQuery(document).ready(function () {
                     type: "post",
                     data: {
                         action: "lasso_lite_upload_thumbnail",
+                        nonce: lassoLiteOptionsData.optionsNonce,
                         lasso_id: lassoData.post_id,
                         product_url: affiliate_url,
                         product_id: amazon_product_id,
@@ -858,12 +896,26 @@ jQuery(document).ready(function () {
                     },
                 })
                 .done(function (res) {
-                    res = res.data;
-                    if (res.status === 0) {
+                    if (!res.success) {
+                        lasso_lite_helper.do_notification(
+                            res.data || "Something went wrong.",
+                            "red"
+                        );
                         return;
                     }
 
-                    jQuery("#render_thumbnail").attr("src", res.thumbnail);
+                    res = res.data;
+                    if (res.status === 0) {
+                        if (res.error) {
+                            lasso_lite_helper.do_notification(
+                                res.error,
+                                "red"
+                            );
+                        }
+                        return;
+                    }
+
+                    update_thumbnail_preview(res.thumbnail);
                     jQuery("#thumbnail_id").val(res.thumbnail_id);
                     jQuery("#thumbnail_image_url").val(res.thumbnail);
 

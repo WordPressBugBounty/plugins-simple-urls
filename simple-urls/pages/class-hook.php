@@ -63,6 +63,7 @@ class Hook {
 		add_filter( 'custom_menu_order', array( $this, 'lasso_order_submenu' ) );
 
 		// ? lasso gutenberg block
+		add_action( 'enqueue_block_assets', array( $this, 'lasso_block_editor_css_variables' ) );
 		add_action( 'enqueue_block_editor_assets', array( $this, 'lasso_lite_gutenberg_block' ) );
 
 		// ? Elementor
@@ -531,21 +532,8 @@ class Hook {
 			return;
 		}
 
-		$settings = Setting::get_settings();
-
 		// @codingStandardsIgnoreStart
-		echo '<style type="text/css">
-			:root{
-				--lasso-main: ' . $settings['display_color_main'] . ' !important;
-				--lasso-title: ' . $settings['display_color_title'] . ' !important;
-				--lasso-button: ' . $settings['display_color_button'] . ' !important;
-				--lasso-secondary-button: ' . $settings['display_color_secondary_button'] . ' !important;
-				--lasso-button-text: ' . $settings['display_color_button_text'] . ' !important;
-				--lasso-background: ' . $settings['display_color_background'] . ' !important;
-				--lasso-pros: ' . $settings['display_color_pros'] . ' !important;
-				--lasso-cons: ' . $settings['display_color_cons'] . ' !important;
-			}
-		</style>';
+		echo '<style type="text/css">' . Helper::get_lasso_display_css_variables( true ) . '</style>';
 
 		// fix fontawesome js render svg (from other plugins) instead of using css
 		echo '
@@ -632,11 +620,39 @@ class Hook {
 	}
 
 	/**
+	 * Lasso display styles + color variables inside the block editor iframe (WP 7+).
+	 *
+	 * admin_enqueue_scripts only loads into the parent editor chrome; shortcode HTML
+	 * preview renders in the editor canvas iframe and needs enqueue_block_assets.
+	 *
+	 * @codeCoverageIgnore Coverage ignore.
+	 */
+	public function lasso_block_editor_css_variables() {
+		if ( ! is_admin() || Helper::is_lasso_pro_installed() || ! Helper::is_lite_using_new_ui() ) {
+			return;
+		}
+
+		$setting = new Setting();
+		if ( ! $setting->is_wordpress_post() && ! $setting->is_custom_post() ) {
+			return;
+		}
+
+		Helper::enqueue_style( 'bootstrap-grid-css', 'bootstrap-grid.min.css' );
+		Helper::enqueue_style( 'lasso-lite', 'lasso-lite.css' );
+		wp_add_inline_style( SIMPLE_URLS_SLUG . '-lasso-lite', Helper::get_lasso_display_css_variables( true ) );
+	}
+
+	/**
 	 * Load lasso js file in Gutenberg editor
 	 */
 	public function lasso_lite_gutenberg_block() {
 		if ( ! Helper::is_lasso_pro_installed() ) {
-			Helper::enqueue_script( 'lasso-lite-gutenberg-block', 'lasso-lite-gutenberg-block.js', array( 'wp-blocks', 'wp-editor' ), true );
+			Helper::enqueue_script(
+				'lasso-lite-gutenberg-block',
+				'lasso-lite-gutenberg-block.js',
+				array( 'wp-blocks', 'wp-block-editor', 'wp-element', 'wp-components', 'wp-compose' ),
+				true
+			);
 			Helper::enqueue_script( 'display-add', 'display-add.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'url-add', 'url-add.js', array( 'jquery' ) );
 		}

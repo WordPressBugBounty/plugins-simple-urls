@@ -10,6 +10,7 @@ namespace LassoLite\Pages;
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Affiliate_Link;
+use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Helper;
@@ -351,48 +352,53 @@ class Ajax {
 	}
 
 	/**
-	 * Get estimated earnings for this site (used for monthly notification).
+	 * Get estimated earnings for this site (used for weekly notification).
+	 *
+	 * Reads the weekly cron cache (POST /api/estimate-earning). Refreshes once on cache miss.
 	 */
 	public function lasso_lite_get_earnings_estimate() {
 		Helper::verify_access_and_nonce();
 
-		$post      = Helper::POST(); // phpcs:ignore
-		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
-
-		$transient_key = 'lasso_lite_earnings_estimate_' . md5( \site_url() );
-		$cache_ttl     = (int) \apply_filters( 'lasso_lite_earnings_estimate_cache_ttl', 6 * \HOUR_IN_SECONDS );
-
-		if ( $use_cache ) {
-			$cached = \get_transient( $transient_key );
-			if ( false !== $cached ) {
-				wp_send_json_success( $cached );
-			}
-		}
-
-		$response = Helper::send_request(
-			'get',
-			Constant::LASSO_LINK . '/api/earnings/estimate',
-			array(),
-			array(
-				'site-url' => \site_url(),
-			)
-		);
-
-		if ( empty( $response['response'] ) || $response['status_code'] >= 400 ) {
+		if ( Estimate_Earning::has_linked_lasso_account() ) {
 			wp_send_json_error(
 				array(
-					'msg'         => 'Unable to fetch earnings estimate.',
-					'status_code' => $response['status_code'] ?? null,
-					'response'    => $response['response'] ?? null,
+					'msg' => 'Linked Lasso account.',
 				)
 			);
 		}
 
+		$post      = Helper::POST(); // phpcs:ignore
+		$use_cache = '0' !== (string) ( $post['use_cache'] ?? '1' ); // phpcs:ignore
+
 		if ( $use_cache ) {
-			\set_transient( $transient_key, $response['response'], $cache_ttl );
+			$cached = Estimate_Earning::get_cached();
+			if ( null === $cached ) {
+				Estimate_Earning::fetch_and_cache();
+				$cached = Estimate_Earning::get_cached();
+			}
+		} else {
+			Estimate_Earning::fetch_and_cache();
+			$cached = Estimate_Earning::get_cached();
 		}
 
-		wp_send_json_success( $response['response'] );
+		if ( null === $cached ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'No earnings estimate available.',
+				)
+			);
+		}
+
+		$payout = (float) ( $cached['estimated_payout'] ?? 0 );
+		if ( $payout <= 0 ) {
+			wp_send_json_error(
+				array(
+					'msg' => 'No earnings to display.',
+				)
+			);
+		}
+
+		wp_send_json_success( Estimate_Earning::format_for_ui( $cached ) );
 	}
 
 	/**
@@ -633,7 +639,7 @@ class Ajax {
 		}
 
 		Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $email );
-		Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+		// Do not auto-sync user_id here — orphan earnings banner/cron key off user_id=0 only.
 		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
 
 		wp_send_json_success(

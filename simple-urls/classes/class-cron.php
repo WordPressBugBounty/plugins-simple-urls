@@ -7,6 +7,7 @@
 
 namespace LassoLite\Classes;
 
+use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\License;
 use LassoLite\Classes\Processes\Amazon;
 use LassoLite\Classes\Processes\Amazon_Shortlink;
@@ -32,6 +33,7 @@ class Cron {
 		'lasso_lite_cron_get_js_domain'      => 'daily',
 		'lasso_lite_cron_get_info'           => 'daily',
 		'lasso_lite_check_lite_user'         => 'daily',
+		Estimate_Earning::CRON_HOOK          => 'weekly',
 	);
 
 	/**
@@ -49,6 +51,7 @@ class Cron {
 		add_action( 'lasso_lite_cron_get_js_domain', array( $this, 'lasso_lite_cron_get_js_domain' ) );
 		add_action( 'lasso_lite_cron_get_info', array( $this, 'lasso_lite_cron_get_info' ) );
 		add_action( 'lasso_lite_check_lite_user', array( $this, 'lasso_lite_check_lite_user' ) );
+		add_action( Estimate_Earning::CRON_HOOK, array( $this, 'lasso_lite_weekly_estimate_earning' ) );
 		$this->lasso_create_schedule_hook();
 	}
 
@@ -62,6 +65,13 @@ class Cron {
 			'interval' => 15 * MINUTE_IN_SECONDS, // ? 15 minutes in seconds
 			'display'  => __( '15 minutes' ),
 		);
+
+		if ( ! isset( $schedules['weekly'] ) ) {
+			$schedules['weekly'] = array(
+				'interval' => WEEK_IN_SECONDS,
+				'display'  => __( 'Once Weekly' ),
+			);
+		}
 
 		return $schedules;
 	}
@@ -315,5 +325,12 @@ class Cron {
 		} catch ( \Exception $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Weekly: refresh cached orphan Affiliate+ payout estimate for the weekly banner.
+	 */
+	public function lasso_lite_weekly_estimate_earning() {
+		Estimate_Earning::fetch_and_cache();
 	}
 }

@@ -106,6 +106,7 @@ jQuery(document).ready(function () {
                 type: "post",
                 data: {
                     action: "lasso_lite_reactivate_license",
+                    nonce: lassoLiteOptionsData.optionsNonce,
                     license: license,
                 },
                 beforeSend: function (xhr) {

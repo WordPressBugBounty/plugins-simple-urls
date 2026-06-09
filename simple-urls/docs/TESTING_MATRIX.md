@@ -34,6 +34,7 @@ This repo is process scaffolding, not application runtime code. It does not yet 
 | `.cursor/rules/**/*.mdc` | default `TEST_FAST` | default `TEST_ALL` | none |
 | `README.md`, `docs/**/*.md` | default `TEST_FAST` | default `TEST_ALL` | none |
 | `scripts/extract_github_issue_image_urls.py` | `python3 scripts/extract_github_issue_image_urls.py --self-test` (in addition to default `TEST_FAST` when this file changes) | default `TEST_ALL` | none |
+| `scripts/set_github_project_points.py` | `python3 scripts/set_github_project_points.py --self-test && python3 -m unittest tests/test_set_github_project_points.py` (in addition to default `TEST_FAST` when this file changes) | default `TEST_ALL` | none |
 | `.github/workflows/*.{yml,yaml}` | default `TEST_FAST` | default `TEST_ALL` | none |
 | `repos.json` | default `TEST_FAST` | default `TEST_ALL` | none |
 

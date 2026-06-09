@@ -116,11 +116,6 @@ $lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EM
 							<a href="https://support.getlasso.co/en/articles/3182308-how-to-set-up-amazon-creators-api-credentials-with-lasso" target="_blank" rel="noopener noreferrer" class="btn btn-sm learn-btn mb-2">
 								<i class="far fa-info-circle"></i> Learn
 							</a>
-							<div class="text-right mb-3">
-								<a class="btn-upgrade purple mr-3" href="<?php echo Constant::LASSO_CHECKOUT_URL_DEFAULT; ?>" target="_self">
-									<strong>Get Amazon Images</strong>
-								</a>
-							</div>
 
 							<div class="form-group">
 								<label data-tooltip="Select your Amazon Associates locale."><strong>Default Tracking ID</strong> <i class="far fa-info-circle light-purple"></i></label>
@@ -169,7 +164,7 @@ $lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EM
 								</div>
 
 								<div class="form-group mb-3 text-right">
-									<button type="button" class="btn btn-sm btn-verify-amazon-creators">Validate</button>
+									<button type="button" class="btn btn-sm btn-lasso-lite-verify-amazon-creators">Validate</button>
 								</div>
 							</div>
 

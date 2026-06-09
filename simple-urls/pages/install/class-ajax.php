@@ -7,6 +7,7 @@
 
 namespace LassoLite\Pages\Install;
 
+use LassoLite\Classes\Helper;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\License;
 
@@ -27,6 +28,8 @@ class Ajax {
 	 * Activate lasso plugin
 	 */
 	public function lasso_lite_activate_license() {
+		Helper::verify_access_and_nonce();
+
 		$license       = wp_unslash( $_POST['license'] ?? '' ); // phpcs:ignore
 
 		$setting = new Setting();

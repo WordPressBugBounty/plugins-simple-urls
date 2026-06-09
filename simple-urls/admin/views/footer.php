@@ -7,6 +7,7 @@
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Enum;
+use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
 use LassoLite\Classes\Page;
@@ -38,7 +39,7 @@ $user_email = strtolower( trim( $user_email ) );
 $checksum_file = SIMPLE_URLS_DIR . '/checksum.txt';
 $commit_hash   = file_exists( $checksum_file ) && is_readable( $checksum_file ) ? trim( (string) file_get_contents( $checksum_file ) ) : ''; // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents
 if ( '' !== $commit_hash ) {
-	$commit_hash = 'lasso-lite-rc' . $commit_hash;
+	$commit_hash = 'lasso-lite-rc-' . $commit_hash;
 }
 
 ?>
@@ -249,7 +250,9 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 	};
 
 	jQuery(function () {
-		window.lassoLiteCheckExistingAccount();
+		if ( ! window.__lassoLiteDeferExistingAccountCheck ) {
+			window.lassoLiteCheckExistingAccount();
+		}
 	});
 </script>
 
@@ -373,14 +376,29 @@ if ( $is_show_upsell ) {
 </script>
 <?php endif; ?>
 
-<?php if ( ! $lasso_lite_setting->is_setting_onboarding_page() && ! $is_lasso_connected ) : ?>
+<?php if ( ! $lasso_lite_setting->is_setting_onboarding_page() && Estimate_Earning::should_show_orphan_earnings_banner() ) : ?>
 <script>
+	window.__lassoLiteDeferExistingAccountCheck = true;
 	jQuery(function () {
 		try {
-			var now = new Date();
-			var monthKey = now.getFullYear() + '-' + (now.getMonth() + 1);
-			var dismissedMonth = localStorage.getItem('lasso_lite_earnings_notification_dismissed_month');
-			if (dismissedMonth === monthKey) return;
+			// ISO year-week (aligned with weekly estimate cron); dismiss hides until next week.
+			var lassoLiteEarningsWeekKey = function (date) {
+				var d = new Date(date.getTime());
+				d.setHours(0, 0, 0, 0);
+				d.setDate(d.getDate() + 4 - (d.getDay() || 7));
+				var yearStart = new Date(d.getFullYear(), 0, 1);
+				var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+				return d.getFullYear() + '-W' + String(weekNo).padStart(2, '0');
+			};
+			var weekKey = lassoLiteEarningsWeekKey(new Date());
+			try {
+				localStorage.removeItem('lasso_lite_earnings_notification_dismissed_month');
+			} catch (e) {}
+			var dismissedWeek = localStorage.getItem('lasso_lite_earnings_notification_dismissed_week');
+			if (dismissedWeek === weekKey) {
+				window.lassoLiteCheckExistingAccount();
+				return;
+			}
 
 			if (!window.lassoLiteOptionsData || !lassoLiteOptionsData.ajax_url) return;
 			if (!lassoLiteOptionsData.optionsNonce) return;
@@ -403,9 +421,11 @@ if ( $is_show_upsell ) {
 			}).done(function (res) {
 				if (!res || !res.success || !res.data) return;
 				var data = res.data.data ? res.data.data : res.data;
+				var payout = parseFloat(data.estimated_payout);
+				if (!payout || payout <= 0) return;
 
 				var tplData = {
-					earnings_display: data.payout_30d,
+					earnings_display: data.earnings_display || data.payout_30d,
 					signup_url: '<?php echo esc_js( Constant::LASSO_PLUS_SIGNUP_URL ); ?>'
 				};
 
@@ -415,12 +435,14 @@ if ( $is_show_upsell ) {
 					tplData,
 					false
 				);
-				jQuery('#lasso-earnings-notification').collapse('show');
+				jQuery('#lasso-earnings-notification').addClass('show').collapse('show');
+			}).always(function () {
+				window.lassoLiteCheckExistingAccount();
 			});
 
 			jQuery(document).on('click', '#lasso-earnings-notification button.close', function(e) {
 				try {
-					localStorage.setItem('lasso_lite_earnings_notification_dismissed_month', monthKey);
+					localStorage.setItem('lasso_lite_earnings_notification_dismissed_week', weekKey);
 				} catch (err) {}
 				jQuery('#lasso-earnings-notification').collapse('hide');
 			});

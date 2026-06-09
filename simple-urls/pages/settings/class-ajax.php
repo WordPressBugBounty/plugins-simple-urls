@@ -312,7 +312,20 @@ class Ajax {
 		);
 
 		if ( ! $result['success'] ) {
-			$this->clear_stored_amazon_creators_credentials();
+			if ( ! empty( $result['clear_stored_credentials'] ) ) {
+				$this->clear_stored_amazon_creators_credentials();
+			} else {
+				$this->persist_amazon_creators_credentials(
+					array(
+						'amazon_creators_credential_id'   => $credential_id,
+						'amazon_creators_secret'          => $secret,
+						'amazon_creators_version'         => $credential_version,
+						'amazon_creators_partner_tag'     => $partner_tag,
+						'amazon_default_tracking_country' => $country,
+					)
+				);
+				$result['msg'] .= ' Your saved credentials were kept; try again when the service is available.';
+			}
 			wp_send_json_error(
 				array(
 					'msg'         => $result['msg'],
@@ -321,7 +334,7 @@ class Ajax {
 			);
 		}
 
-		Setting::set_settings(
+		$this->persist_amazon_creators_credentials(
 			array(
 				'amazon_creators_credential_id'   => $credential_id,
 				'amazon_creators_secret'          => $secret,
@@ -393,7 +406,7 @@ class Ajax {
 	}
 
 	/**
-	 * Validate Creators credentials after save; clears stored Creators fields if remote verification fails.
+	 * Validate Creators credentials after save; keeps stored fields even when remote verification fails.
 	 *
 	 * @param array $settings Saved settings.
 	 * @return array
@@ -442,12 +455,28 @@ class Ajax {
 			$this->mark_amazon_credentials_notice_updated();
 			$this->update_amazon_creators_verified_signature( $settings );
 		} else {
-			$result['msg']                 = 'Settings were saved, but Creators API credentials could not be validated. ' . $result['msg'];
-			$result['credentials_cleared'] = true;
-			$this->clear_stored_amazon_creators_credentials();
+			$result['msg'] = 'Settings were saved, but Creators API credentials could not be validated. ' . $result['msg'];
 		}
 
 		return $result;
+	}
+
+	/**
+	 * Persist Amazon Creators API credential fields in Lite settings.
+	 *
+	 * @param array $settings Settings values.
+	 * @return void
+	 */
+	private function persist_amazon_creators_credentials( $settings ) {
+		Setting::set_settings(
+			array(
+				'amazon_creators_credential_id'   => $settings['amazon_creators_credential_id'] ?? '',
+				'amazon_creators_secret'          => $settings['amazon_creators_secret'] ?? '',
+				'amazon_creators_version'         => $settings['amazon_creators_version'] ?? '',
+				'amazon_creators_partner_tag'     => $settings['amazon_creators_partner_tag'] ?? '',
+				'amazon_default_tracking_country' => $settings['amazon_default_tracking_country'] ?? '',
+			)
+		);
 	}
 
 	/**
@@ -622,18 +651,76 @@ class Ajax {
 		$success_message  = $this->get_creators_validate_message( $response_body, 'Creators API credentials verified.' );
 
 		if ( $status_code >= 400 || empty( $response_body ) || empty( $response_body->result ) ) {
+			$clear = $this->should_clear_stored_amazon_creators_credentials_on_failed_remote_verify( $status_code, $response_body );
+
 			return array(
-				'success'     => false,
-				'msg'         => $error_message,
-				'status_code' => $status_code,
+				'success'                  => false,
+				'msg'                      => $error_message,
+				'status_code'              => $status_code,
+				'clear_stored_credentials' => $clear,
 			);
 		}
 
 		return array(
-			'success'     => true,
-			'msg'         => $success_message,
-			'status_code' => $status_code,
+			'success'                  => true,
+			'msg'                      => $success_message,
+			'status_code'              => $status_code,
+			'clear_stored_credentials' => false,
 		);
+	}
+
+	/**
+	 * When remote verify failed, whether stored DB credentials should be wiped (e.g. rejected keys)
+	 * or kept (server/transport/empty response/throttle) so a transient does not delete good values.
+	 *
+	 * @param int   $status_code   HTTP status from the verify request.
+	 * @param mixed $response_body Decoded body from Lasso API.
+	 * @return bool
+	 */
+	private function should_clear_stored_amazon_creators_credentials_on_failed_remote_verify( $status_code, $response_body ) {
+		$status_code = (int) $status_code;
+		if ( 0 === $status_code || $status_code >= 500 || 429 === $status_code ) {
+			return false;
+		}
+		if ( empty( $response_body ) && ! is_object( $response_body ) ) {
+			return false;
+		}
+		if ( $this->creators_verify_response_indicates_transient( $response_body ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param mixed $response_body Decoded or nested payload.
+	 * @return bool
+	 */
+	private function creators_verify_response_indicates_transient( $response_body ) {
+		if ( is_string( $response_body ) ) {
+			$decoded = json_decode( $response_body );
+			if ( JSON_ERROR_NONE === json_last_error() && ( is_object( $decoded ) || is_array( $decoded ) ) ) {
+				return $this->creators_verify_response_indicates_transient( $decoded );
+			}
+
+			return false;
+		}
+		$data = $response_body;
+		if ( is_array( $data ) ) {
+			$data = json_decode( wp_json_encode( $data ) );
+		}
+		$data = is_object( $data ) ? $data : null;
+		if ( ! is_object( $data ) ) {
+			return false;
+		}
+		if ( ! empty( $data->type ) && is_string( $data->type ) && 'ThrottleException' === $data->type ) {
+			return true;
+		}
+		if ( ! empty( $data->detail ) && ( is_string( $data->detail ) || is_object( $data->detail ) || is_array( $data->detail ) ) ) {
+			return $this->creators_verify_response_indicates_transient( $data->detail );
+		}
+
+		return false;
 	}
 
 	/**
@@ -721,6 +808,8 @@ class Ajax {
 	 * Re-activate license again in Setting page
 	 */
 	public function lasso_lite_reactivate_license() {
+		Helper::verify_access_and_nonce();
+
 		$data    = Helper::POST();
 		$license = $data['license'] ?? '';
 

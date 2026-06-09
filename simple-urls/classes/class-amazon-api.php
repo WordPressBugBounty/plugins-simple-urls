@@ -458,9 +458,12 @@ class Amazon_Api {
 	 * @param bool        $store_product Store product into DB or not. Default to false.
 	 * @param bool|string $updated_at    Set date time or not. Default to false.
 	 * @param string      $amz_link      Amazon link. Default to empty.
+	 * @param bool        $url_version_param Is add version param to request api url to ignore cache. Default to false.
+	 * @param bool        $force_bls Force fetch product from BLS or not. Default to false.
+	 * @param bool        $refresh_image Bypass cache and fetch fresh product image/metadata. Default to false.
 	 * @return mixed
 	 */
-	public function fetch_product_info( $product_id, $store_product = false, $updated_at = false, $amz_link = '' ) {
+	public function fetch_product_info( $product_id, $store_product = false, $updated_at = false, $amz_link = '', $url_version_param = false, $force_bls = false, $refresh_image = false ) {
 		$lasso_db = new Lasso_DB();
 
 		$lasso_settings       = Setting::get_settings();
@@ -470,19 +473,30 @@ class Amazon_Api {
 			self::is_amazon_creators_verified( $lasso_settings )
 			&& $this->is_same_domain( $amz_link )
 		) {
+			if ( $refresh_image && ! self::is_lite_account_connected() ) {
+				return array(
+					'product'    => array(),
+					'api'        => 'no',
+					'full_item'  => array(),
+					'status'     => 'failed',
+					'error_code' => 'LiteAccountNotConnected',
+				);
+			}
+
 			$creators_result = $this->fetch_product_info_from_creators_api(
 				$product_id,
 				$store_product,
 				$updated_at,
 				$amz_link,
-				$lasso_settings
+				$lasso_settings,
+				$refresh_image
 			);
 			if ( null !== $creators_result ) {
 				return $creators_result;
 			}
 		}
 
-		$result = $is_amazon_configured && $this->is_same_domain( $amz_link ) ? $this->get_product_by_id_v5( $product_id ) : false;
+		$result = ! $force_bls && $is_amazon_configured && $this->is_same_domain( $amz_link ) ? $this->get_product_by_id_v5( $product_id ) : false;
 		// phpcs:ignore
 		if ( is_object( $result ) && isset( $result->Errors[0] ) && (
 				"The ItemId $product_id provided in the request is invalid." === $result->Errors[0]->Message // phpcs:ignore
@@ -522,8 +536,8 @@ class Amazon_Api {
 				'status'     => 'success',
 				'error_code' => '',
 			);
-		} elseif ( '' !== $lasso_settings['license_serial'] ) {
-			list( $product, $status ) = $this->fetch_product_from_bls( $product_id, $store_product, $updated_at, $amz_link );
+		} elseif ( '' !== $lasso_settings['license_serial'] || $force_bls ) {
+			list( $product, $status ) = $this->fetch_product_from_bls( $product_id, $store_product, $updated_at, $amz_link, $url_version_param, $force_bls, $refresh_image );
 
 			return array(
 				'product'    => $product,
@@ -550,8 +564,11 @@ class Amazon_Api {
 	 * @param bool        $store_product Store product into DB or not. Default to false.
 	 * @param bool|string $updated_at    Set date time or not. Default to false.
 	 * @param string      $amz_link      Amazon link. Default to empty.
+	 * @param bool        $url_version_param Is add version param to request api url to ignore cache. Default to false.
+	 * @param bool        $force_bls Force fetch product from BLS or not. Default to false.
+	 * @param bool        $refresh_image Bypass cache and fetch fresh product image/metadata. Default to false.
 	 */
-	public function fetch_product_from_bls( $product_id, $store_product = false, $updated_at = false, $amz_link = '' ) {
+	public function fetch_product_from_bls( $product_id, $store_product = false, $updated_at = false, $amz_link = '', $url_version_param = false, $force_bls = false, $refresh_image = false ) {
 		$url    = strpos( $amz_link, 'amazon.' ) !== false ? $amz_link : $this->get_amazon_link_by_product_id( $product_id, $amz_link );
 		$m_link = self::get_amazon_product_url( $url );
 		$url    = self::get_amazon_product_url( $url, false );
@@ -568,7 +585,7 @@ class Amazon_Api {
 		);
 
 		try {
-			$res = Helper::get_url_status_code_by_broken_link_service( $url, true );
+			$res = Helper::get_url_status_code_by_broken_link_service( $url, true, false, $url_version_param, $force_bls, $refresh_image );
 		} catch ( \Throwable $e ) {
 			$res = array(
 				'status_code' => 500,
@@ -1579,6 +1596,17 @@ class Amazon_Api {
 	}
 
 	/**
+	 * Whether the Lite install is linked to a Lasso account email (required for Creators fetch).
+	 *
+	 * @return bool
+	 */
+	public static function is_lite_account_connected() {
+		$email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+
+		return is_string( $email ) && '' !== trim( $email );
+	}
+
+	/**
 	 * Lite account token for lasso.link (md5 of linked account email).
 	 *
 	 * @return string Empty when Lite account email is not linked.
@@ -1600,9 +1628,10 @@ class Amazon_Api {
 	 * @param bool|string $updated_at    Optional updated timestamp.
 	 * @param string      $amz_link      Amazon URL.
 	 * @param array       $lasso_settings Plugin settings.
+	 * @param bool        $refresh_image  Bypass cache and fetch fresh product image/metadata.
 	 * @return array|null Same shape as fetch_product_info success/failure, or null to fall back.
 	 */
-	private function fetch_product_info_from_creators_api( $product_id, $store_product, $updated_at, $amz_link, $lasso_settings ) {
+	private function fetch_product_info_from_creators_api( $product_id, $store_product, $updated_at, $amz_link, $lasso_settings, $refresh_image = false ) {
 		$token = self::get_lite_account_token();
 		if ( '' === $token ) {
 			return null;
@@ -1616,6 +1645,10 @@ class Amazon_Api {
 			'asin'    => $product_id,
 			'url'     => $amz_link,
 		);
+
+		if ( $refresh_image ) {
+			$payload['refresh_image'] = 1;
+		}
 
 		$response = Helper::send_request(
 			'post',

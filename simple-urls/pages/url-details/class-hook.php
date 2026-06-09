@@ -12,7 +12,6 @@ use LassoLite\Classes\Amazon_Api;
 use LassoLite\Admin\Constant;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
-use LassoLite\Classes\License;
 use LassoLite\Classes\Setting;
 
 /**
@@ -117,6 +116,8 @@ class Hook {
 	 * @param string $image_url Image url.
 	 */
 	public function upload_thumbnail( $image_url = '' ) {
+		Helper::verify_access_and_nonce();
+
 		$data           = wp_unslash( $_POST ); // phpcs:ignore
 		$lasso_id       = intval( $data['lasso_id'] ?? 0 );
 		$product_url    = $data['product_url'] ?? '';
@@ -125,9 +126,7 @@ class Hook {
 		$is_product_url = $data['is_product_url'] ?? false;
 		$amazon_product = false;
 
-		$is_amazon_configured = Amazon_Api::is_amazon_setting_configured();
-		$license_status       = License::get_license_status();
-		if ( ! $is_amazon_configured || ! $license_status ) {
+		if ( ! Amazon_Api::is_amazon_setting_configured() ) {
 			$this->lasso_ajax_error( 'This feature is disabled due to Amazon setting issue.' );
 		}
 
@@ -137,20 +136,25 @@ class Hook {
 			$this->lasso_ajax_error( 'Lasso ID (' . $lasso_id . ') is invalid.' );
 		}
 
-		if ( '' === $product_id ) {
-			$this->lasso_ajax_error( 'Product ID (' . $product_id . ') is invalid.' );
+		if ( empty( $product_id ) ) {
+			$this->lasso_ajax_error( 'Product ID is invalid.' );
 		}
 
 		// ? send request to broken link service
 		$lasso_amazon_api = new Amazon_Api();
 		if ( $is_product_url ) {
-			$amazon_product = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $product_url );
-			$amazon_product = $amazon_product['product'];
-			if ( isset( $amazon_product['status_code'] ) && 200 === $amazon_product['status_code'] ) {
+			$fetch_result   = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $product_url, true, true, true );
+			$amazon_product = is_array( $fetch_result['product'] ?? null ) ? $fetch_result['product'] : array();
+
+			if ( isset( $amazon_product['status_code'] ) && 200 === intval( $amazon_product['status_code'] ) ) {
 				$image_url    = $amazon_product['image'] ?? $image_url;
 				$product_name = $amazon_product['title'] ?? '';
+			} elseif ( ! empty( $amazon_product['image'] ) ) {
+				$image_url                   = $amazon_product['image'];
+				$product_name                = $amazon_product['title'] ?? '';
+				$amazon_product['status_code'] = 200;
 			} else {
-				$this->lasso_ajax_error( 'Fetch status was not 200.' );
+				$this->lasso_ajax_error( $this->get_upload_thumbnail_fetch_error( $fetch_result ) );
 			}
 		} else {
 			$this->lasso_ajax_error( "Don't run BLS, not an Amazon Product." );
@@ -182,6 +186,30 @@ class Hook {
 			$this->lasso_ajax_error( "For some reason the image_url isn't set, weird issue." );
 		}
 	} // @codeCoverageIgnore
+
+	/**
+	 * Build a user-facing error for failed Amazon image refresh.
+	 *
+	 * @param array $fetch_result fetch_product_info() response.
+	 * @return string
+	 */
+	private function get_upload_thumbnail_fetch_error( $fetch_result ) {
+		$error_code = (string) ( $fetch_result['error_code'] ?? '' );
+
+		if ( 'LiteAccountNotConnected' === $error_code ) {
+			return 'Connect your Lite account to app.getlasso.co to refresh Amazon images.';
+		}
+
+		if ( 'CredentialsNotFound' === $error_code ) {
+			return 'Valid Amazon Creators API credentials not detected. Add them in your Lasso Settings.';
+		}
+
+		if ( 'NotFound' === $error_code ) {
+			return 'Amazon product could not be found.';
+		}
+
+		return 'Fetch status was not 200.';
+	}
 
 	/**
 	 * Send error via ajax request
