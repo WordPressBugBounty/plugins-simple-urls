@@ -1,3 +1,7 @@
+<?php
+use LassoLite\Admin\Constant;
+?>
+
 <!-- TITLE -->
 <div class="row align-items-center">
 	<div class="col-lg text-lg-left text-center mb-4">
@@ -30,6 +34,16 @@
 	</div>
 	<div class="col-lg-6 text-right">
 		<ul class="d-inline-block mb-0">
+			<?php if ( $show_get_amazon_images_upsell || $defer_get_amazon_images_upsell ) : ?>
+			<li class="d-inline-block">
+				<a id="lasso-get-amazon-images-upsell"
+					class="btn-upgrade<?php echo $defer_get_amazon_images_upsell ? ' d-none' : ''; ?>"
+					href="<?php echo esc_url( Constant::LASSO_CHECKOUT_URL_DEFAULT ); ?>"
+					target="_blank" rel="noopener noreferrer">
+					<strong>Get Amazon Images</strong>
+				</a>
+			</li>
+			<?php endif; ?>
 			<li class="d-inline-block">
 				<input id="shortcode" type="text" style="opacity: 0; width: 0px;" value='[lasso rel="<?php echo $lasso_lite_url->slug; ?>" id="<?php echo $lasso_lite_url->id; ?>"]'>
 				<a id="copy-shortcode" class="purple" data-tooltip="Copy this Display to your clipboard.">

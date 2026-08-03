@@ -473,23 +473,12 @@ class Amazon_Api {
 			self::is_amazon_creators_verified( $lasso_settings )
 			&& $this->is_same_domain( $amz_link )
 		) {
-			if ( $refresh_image && ! self::is_lite_account_connected() ) {
-				return array(
-					'product'    => array(),
-					'api'        => 'no',
-					'full_item'  => array(),
-					'status'     => 'failed',
-					'error_code' => 'LiteAccountNotConnected',
-				);
-			}
-
 			$creators_result = $this->fetch_product_info_from_creators_api(
 				$product_id,
 				$store_product,
 				$updated_at,
 				$amz_link,
-				$lasso_settings,
-				$refresh_image
+				$lasso_settings
 			);
 			if ( null !== $creators_result ) {
 				return $creators_result;
@@ -644,7 +633,7 @@ class Amazon_Api {
 					$amazon_product['savings_percent'] = $store_data['savings_percent'];
 				}
 
-				$this->update_amazon_product_in_db( $store_data, $updated_at, true );
+				$this->update_amazon_product_in_db( $store_data, $updated_at, true ); // allow_partial: BLS may omit imgUrl.
 			}
 
 			$amazon_product['title']       = $product_name;
@@ -675,10 +664,11 @@ class Amazon_Api {
 	/**
 	 * Insert or Update Amazon Product Data
 	 *
-	 * @param array       $product    Amazon product.
-	 * @param bool|string $updated_at Set update date time. Default to false.
+	 * @param array       $product        Amazon product.
+	 * @param bool|string $updated_at     Set update date time. Default to false.
+	 * @param bool        $allow_partial  When true, allow empty image (BLS may omit imgUrl). Default false.
 	 */
-	public function update_amazon_product_in_db( $product, $updated_at = false ) {
+	public function update_amazon_product_in_db( $product, $updated_at = false, $allow_partial = false ) {
 		global $wpdb;
 
 		$lasso_db = new Lasso_DB();
@@ -702,7 +692,9 @@ class Amazon_Api {
 		$quantity             = intval( $product['quantity'] ?? 200 );
 		$out_of_stock         = 0 === $quantity ? 1 : 0;
 
-		if ( '' === $amazon_id || '' === $default_product_name || '' === $default_image
+		$image_required = ! $allow_partial;
+		if ( '' === $amazon_id || '' === $default_product_name
+			|| ( $image_required && '' === $default_image )
 			|| ( '' !== $default_image && Helper::validate_url( $default_image ) === false && strpos( $default_image, 'data:image' ) !== 0 )
 		) {
 			return false;
@@ -1136,7 +1128,7 @@ class Amazon_Api {
 		$amz_cache_key = self::OBJECT_KEY . '_' . self::FUNCTION_NAME_GET_LASSO_ID_BY_PRODUCT_ID_AND_TYPE . '_' . $product_id . '_' . self::PRODUCT_TYPE;
 		$lasso_id      = Cache_Per_Process::get_instance()->get_cache( $amz_cache_key, null );
 		if ( null === $lasso_id ) {
-			$lasso_id = $lasso_db->get_lasso_id_by_product_id_and_type( $product_id, self::PRODUCT_TYPE, $product_url );
+			$lasso_id = $lasso_db->get_lasso_id_by_product_id_and_type( $product_id, self::PRODUCT_TYPE );
 			Cache_Per_Process::get_instance()->set_cache( $amz_cache_key, $lasso_id );
 		}
 
@@ -1596,7 +1588,32 @@ class Amazon_Api {
 	}
 
 	/**
-	 * Whether the Lite install is linked to a Lasso account email (required for Creators fetch).
+	 * Resolve Creators API country from an Amazon URL or default tracking country.
+	 *
+	 * @param string      $amazon_url     Amazon product URL (optional).
+	 * @param array|false $lasso_settings Settings array. Default false loads current settings.
+	 * @return string
+	 */
+	public static function get_country_for_creators_api( $amazon_url, $lasso_settings = false ) {
+		if ( ! is_array( $lasso_settings ) ) {
+			$lasso_settings = Setting::get_settings();
+		}
+
+		if ( $amazon_url && self::is_amazon_url( $amazon_url ) ) {
+			$base_domain = Helper::get_base_domain( $amazon_url );
+			$host_key    = 'www.' . $base_domain;
+			$flags       = self::get_aff_link_and_flag();
+
+			if ( ! empty( $flags[ $host_key ]['code'] ) ) {
+				return (string) $flags[ $host_key ]['code'];
+			}
+		}
+
+		return (string) ( $lasso_settings['amazon_default_tracking_country'] ?? '' );
+	}
+
+	/**
+	 * Whether the Lite install is linked to a Lasso account email.
 	 *
 	 * @return bool
 	 */
@@ -1607,83 +1624,45 @@ class Amazon_Api {
 	}
 
 	/**
-	 * Lite account token for lasso.link (md5 of linked account email).
+	 * Fetch product data via direct Amazon Creators API (replaces deprecated PA-API GetItems).
 	 *
-	 * @return string Empty when Lite account email is not linked.
-	 */
-	private static function get_lite_account_token() {
-		$email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
-		if ( ! is_string( $email ) || '' === trim( $email ) ) {
-			return '';
-		}
-
-		return md5( strtolower( trim( $email ) ) );
-	}
-
-	/**
-	 * Fetch product data via lasso.link Creators API proxy (replaces deprecated PA-API GetItems).
-	 *
-	 * @param string      $product_id    Amazon ASIN.
-	 * @param bool        $store_product Store in local DB.
-	 * @param bool|string $updated_at    Optional updated timestamp.
-	 * @param string      $amz_link      Amazon URL.
+	 * @param string      $product_id     Amazon ASIN.
+	 * @param bool        $store_product  Store in local DB.
+	 * @param bool|string $updated_at     Optional updated timestamp.
+	 * @param string      $amz_link       Amazon URL.
 	 * @param array       $lasso_settings Plugin settings.
-	 * @param bool        $refresh_image  Bypass cache and fetch fresh product image/metadata.
 	 * @return array|null Same shape as fetch_product_info success/failure, or null to fall back.
 	 */
-	private function fetch_product_info_from_creators_api( $product_id, $store_product, $updated_at, $amz_link, $lasso_settings, $refresh_image = false ) {
-		$token = self::get_lite_account_token();
-		if ( '' === $token ) {
+	private function fetch_product_info_from_creators_api( $product_id, $store_product, $updated_at, $amz_link, $lasso_settings ) {
+		if ( ! self::is_amazon_creators_configured( $lasso_settings ) ) {
 			return null;
 		}
 
-		$headers = Helper::get_headers();
-		$headers['token'] = $token;
-
-		$payload = array(
-			'country' => $lasso_settings['amazon_default_tracking_country'] ?? '',
-			'asin'    => $product_id,
-			'url'     => $amz_link,
+		$api_result = Amazon_Creators_Api::fetch_product(
+			$product_id,
+			self::get_country_for_creators_api( $amz_link, $lasso_settings ),
+			array(
+				'product_only' => false,
+			)
 		);
 
-		if ( $refresh_image ) {
-			$payload['refresh_image'] = 1;
-		}
+		if ( 'fail' === ( $api_result['status'] ?? '' ) ) {
+			$error_code = (string) ( $api_result['error_code'] ?? '' );
 
-		$response = Helper::send_request(
-			'post',
-			rtrim( Constant::LASSO_LINK, '/' ) . '/amazon/creators/product',
-			$payload,
-			$headers
-		);
+			if ( 'NotFound' === $error_code ) {
+				return $this->build_fetch_product_info_response( array(), 'yes', array(), 'failed', 'NotFound' );
+			}
 
-		$status_code   = intval( $response['status_code'] ?? 500 );
-		$response_body = $response['response'] ?? null;
-
-		if ( empty( $response_body ) ) {
 			return null;
 		}
 
-		if ( ! empty( $response_body->error_code ) && 'CredentialsNotFound' === $response_body->error_code ) {
+		$product_data = $api_result['product'] ?? array();
+		if ( ! is_array( $product_data ) || empty( $product_data ) ) {
 			return null;
 		}
 
-		$fetch_status  = isset( $response_body->status ) ? (string) $response_body->status : '';
-		$error_code    = isset( $response_body->error_code ) ? (string) $response_body->error_code : '';
-		$api_flag      = isset( $response_body->api ) ? (string) $response_body->api : 'yes';
-		$product_data  = isset( $response_body->product ) ? json_decode( wp_json_encode( $response_body->product ), true ) : array();
-		$product_data  = is_array( $product_data ) ? $product_data : array();
-		$full_item     = isset( $response_body->full_item ) ? $response_body->full_item : array();
-
-		if ( 'failed' === $fetch_status || 'NotFound' === $error_code ) {
-			return $this->build_fetch_product_info_response( array(), $api_flag, $full_item, 'failed', $error_code );
-		}
-
-		if ( $status_code >= 400 || empty( $response_body->result ) || empty( $product_data ) ) {
-			return null;
-		}
-
-		$product = $this->finalize_fetch_product_info_product(
+		$full_item = $api_result['item'] ?? array();
+		$product   = $this->finalize_fetch_product_info_product(
 			$product_data,
 			$product_id,
 			$store_product,
@@ -1691,7 +1670,7 @@ class Amazon_Api {
 			$amz_link
 		);
 
-		return $this->build_fetch_product_info_response( $product, $api_flag, $full_item, 'success', '' );
+		return $this->build_fetch_product_info_response( $product, 'yes', $full_item, 'success', '' );
 	}
 
 	/**

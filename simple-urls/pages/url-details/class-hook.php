@@ -12,6 +12,7 @@ use LassoLite\Classes\Amazon_Api;
 use LassoLite\Admin\Constant;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Setting;
 
 /**
@@ -161,15 +162,21 @@ class Hook {
 		}
 
 		// We have an Amazon Image, let's hook it up.
+		$image_url = esc_url_raw( $image_url );
 		if ( ! empty( $image_url ) && Constant::DEFAULT_THUMBNAIL !== $image_url ) {
 			delete_post_thumbnail( $lasso_id );
-			update_post_meta( $lasso_id, 'lasso_custom_thumbnail', $image_url );
+			update_post_meta( $lasso_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, $image_url );
 		}
 
 		// ? Set Amazon additional data
-		if ( ! empty( $amazon_product ) && isset( $amazon_product['price'] ) && isset( $amazon_product['savings_basis'] ) && isset( $amazon_product['currency'] ) ) {
-			$amazon_product['show_discount_pricing'] = Setting::get_setting( 'show_amazon_discount_pricing' );
-			$amazon_product['discount_pricing_html'] = Amazon_Api::build_discount_pricing_html( $amazon_product['price'], $amazon_product['savings_basis'], $amazon_product['currency'] );
+		if ( ! empty( $amazon_product ) && isset( $amazon_product['price'] ) ) {
+			if ( isset( $amazon_product['savings_basis'] ) && isset( $amazon_product['currency'] ) ) {
+				$amazon_product['show_discount_pricing'] = Setting::get_setting( 'show_amazon_discount_pricing' );
+				$amazon_product['discount_pricing_html'] = Amazon_Api::build_discount_pricing_html( $amazon_product['price'], $amazon_product['savings_basis'], $amazon_product['currency'] );
+			} else {
+				$amazon_product['show_discount_pricing'] = false;
+				$amazon_product['discount_pricing_html']  = '';
+			}
 		}
 
 		if ( isset( $image_url ) ) {

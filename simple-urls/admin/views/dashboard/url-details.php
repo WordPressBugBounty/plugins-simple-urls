@@ -11,6 +11,7 @@ use LassoLite\Classes\Config;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Group;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 
@@ -60,6 +61,17 @@ if ( isset( $lasso_lite_url->category ) ) {
 $price_disabled         = $is_amazon_link ? 'disabled' : '';
 $is_amazon_configured   = Amazon_Api::is_amazon_setting_configured();
 $is_amazon_configured_attr = $is_amazon_configured ? '1' : '0';
+$stored_thumbnail       = get_post_meta( $post_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, true );
+$show_get_amazon_images_upsell = Helper::should_show_get_amazon_images_upsell(
+	$is_amazon_link,
+	$stored_thumbnail,
+	$is_amazon_configured
+);
+$defer_get_amazon_images_upsell = Helper::should_defer_get_amazon_images_upsell(
+	$is_amazon_link,
+	$stored_thumbnail,
+	$is_amazon_configured
+);
 ?>
 
 <?php Config::get_header(); ?>

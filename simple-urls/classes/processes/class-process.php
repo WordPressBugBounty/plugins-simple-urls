@@ -313,7 +313,7 @@ abstract class Process extends Lasso_WP_Background_Process {
 		);
 		// @codingStandardsIgnoreEnd
 
-		$queue              = $lasso_db->get_var( $sql );   // ? We want to track SQL errors in Sentry
+		$queue              = $lasso_db->get_var( $sql );   // ? SQL errors surfaced via log_error() -> trigger_error()
 		$count              = 0;
 		$unserialized_queue = maybe_unserialize( $queue );
 		if ( is_array( $unserialized_queue ) ) {

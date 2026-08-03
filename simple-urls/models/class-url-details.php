@@ -58,7 +58,8 @@ class Url_Details extends Model {
 			product_id varchar(150),
 			product_type varchar(20),
 			PRIMARY KEY  (lasso_id),
-			KEY  ix_base_domain (base_domain)
+			KEY  ix_base_domain (base_domain),
+			KEY  ix_product_id_type (product_id, product_type)
 		';
 		$sql         = '
 			CREATE TABLE ' . $this->get_table_name() . ' (
@@ -66,6 +67,20 @@ class Url_Details extends Model {
 			) ' . $this->get_charset_collate();
 
 		return $this->modify_table( $sql, $this->get_table_name() );
+	}
+
+	/**
+	 * Add product lookup index for existing installs (v152+).
+	 */
+	public function update_for_v152() {
+		$index_name = 'ix_product_id_type';
+		$table      = $this->get_table_name();
+		$exists     = self::get_var(
+			"SHOW INDEX FROM {$table} WHERE Key_name = '{$index_name}'"
+		);
+		if ( ! $exists ) {
+			self::query( "ALTER TABLE {$table} ADD KEY {$index_name} (product_id, product_type)" );
+		}
 	}
 
 	/**

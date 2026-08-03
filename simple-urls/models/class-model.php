@@ -583,10 +583,13 @@ abstract class Model {
 	 */
 	public function __get( $name ) {
 		$method   = strtolower( $name );
-		$property = $this->get_property_name( $method );
+		$property = $method;
 
-		if ( ! $property ) {
-			$property = $method;
+		if ( 0 === strpos( $method, 'get_' ) || 0 === strpos( $method, 'set_' ) ) {
+			$derived = $this->get_property_name( $method );
+			if ( $derived ) {
+				$property = $derived;
+			}
 		}
 
 		if ( ! in_array( $property, $this->columns, true ) ) {
@@ -897,7 +900,7 @@ abstract class Model {
 			}
 
 			// ? Add force write log for lasso_debug, to see what happen when Lasso call query.
-			trigger_error( $error, E_USER_NOTICE ); // phpcs:ignore
+			trigger_error( '[lasso-lite-sql] ' . $error, E_USER_NOTICE ); // phpcs:ignore
 		}
 	}
 
@@ -958,7 +961,7 @@ abstract class Model {
 		$reference_charset_status = $this->get_table_charset( $reference_charset_table, true );
 		$current_table_status     = $this->get_table_charset( $table, false );
 
-		if ( ! $reference_charset_status[1] !== $current_table_status[1] ) {
+		if ( $reference_charset_status[1] !== $current_table_status[1] ) {
 			$result = $this->update_table_collation( $table, $reference_charset_status[0], $reference_charset_status[1] );
 		} else {
 			$result = true;

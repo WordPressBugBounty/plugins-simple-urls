@@ -274,7 +274,7 @@ class Affiliate_Link {
 						'default_url'     => $product['base_url'],
 						'url'             => $url,
 						'image'           => $product['default_image'],
-						'quantity'        => '0' === $product['out_of_stock'] ? 200 : 0,  // ? Manual checks won't show out of stock for now. TODO: Add BLS to out of stock checks.
+						'quantity'        => '0' === $product['out_of_stock'] ? 200 : 0,  // Deferred: BLS for out-of-stock (product decision — see epic #496).
 						'is_manual'       => $product['is_manual'],
 						'is_prime'        => $product['is_prime'],
 						'features'        => $product['features'],

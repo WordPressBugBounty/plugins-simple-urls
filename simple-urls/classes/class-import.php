@@ -45,6 +45,11 @@ class Import {
 			return false;
 		}
 
+		// Bulk revert passes plugin slugs from the revert table; UI passes display labels.
+		if ( isset( Setting_Enum::SUPPORT_IMPORT_PLUGINS[ $import_source ] ) ) {
+			$import_source = Setting_Enum::SUPPORT_IMPORT_PLUGINS[ $import_source ];
+		}
+
 		if ( 'AAWP' === $import_source && 'aawp_list' === $post_type ) {
 			$aawp_list       = $lasso_db->get_aawp_list( $import_id );
 			$aawp_amazon_ids = $aawp_list->product_asins ?? '';
@@ -575,7 +580,7 @@ class Import {
 				'default_url' => $product['url'],
 				'url'         => $product['url'],
 				'image'       => $product['images'][4]['url'] ?? $product['images'][ count( $product['images'] ) - 1 ]['url'],
-				'quantity'    => 200,  // Manual checks won't show out of stock for now. TODO: Add BLS to out of stock checks.
+				'quantity'    => 200,  // Deferred: BLS quantity for out-of-stock checks (product decision — see epic #496).
 				'is_manual'   => 1,
 			);
 			$lasso_amazon_api->update_amazon_product_in_db( $store_data );

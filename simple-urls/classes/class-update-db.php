@@ -80,6 +80,11 @@ class Update_DB {
 		if ( $version < 129 ) {
 			Setting::set_setting( 'auto_upgrade_eligible_links', true );
 		}
+
+		if ( $version < 152 && (int) LASSO_LITE_VERSION >= 152 ) {
+			( new Url_Details() )->update_for_v152();
+			( new Revert() )->update_for_v152();
+		}
 	}
 
 	/**

@@ -368,8 +368,11 @@ if ( $is_show_upsell ) {
 					nonce: lassoLiteOptionsData.optionsNonce,
 					option_name: '<?php echo esc_js( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED ); ?>',
 				},
-			}).done(function() {
-				jQuery('#lasso-amazon-credentials-update').collapse('hide');
+			}).done(function(res) {
+				if (res.success) {
+					jQuery('#lasso-amazon-credentials-update').collapse('hide');
+					jQuery(document).trigger('lasso_lite_amazon_credentials_notice_dismissed', [res.data]);
+				}
 			});
 		});
 	});

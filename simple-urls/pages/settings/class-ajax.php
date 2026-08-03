@@ -10,6 +10,7 @@ namespace LassoLite\Pages\Settings;
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Amazon_Api;
+use LassoLite\Classes\Amazon_Creators_Api;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
@@ -255,7 +256,7 @@ class Ajax {
 	}
 
 	/**
-	 * Verify Amazon Creators API credentials against Lambda.
+	 * Verify Amazon Creators API credentials via direct Amazon API token exchange.
 	 */
 	public function lasso_lite_verify_amazon_creators_credentials() {
 		Helper::verify_access_and_nonce();
@@ -267,9 +268,6 @@ class Ajax {
 		$credential_version  = sanitize_text_field( $post['amazon_creators_version'] ?? '' );
 		$partner_tag         = sanitize_text_field( $post['amazon_creators_partner_tag'] ?? '' );
 		$country             = sanitize_text_field( $post['amazon_default_tracking_country'] ?? '' );
-		$email               = $this->get_lite_account_email();
-		$normalized_email    = is_string( $email ) ? strtolower( trim( $email ) ) : '';
-		$token               = md5( $normalized_email );
 
 		$missing_fields = array();
 		if ( empty( $credential_id ) ) {
@@ -293,22 +291,12 @@ class Ajax {
 			);
 		}
 
-		if ( empty( $normalized_email ) ) {
-			wp_send_json_error(
-				array(
-					'msg'                       => 'Connect your Lite account to app.getlasso.co before validating Creators API credentials.',
-					'lite_account_validate_cta' => true,
-				)
-			);
-		}
-
-		$result = $this->verify_amazon_creators_credentials_with_lasso_api(
+		$result = $this->verify_amazon_creators_credentials(
 			$credential_id,
 			$secret,
 			$credential_version,
 			$partner_tag,
-			$country,
-			$token
+			$country
 		);
 
 		if ( ! $result['success'] ) {
@@ -429,24 +417,13 @@ class Ajax {
 		}
 
 		$result['attempted'] = true;
-		$email               = $this->get_lite_account_email();
-		$normalized_email    = is_string( $email ) ? strtolower( trim( $email ) ) : '';
 
-		if ( empty( $normalized_email ) ) {
-			$result['success']                   = false;
-			$result['msg']                       = 'Settings were saved, but Creators API credentials could not be validated because your Lite account is not connected.';
-			$result['lite_account_validate_cta'] = true;
-
-			return $result;
-		}
-
-		$result = $this->verify_amazon_creators_credentials_with_lasso_api(
+		$result = $this->verify_amazon_creators_credentials(
 			$settings['amazon_creators_credential_id'],
 			$settings['amazon_creators_secret'],
 			$settings['amazon_creators_version'],
 			$settings['amazon_creators_partner_tag'],
-			$settings['amazon_default_tracking_country'] ?? '',
-			md5( $normalized_email )
+			$settings['amazon_default_tracking_country'] ?? ''
 		);
 		$result['attempted']           = true;
 		$result['credentials_cleared'] = false;
@@ -617,55 +594,57 @@ class Ajax {
 	}
 
 	/**
-	 * Send Creators credentials to Lasso API for validation.
+	 * Verify Creators credentials via direct Amazon API token exchange.
 	 *
 	 * @param string $credential_id Credential ID.
 	 * @param string $secret Credential secret.
 	 * @param string $credential_version Credential version.
 	 * @param string $partner_tag Partner tag.
 	 * @param string $country Tracking country.
-	 * @param string $token Lite account token.
 	 * @return array
 	 */
-	private function verify_amazon_creators_credentials_with_lasso_api( $credential_id, $secret, $credential_version, $partner_tag, $country, $token ) {
-		$headers = Helper::get_headers();
-		$headers['token'] = $token;
-		$verify_payload = array(
-			'credential_id'      => $credential_id,
-			'secret'             => $secret,
-			'credential_version' => $credential_version,
-			'partner_tag'        => $partner_tag,
-			'country'            => $country,
+	private function verify_amazon_creators_credentials( $credential_id, $secret, $credential_version, $partner_tag, $country ) {
+		$result = Amazon_Creators_Api::verify_credentials(
+			array(
+				'client_id'     => $credential_id,
+				'client_secret' => $secret,
+				'version'       => $credential_version,
+				'partner_tag'   => $partner_tag,
+				'country'       => $country,
+			)
 		);
 
-		$response = Helper::send_request(
-			'post',
-			rtrim( Constant::LASSO_LINK, '/' ) . '/amazon/creators/credentials/verify',
-			$verify_payload,
-			$headers
-		);
-
-		$status_code      = intval( $response['status_code'] ?? 500 );
-		$response_body    = $response['response'] ?? null;
-		$error_message    = $this->get_creators_validate_message( $response_body, 'Unable to verify Creators API credentials.' );
-		$success_message  = $this->get_creators_validate_message( $response_body, 'Creators API credentials verified.' );
-
-		if ( $status_code >= 400 || empty( $response_body ) || empty( $response_body->result ) ) {
-			$clear = $this->should_clear_stored_amazon_creators_credentials_on_failed_remote_verify( $status_code, $response_body );
-
+		if ( 'success' === ( $result['status'] ?? '' ) ) {
 			return array(
-				'success'                  => false,
-				'msg'                      => $error_message,
-				'status_code'              => $status_code,
-				'clear_stored_credentials' => $clear,
+				'success'                  => true,
+				'msg'                      => (string) ( $result['message'] ?? 'Amazon Creators API credentials verified successfully.' ),
+				'status_code'              => 200,
+				'clear_stored_credentials' => false,
 			);
 		}
 
+		$error_code  = (string) ( $result['error_code'] ?? 'ApiError' );
+		$message     = sanitize_text_field( (string) ( $result['message'] ?? 'Unable to verify Creators API credentials.' ) );
+		$status_code = 422;
+
+		if ( 'CredentialsMissing' === $error_code ) {
+			$status_code = 400;
+		} elseif ( 'AuthFailed' === $error_code ) {
+			$status_code = 401;
+		} elseif ( 'HttpError' === $error_code ) {
+			$status_code = 503;
+		}
+
+		$clear = $this->should_clear_stored_amazon_creators_credentials_on_failed_remote_verify(
+			$status_code,
+			(object) array( 'message' => $message )
+		);
+
 		return array(
-			'success'                  => true,
-			'msg'                      => $success_message,
+			'success'                  => false,
+			'msg'                      => $message,
 			'status_code'              => $status_code,
-			'clear_stored_credentials' => false,
+			'clear_stored_credentials' => $clear,
 		);
 	}
 

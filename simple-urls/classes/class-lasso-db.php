@@ -12,6 +12,7 @@ use LassoLite\Classes\Setting_Enum;
 use LassoLite\Admin\Constant;
 use LassoLite\Models\Url_Details;
 use LassoLite\Models\Model;
+use LassoLite\Classes\Db\Revert_Repository;
 use LassoLite\Models\Revert;
 
 /**
@@ -269,7 +270,7 @@ class Lasso_DB {
 			}
 
 			// ? Add force write log for lasso_debug, to see what happen when Lasso call query.
-			trigger_error( $error, E_USER_NOTICE ); // phpcs:ignore
+			trigger_error( '[lasso-lite-sql] ' . $error, E_USER_NOTICE ); // phpcs:ignore
 		}
 	}
 
@@ -280,28 +281,17 @@ class Lasso_DB {
 	 * @param string $product_type Product type. Default is amazon.
 	 */
 	public function get_lasso_id_by_product_id_and_type( $product_id, $product_type = Amazon_Api::PRODUCT_TYPE ) {
-		global $wpdb;
-
 		if ( ! $product_id ) {
 			return false;
 		}
 
-		$sql = '
-			SELECT DISTINCT lud.lasso_id as post_id
-			FROM ' . $this->posts . ' as wpp
-				LEFT JOIN ' . ( new Url_Details() )->get_table_name() . ' as lud
-				ON wpp.id = lud.lasso_id
-			WHERE wpp.post_type = %s 
-				AND lud.product_id = %s 
-				AND lud.product_type = %s 
-				AND wpp.post_status = "publish"
-		';
+		$detail = Url_Details::get_by_product_id_and_type( $product_id, $product_type );
+		if ( ! $detail || ! $detail->lasso_id ) {
+			return false;
+		}
 
-		$prepare = $wpdb->prepare( $sql, Constant::LASSO_POST_TYPE, $product_id, $product_type ); // phpcs:ignore
-		$post    = $this->get_row( $prepare );
-
-		if ( $post && get_post( $post->post_id ) ) {
-			return $post->post_id;
+		if ( get_post( $detail->lasso_id ) ) {
+			return (int) $detail->lasso_id;
 		}
 
 		return false;
@@ -988,19 +978,12 @@ class Lasso_DB {
 	}
 
 	/**
-	 * Get revert by id
+	 * Get revert row by Lasso post id.
 	 *
-	 * @param int $id Id in revert table.
+	 * @param int $id Lasso post id (matches `lasso_id` column, not revert table primary key).
 	 */
 	public function get_revert_by_id( $id ) {
-		$sql = '
-			SELECT * 
-			FROM ' . ( new Revert() )->get_table_name() . '
-			WHERE lasso_id = %d;
-		';
-		$sql = Model::prepare( $sql, $id );
-
-		return Model::get_row( $sql );
+		return ( new Revert_Repository() )->get_by_lasso_id( $id );
 	}
 
 	/**

@@ -1,4 +1,6 @@
 jQuery(document).ready(function () {
+    var show_discount_pricing = false;
+    var discount_pricing_html = "";
     let is_update = parseInt(jQuery("#is-update").val()) === 1;
     let initial_value = {};
     jQuery(".lasso-box-2").html(jQuery("#image_editor").html());
@@ -164,6 +166,14 @@ jQuery(document).ready(function () {
         });
 
     amazon_notification();
+    jQuery(document).on(
+        "lasso_lite_amazon_credentials_notice_dismissed",
+        function () {
+            jQuery("#lasso-get-amazon-images-upsell.d-none").removeClass(
+                "d-none"
+            );
+        }
+    );
     product_duplicate_notification();
     first_link_notification();
     jQuery(".image_loading").html(lasso_lite_helper.get_loading_image());
@@ -937,6 +947,14 @@ jQuery(document).ready(function () {
                             res.amazon_product.price
                         );
 
+                        show_discount_pricing = res.amazon_product.hasOwnProperty(
+                            "show_discount_pricing"
+                        )
+                            ? !!res.amazon_product.show_discount_pricing
+                            : false;
+                        discount_pricing_html =
+                            res.amazon_product.discount_pricing_html || "";
+
                         if (res.amazon_product.url != "") {
                             jQuery("#affiliate_url").val(
                                 res.amazon_product.url
@@ -957,16 +975,6 @@ jQuery(document).ready(function () {
                                 res.amazon_product.url
                             );
 
-                            if (
-                                res.amazon_product.hasOwnProperty(
-                                    "show_discount_pricing"
-                                )
-                            ) {
-                                show_discount_pricing =
-                                    res.amazon_product.show_discount_pricing;
-                                discount_pricing_html =
-                                    res.amazon_product.discount_pricing_html;
-                            }
                         }
 
                         updatePriceSection();

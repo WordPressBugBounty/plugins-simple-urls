@@ -113,14 +113,13 @@ class Amazon_Products extends Model {
 			SELECT 
 				ap.*
 			FROM ' . $url_details->get_table_name() . ' AS ud
-				LEFT JOIN ' . $posts . ' AS p
+				INNER JOIN ' . $posts . ' AS p
 					ON ud.lasso_id = p.ID
-				LEFT JOIN ' . $amazon_products->get_table_name() . ' AS ap
+				INNER JOIN ' . $amazon_products->get_table_name() . ' AS ap
 					ON ap.amazon_id = ud.product_id
 			WHERE p.post_type = %s
 				AND p.post_status = %s
 				AND ud.product_type = %s
-				AND ap.amazon_id IS NOT NULL
 				AND ap.last_updated < DATE_SUB(%s, INTERVAL 24 HOUR)
 			ORDER BY 
 				ap.last_updated ASC

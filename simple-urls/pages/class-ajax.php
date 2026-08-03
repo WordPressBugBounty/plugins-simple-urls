@@ -704,7 +704,8 @@ class Ajax {
 
 			wp_send_json_success(
 				array(
-					'status' => 1,
+					'status'                         => 1,
+					'show_amazon_credentials_notice' => Helper::show_amazon_credentials_notice(),
 				)
 			);
 

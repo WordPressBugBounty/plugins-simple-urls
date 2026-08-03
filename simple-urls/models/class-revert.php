@@ -51,7 +51,8 @@ class Revert extends Model {
 			old_uri varchar(500) NOT NULL,
 			plugin varchar(200) NOT NULL,
 			revert_dt datetime NOT NULL,
-			PRIMARY KEY  (id)
+			PRIMARY KEY  (id),
+			KEY  ix_lasso_id (lasso_id)
 		';
 		$sql         = '
 			CREATE TABLE ' . $this->get_table_name() . ' (
@@ -71,5 +72,19 @@ class Revert extends Model {
 				CHANGE `revert_dt` `revert_dt` DATETIME NOT NULL
 		';
 		self::query( $query );
+	}
+
+	/**
+	 * Add lasso_id index for revert lookups (v152+).
+	 */
+	public function update_for_v152() {
+		$index_name = 'ix_lasso_id';
+		$table      = $this->get_table_name();
+		$exists     = self::get_var(
+			"SHOW INDEX FROM {$table} WHERE Key_name = '{$index_name}'"
+		);
+		if ( ! $exists ) {
+			self::query( "ALTER TABLE {$table} ADD KEY {$index_name} (lasso_id)" );
+		}
 	}
 }

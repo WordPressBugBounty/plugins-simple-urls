@@ -7,6 +7,8 @@
 
 namespace LassoLite\Classes;
 
+use LassoLite\Classes\Helper\Url_Format;
+
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Affiliate_Link;
@@ -215,10 +217,7 @@ class Helper {
 	 * @return bool
 	 */
 	public static function has_protocol( $url ) {
-		if ( strpos( $url, 'http' ) === 0 || strpos( $url, 'https' ) === 0 ) {
-			return true;
-		}
-		return false;
+		return Url_Format::has_protocol( $url );
 	}
 
 	/**
@@ -306,40 +305,7 @@ class Helper {
 	 * @param string $url URL.
 	 */
 	public static function add_https( $url ) {
-		$invalid_url = array(
-			'https://%20https:/',
-			'https://xhttps://',
-			'http:/https://',
-			'http://https://',
-			'https://https://',
-			'https://hhttps://',
-			'https://]https://',
-			'https://&quot;https://',
-			'[gift_item link=&quot;https://',
-			']https://',
-		);
-		$url         = trim( $url );
-		$url         = str_replace( $invalid_url, 'https://', $url );
-
-		// ? fix mailto in <a> href
-		if ( strpos( $url, 'mailto:' ) !== false || filter_var( $url, FILTER_VALIDATE_EMAIL ) ) {
-			$email = explode( 'mailto:', $url )[1] ?? '';
-			if ( filter_var( $email, FILTER_VALIDATE_EMAIL ) ) {
-				$url = 'mailto:' . $email;
-			}
-
-			return $url;
-		}
-
-		if ( '' === $url || is_null( $url ) || strpos( $url, '[' ) === 0 ) {
-			return $url;
-		}
-
-		if ( strpos( $url, 'http://' ) !== 0 && strpos( $url, 'https://' ) !== 0 && strpos( $url, '.' ) !== false && '#' !== $url ) {
-			$url = 'https://' . $url;
-		}
-
-		return $url;
+		return Url_Format::add_https( $url );
 	}
 
 	/**
@@ -617,15 +583,7 @@ class Helper {
 	 * @param string $url URL.
 	 */
 	public static function validate_url( $url ) {
-		if ( ! is_string( $url ) ) {
-			return false;
-		}
-
-		$url = str_replace( ' ', '%20', $url );
-		$url = preg_replace( '/[^\00-\255]+/u', '', $url );
-
-		return ( ( strpos( $url, 'http://' ) === 0 || strpos( $url, 'https://' ) === 0 ) &&
-			filter_var( $url, FILTER_VALIDATE_URL ) !== false );
+		return Url_Format::validate_url( $url );
 	}
 
 	/**
@@ -1529,6 +1487,82 @@ class Helper {
 	}
 
 	/**
+	 * Whether the stored thumbnail is still the default placeholder.
+	 *
+	 * @param string $stored_thumbnail Post meta thumbnail.
+	 * @return bool
+	 */
+	private static function uses_default_thumbnail( $stored_thumbnail ) {
+		$stored_thumbnail = (string) $stored_thumbnail;
+
+		if ( '' === $stored_thumbnail ) {
+			return true;
+		}
+
+		if ( false !== strpos( $stored_thumbnail, Constant::DEFAULT_THUMBNAIL ) ) {
+			return true;
+		}
+
+		return false !== strpos( $stored_thumbnail, 'lasso-no-thumbnail.jpg' );
+	}
+
+	/**
+	 * Whether the footer credentials banner should block the upsell CTA.
+	 *
+	 * The upsell may show after the customer dismisses the banner once, even if the
+	 * banner reappears on a later page load until the second dismiss is recorded.
+	 *
+	 * @return bool
+	 */
+	private static function amazon_credentials_banner_blocks_upsell() {
+		if ( ! self::show_amazon_credentials_notice() ) {
+			return false;
+		}
+
+		$dismissed_once = self::cast_to_boolean(
+			self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' )
+		);
+
+		return ! $dismissed_once;
+	}
+
+	/**
+	 * Whether to show the Get Amazon Images upsell on URL Details.
+	 *
+	 * @param bool   $is_amazon_link       Whether the link is an Amazon URL.
+	 * @param string $stored_thumbnail     Post meta thumbnail (before Amazon DB enrichment).
+	 * @param bool   $is_amazon_configured Whether valid Amazon API credentials exist.
+	 * @return bool
+	 */
+	public static function should_show_get_amazon_images_upsell( $is_amazon_link, $stored_thumbnail, $is_amazon_configured ) {
+		if ( ! $is_amazon_link || $is_amazon_configured ) {
+			return false;
+		}
+
+		if ( ! self::uses_default_thumbnail( $stored_thumbnail ) ) {
+			return false;
+		}
+
+		return ! self::amazon_credentials_banner_blocks_upsell();
+	}
+
+	/**
+	 * Whether the URL Details upsell should render hidden until the credentials banner is dismissed.
+	 *
+	 * @param bool   $is_amazon_link       Whether the link is an Amazon URL.
+	 * @param string $stored_thumbnail     Post meta thumbnail (before Amazon DB enrichment).
+	 * @param bool   $is_amazon_configured Whether valid Amazon API credentials exist.
+	 * @return bool
+	 */
+	public static function should_defer_get_amazon_images_upsell( $is_amazon_link, $stored_thumbnail, $is_amazon_configured ) {
+		if ( ! $is_amazon_link || $is_amazon_configured || ! self::uses_default_thumbnail( $stored_thumbnail ) ) {
+			return false;
+		}
+
+		return self::amazon_credentials_banner_blocks_upsell();
+	}
+
+	/**
 	 * Get Ajax URL
 	 */
 	public static function get_ajax_url() {
@@ -1727,6 +1761,8 @@ class Helper {
 			if ( false === wp_verify_nonce( $nonce, Constant::LASSO_LITE_NONCE . wp_salt() ) ) {
 				wp_send_json_error( 'Nonce not verified.' );
 			}
+		} catch ( WPAjaxDieStopException $e ) {
+			throw $e;
 		} catch ( \Exception $e ) {
 			wp_send_json_error( 'Verify access and nonce error.' );
 		}
