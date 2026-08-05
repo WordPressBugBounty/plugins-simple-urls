@@ -329,8 +329,8 @@ $defer_get_amazon_images_upsell = Helper::should_defer_get_amazon_images_upsell(
 						<div class="form-group mb-4">
 							<label data-tooltip="This description will only be shown in displays"><strong>Description</strong> <i class="far fa-info-circle light-purple"></i></label>
 							<div class="form-control" id="description">
-								<?php echo $lasso_lite_url->description ?>
-                            </div>
+								<?php echo wp_kses_post( $lasso_lite_url->description ); ?>
+							</div>
 						</div>
 
 						<!-- DISCLOSURE -->

@@ -1,81 +1,165 @@
-=== Simple URLs - Link Cloaking, Product Displays, and Affiliate Link Management ===
+=== Lasso Lite - Affiliate Link Manager & Product Displays ===
 Contributors: lassoanalytics, mollusk, khangwithlasso, phucdolasso, chuongwithlasso, triwithlasso, caitlinwithlasso, genewithlasso, lassoteam
 Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=repo-description
-Tags: affiliate, affiliate link manager, link cloaking, amazon affiliate, affiliate marketing
+Tags: affiliate link manager, affiliate links, amazon affiliate, link cloaking, product displays
 Requires at least: 5.1
 Requires PHP: 7.2
-Tested up to: 6.8.2
+Tested up to: 6.8.6
 Stable tag: trunk
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Simple URLs helps you to manage links, create product displays, and grow your affiliate marketing business.
+Stop pasting long affiliate URLs into every post. Cloak your links, add product displays, and track clicks in WordPress.
 
 == Description ==
 
-Simple URLs helps you manage and organize links directly inside WordPress. It’s useful for affiliate marketers, bloggers, and anyone who wants more control over outbound links.
+Managing affiliate links gets messy fast. You paste a long tracking URL into a post, then another, then another. When an offer changes, you dig through old content hoping you catch every instance.
 
-### What you can do with Simple URLs
+Lasso Lite is a free WordPress plugin for people who promote products with those links (including Amazon Associates). It keeps your links in one dashboard, cloaks them behind short URLs on your site, and turns them into product displays with images, prices, and buttons.
 
-* Create short, clean URLs with custom slugs  
-* Cloak affiliate links with optional attributes (new window, nofollow, sponsored)  
-* Organize and edit links from a central dashboard  
-* Insert links from the editor while writing posts  
-* Track basic click counts on your links  
-* Works with both the Block Editor and Classic Editor  
+Example: use `yoursite.com/go/best-kayak` instead of a long Amazon URL. Change the destination once, and every place that link appears stays current.
 
-### Why it’s helpful
+### Why Lasso Lite?
 
-With Simple URLs, you don’t need spreadsheets to keep track of affiliate links. Update a link once in your dashboard, and it’s automatically updated everywhere it’s used on your site.  
+* Fix a broken or outdated offer in one place instead of hunting through posts
+* Turn a plain link into a product display without leaving WordPress
+* See basic click counts so you know which links people actually use
+* Import an existing link library instead of rebuilding it
+* Start free, with no account required for core features
+* Go from install to a live cloaked link in a few minutes
 
-When writing new content, you can quickly search for a link in the editor and insert it without leaving the page. This helps keep your workflow smooth and lets you stay focused on creating content.  
+### How this is different from a basic URL shortener
 
-### Getting started
+Most shorteners and cloaking plugins mainly create redirects. Lasso Lite also gives you:
 
-1. Install and activate Simple URLs.  
-2. Go to **Simple URLs → Add New**.  
-3. Enter the destination URL, slug, and any attributes.  
-4. Save your link and insert it into posts or pages.  
+* A dashboard for all your links
+* Product displays for posts and pages
+* Groups for organizing links
+* Basic click counts
+* Imports from other link plugins
 
-That’s all there is to it — manage as many links as you need, all in one place.  
+### Your first five minutes
 
-### Looking for advanced features?
+1. Install and activate **Lasso Lite**
+2. Click **Add New Link** and paste an offer URL
+3. Insert it into a post with the Lasso Lite block or the `[lasso]` shortcode
+4. Publish. Your cloaked link is live (add a product display if you want one).
 
-For comparison tables, product grids, or performance reports, see our separate plugin [Lasso Documentation](https://getlasso.co/docs/).
+### What's included
+
+**All your links in one place**
+Search, edit, and organize offers from a single dashboard.
+
+**Clean short URLs you control**
+Replace long tracking URLs with links like `/go/your-slug/`. Update the destination once when an offer changes.
+
+**Product displays for your content**
+Add image, title, price, badge, and buttons to reviews and roundups. Insert with the block or shortcode.
+
+**See which links get clicked**
+Each cloaked link stores a basic click count. Connect a free Lasso account for clearer reports.
+
+**Optional Amazon product details**
+Connect Amazon credentials to help fill product info on displays.
+
+**Insert links while you write**
+Works with the Block Editor and Classic Editor.
+
+**Organize with groups**
+Sort links by niche, merchant, or campaign.
+
+**Import from other plugins**
+Pretty Links, ThirstyAffiliates, Easy Affiliate Links, AAWP, EasyAzon, AmaLinks Pro, Earnist, and Affiliate URLs.
+
+### Already using another link plugin?
+
+Import your existing links, tidy up groups, and keep publishing. No need to rebuild your library by hand.
+
+### When you need more later
+
+Lasso Lite covers everyday link management on its own. If you later want deeper reporting, link monitoring, or richer display layouts, you can move up to [Lasso](https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=repo-upgrade). Your existing links and displays come with you.
+
+### Help & support
+
+* Docs: [support.getlasso.co](https://support.getlasso.co/)
+* WordPress.org forum: [wordpress.org/support/plugin/simple-urls](https://wordpress.org/support/plugin/simple-urls/)
+
+== Installation ==
+
+1. Go to **Plugins > Add New** and search for **Lasso Lite** (Formerly Simple URLs).
+2. Click **Install Now**, then **Activate**.
+3. Open **Lasso Lite** in the admin menu.
+4. Click **Add New Link**, paste an offer URL, and save.
+5. Edit a post, insert the **Lasso Lite** block (or `[lasso]` shortcode), and choose your link.
+6. **Publish**, then click the cloaked link to confirm the redirect.
 
 == Frequently Asked Questions ==
 
+= Is Lasso Lite free? =
+Yes. The dashboard, cloaking, groups, imports, product displays, and basic click counts work without paying. A free Lasso account is optional for support and richer reports.
 
-= What is Simple URLs? =  
-Simple URLs is a WordPress plugin that helps you create, organize, and manage redirect links. It’s commonly used for affiliate links, campaign URLs, or any external links you want to keep consistent across your site.  
+= Do I need a Lasso account? =
+No. Create one when you want help or clearer click reports.
 
-= Does Simple URLs work with my theme? =  
-Yes. Because it manages links at the WordPress level, it works with any standard WordPress theme and both the Block and Classic editors.  
+= Does it work with Amazon? =
+Yes. Cloak Amazon links and optionally connect credentials for product details on displays. Other programs work too.
 
-= Can I track clicks on my links? =  
-Yes. Simple URLs records basic click counts for each link so you can see how often they’re being used. You'll need to connect to Lasso to see your click reports.  
+= Can I import links from another plugin? =
+Yes. Pretty Links, ThirstyAffiliates, Easy Affiliate Links, AAWP, EasyAzon, AmaLinks Pro, Earnist, and Affiliate URLs.
 
-= Do I need an account to use it? =  
-No. You can install and use Simple URLs right from your WordPress dashboard. No external account is required. We recommend creating a Lasso account to receive support and click tracking. 
+= Will it work with my theme and the Block Editor? =
+Yes. Standard WordPress themes, plus Block Editor and Classic Editor.
 
-= Can I import my existing links? =  
-If you can export your links (from a database or CSV, for example), you can use the Simple URLs importer to bring them in.  
+= Does it work with Elementor? =
+Yes. Lasso Lite includes an Elementor widget for adding displays while you edit a page.
 
-= Where can I find documentation or support? =  
-Documentation and support are available at [support.getlasso.co](https://support.getlasso.co/).
+= What's the difference between Lasso Lite and Lasso? =
+Lite covers cloaking, displays, groups, imports, Amazon setup, and basic click counts. Lasso adds deeper reporting and monitoring. What you build in Lite carries over.
+
+= Where do I get help? =
+Docs: [support.getlasso.co](https://support.getlasso.co/). Forum: [wordpress.org/support/plugin/simple-urls](https://wordpress.org/support/plugin/simple-urls/).
+
+= Is this the same plugin as Simple URLs? =
+Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.org listing (slug `simple-urls`).
 
 == Screenshots ==
 
-1. Lasso's Link Details Page
-2. Lasso's Link Groups Page
-3. Lasso's Link Management Dashboard
+1. Edit a link and preview the product display before you publish, so you know what readers will see.
+2. Group related links by topic so your library stays organized as it grows.
+3. Browse every link from one dashboard. Find and update offers without digging through old posts.
 
+== Changelog ==
 
-=== Changelog ===
+= 153 =
+* Released: August 5, 2026
+* Improved Amazon Creators API product URL and country handling
+* Hardened admin/shortcode output and quick-detail AJAX against XSS
+* Improved WordPress.org listing copy
+
+= 152 =
+* Released: August 3, 2026
+* Amazon Creators API: improved product fetch reliability in Lite
+* Fixed discount pricing display after Creators product fetch
+* Maintenance and tooling updates
+
+= 151 =
+* Released: 2026
+* Gutenberg block: Block API v3 support and display CSS in the block editor iframe
+* Amazon settings: Creators credentials and image refresh improvements
+* Hardened thumbnail upload and license AJAX auth
+* Earnings / orphan-account banner reliability improvements
+
+= 150 =
+* Released: 2026
+* PHP 8 stability: safer handling of empty/null API responses (license, Amazon, BLS)
+* Amazon Creators product fetch improvements
+* Analytics link updates
 
 = 149 =
-Amazon settings: Lite account flow — validate/connect flow in the Amazon settings context, with clearer Creators UX and signup handoff.
-Hub URL override support for the Lite/hub integration path used from Amazon settings.
-Lite account email can fall back to the WordPress admin_email when needed.
-Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansion).
+* Amazon settings: Lite account validate/connect flow with clearer Creators UX and signup handoff
+* Hub URL override support for the Lite/hub integration path used from Amazon settings
+* Lite account email can fall back to the WordPress admin_email when needed
+* Additional unit tests for settings/Ajax behavior
 
 = 148 =
 * Released: April 29, 2026
@@ -136,15 +220,15 @@ Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansi
 
 = 136 =
 * Released: September 5, 2025
-* Revised plugin description and details 
+* Revised plugin description and details
 
 = 135 =
 * Released: August 29, 2025
-* Additional JS improvements. 
+* Additional JS improvements
 
 = 134 =
 * Released: August 26, 2025
-* Improved the way Simple URLs handles JavaScript
+* Improved the way Lasso Lite handles JavaScript
 
 = 133 =
 * Released: August 18, 2025
@@ -162,14 +246,14 @@ Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansi
 = 130 =
 * Released: December 30, 2024
 * Updated Amazon attribution link handling to comply with new policies
-* Improved importing and exporting of displays between plugin versions.
+* Improved importing and exporting of displays between plugin versions
 * Fixed an edge case issue that stopped users from accessing the "Add a link" modals
 
 = 129 =
 * Released: November 5, 2024
 * Fixed an issue with promotional banners showing by mistake
 * Added the ability to refresh manually Amazon product data
-* Fixed an issue with Simple URLs blocks
+* Fixed an issue with Lasso Lite blocks
 
 = 128 =
 * Released: October 8, 2024
@@ -182,7 +266,7 @@ Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansi
 
 = 126 =
 * Released: August 26, 2024
-* Updated the plugin's onboarding flow 
+* Updated the plugin's onboarding flow
 * Fixed icons, modals, and external URLs in the plugin that were depreciated
 * Enhanced the ability to connect to admin tools
 
@@ -211,7 +295,7 @@ Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansi
 
 = 120 =
 * Released: October 6, 2023
-* Fixed an encoding issue on some display links.
+* Fixed an encoding issue on some display links
 
 = 119 =
 * Released: September 26, 2023
@@ -228,9 +312,9 @@ Additional unit tests for settings/Ajax behavior (large TestSettingsAjax expansi
 = 117 =
 * Released: May 30, 2023
 * Support for WordPress 6.2.1
-* Better Import detection and flexibility.
+* Better Import detection and flexibility
 
 = 116 =
 * Released: Feb 28, 2023
-* Fixed an edge case where you wouldn't see imports.
-* Ability to disable support.
+* Fixed an edge case where you wouldn't see imports
+* Ability to disable support

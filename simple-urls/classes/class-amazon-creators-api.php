@@ -379,6 +379,8 @@ class Amazon_Creators_Api {
 		$price_data = self::extract_price_data( $item );
 		$quantity   = self::extract_quantity( $item );
 
+		$detail_page_url = (string) ( $item['detailPageURL'] ?? '' );
+
 		return array(
 			'product_id'  => (string) ( $item['asin'] ?? '' ),
 			'title'       => (string) $title,
@@ -386,7 +388,8 @@ class Amazon_Creators_Api {
 			'price'       => (string) ( $price_data['price'] ?? '' ),
 			'amount'      => floatval( $price_data['amount'] ?? 0 ),
 			'quantity'    => $quantity,
-			'url'         => (string) ( $item['detailPageURL'] ?? '' ),
+			'url'         => $detail_page_url,
+			'default_url' => $detail_page_url,
 			'features'    => $features,
 			'parent_asin' => (string) ( $item['parentASIN'] ?? '' ),
 			'marketplace' => (string) $marketplace,

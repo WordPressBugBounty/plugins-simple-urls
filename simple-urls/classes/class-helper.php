@@ -443,7 +443,7 @@ class Helper {
 		$follow_on_twitter     = boolval( get_option( Enum::FOLLOW_ON_TWITTER ) ) ? 10 : 0;
 		$share_on_twitter      = boolval( get_option( Enum::SHARE_ON_TWITTER ) ) ? 10 : 0;
 		$leave_a_review        = boolval( get_option( Enum::LEAVE_A_REVIEW ) ) ? 5 : 0;
-		$is_show_review_note   = ! $leave_a_review && $total_links >= 20 && $enable_support && $setup_amz_tracking_id && $follow_on_twitter && $share_on_twitter ? 1 : 0;
+		$is_show_review_note   = ! $leave_a_review && $total_links >= 5 && $enable_support && $setup_amz_tracking_id && $follow_on_twitter && $share_on_twitter ? 1 : 0;
 		$progress              = $enable_support + $setup_amz_tracking_id + $follow_on_twitter + $share_on_twitter + ( $links * 2 ) + $leave_a_review;
 		$progress              = $progress ? $progress / 100 : 0;
 		$open_modal_add_link   = $links < 20 ? 'btn-add-20-links' : '';
@@ -1447,8 +1447,9 @@ class Helper {
 		$lasso_review_snooze     = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_REVIEW_SNOOZE, '0' ) );
 		$lasso_review_link_count = intval( self::get_option( Constant::LASSO_OPTION_REVIEW_LINK_COUNT, $link_count ) );
 
-		$show            = ! $lasso_review_snooze && $link_count >= 20;
-		$snooze_but_show = $lasso_review_snooze && $link_count - $lasso_review_link_count >= 20;
+		// Ask after early success (enough links to be real usage), not after a large catalog.
+		$show            = ! $lasso_review_snooze && $link_count >= 5;
+		$snooze_but_show = $lasso_review_snooze && $link_count - $lasso_review_link_count >= 5;
 
 		if ( ! $lasso_review_allow ) {
 			return false;
@@ -1706,23 +1707,20 @@ class Helper {
 	}
 
 	/**
-	 * Remove all the script code from the HTML.
-	 * Remove script tags and event attributes (e.g., onload, onsubmit, etc.)
+	 * Sanitize HTML for safe display (formerly regex-based script strip).
+	 * Now delegates to wp_kses_post so event handlers and javascript: URLs are removed.
 	 *
-	 * @param string $html HTML code.
+	 * Falsy input (null, false, empty string) is returned unchanged.
+	 *
+	 * @param string|null|false $html HTML code.
+	 * @return string|null|false Sanitized HTML, or the original falsy value.
 	 */
 	public static function sanitize_script( $html ) {
 		if ( ! $html ) {
 			return $html;
 		}
 
-		// ? Remove <script> tags and their variations
-		$html = preg_replace( '/<script\b[^>]*>.*?<\/script\s*>/is', '', $html );
-
-		// ? Remove event attributes (e.g., onload, onsubmit, etc.) and their values
-		$html = preg_replace( '/\s+on\w+\s*=\s*["\'][^"\']*["\']/', ' ', $html );
-
-		return $html;
+		return wp_kses_post( (string) $html );
 	}
 
 	/**

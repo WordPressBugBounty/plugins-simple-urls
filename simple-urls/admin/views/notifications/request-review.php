@@ -8,7 +8,7 @@ use LassoLite\Classes\Helper;
 		<img src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/lasso-icon.png">
 	</div>
 	<div class="review">
-		Hi there! We noticed you've been using Lasso for a week now. How do you like it so far?
+		Hi there! We noticed you're getting value from Lasso Lite. How do you like it so far?
 		<p>
 			<span><a href="#" class="review-request">It's awesome!</a></span>
 			<span><a href="#" class="review-support">I'm having some trouble</a></span>
@@ -29,7 +29,7 @@ use LassoLite\Classes\Helper;
 
         function click_review_request() {
             let a_link = `<a href="<?php echo Enum::LASSO_REVIEW_URL; ?>" target="_blank">WordPress.org</a>`;
-            let new_text = `That's what we like to hear. Please take a moment to leave a 5-star review on ${a_link}. Thanks for your support!`;
+            let new_text = `That's what we like to hear. Please take a moment to leave a 5-star review for Lasso Lite on ${a_link}. Thanks for your support!`;
             jQuery('.ls-review div.review').html(new_text);
         }
 

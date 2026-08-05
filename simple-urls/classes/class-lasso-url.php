@@ -184,7 +184,11 @@ class Lasso_URL {
 		}
 
 		foreach ( $attrs as $key => $attr ) {
-			$attrs[ $key ] = esc_attr( $attr );
+			if ( 'href' === $key ) {
+				$attrs[ $key ] = esc_url( $attr );
+			} else {
+				$attrs[ $key ] = esc_attr( $attr );
+			}
 		}
 
 		$attrs_str  = self::generate_attrs( $attrs );

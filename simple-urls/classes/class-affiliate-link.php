@@ -487,23 +487,23 @@ class Affiliate_Link {
 		}
 
 		$lasso_lite_post = array(
-			'post_title'   => $post_title,
+			'post_title'   => self::save_scalar_string( $post_title ),
 			'post_type'    => SIMPLE_URLS_SLUG,
 			'post_name'    => $post_name,
 			'post_content' => '',
 			'post_status'  => 'publish',
 			'meta_input'   => array(
 				Meta_Enum::SURL_REDIRECT               => $surl_redirect,
-				Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL => $thumbnail,
+				Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL => self::save_scalar_url( $thumbnail ),
 				Meta_Enum::OPEN_NEW_TAB                => $open_new_tab,
 				Meta_Enum::ENABLE_NOFOLLOW             => $enable_nofollow,
-				Meta_Enum::BUY_BTN_TEXT                => $buy_btn_text,
-				Meta_Enum::DESCRIPTION                 => $description,
+				Meta_Enum::BUY_BTN_TEXT                => self::save_scalar_string( $buy_btn_text ),
+				Meta_Enum::DESCRIPTION                 => self::save_scalar_html( $description ),
 				Meta_Enum::SHOW_PRICE                  => $show_price,
 				Meta_Enum::PRICE                       => $price,
 				Meta_Enum::ENABLE_SPONSORED            => $enable_sponsored,
 				Meta_Enum::SHOW_DISCLOSURE             => $show_disclosure,
-				Meta_Enum::BADGE_TEXT                  => $badge_text,
+				Meta_Enum::BADGE_TEXT                  => self::save_scalar_string( $badge_text ),
 			),
 		);
 
@@ -530,7 +530,7 @@ class Affiliate_Link {
 			// ? update thumbnail
 			if ( $thumbnail_id > 0 ) {
 				set_post_thumbnail( $post_id, $thumbnail_id );
-				$image_url = wp_get_attachment_url( $thumbnail_id );
+				$image_url = esc_url_raw( wp_get_attachment_url( $thumbnail_id ) );
 				update_post_meta( $post_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, $image_url );
 			} else {
 				delete_post_thumbnail( $post_id );
@@ -653,6 +653,48 @@ class Affiliate_Link {
 		}
 
 		return intval( $lasso_lite_id );
+	}
+
+	/**
+	 * Save-path text field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private static function save_scalar_string( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return sanitize_text_field( wp_unslash( (string) $value ) );
+	}
+
+	/**
+	 * Save-path URL field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private static function save_scalar_url( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return esc_url_raw( wp_unslash( (string) $value ) );
+	}
+
+	/**
+	 * Save-path HTML field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private static function save_scalar_html( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return wp_kses_post( wp_unslash( (string) $value ) );
 	}
 
 	/**

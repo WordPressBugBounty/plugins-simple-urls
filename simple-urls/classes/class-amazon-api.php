@@ -1600,12 +1600,14 @@ class Amazon_Api {
 		}
 
 		if ( $amazon_url && self::is_amazon_url( $amazon_url ) ) {
-			$base_domain = Helper::get_base_domain( $amazon_url );
-			$host_key    = 'www.' . $base_domain;
-			$flags       = self::get_aff_link_and_flag();
-
-			if ( ! empty( $flags[ $host_key ]['code'] ) ) {
-				return (string) $flags[ $host_key ]['code'];
+			$base_domain = strtolower( Helper::get_base_domain( $amazon_url ) );
+			if ( '' !== $base_domain ) {
+				foreach ( self::get_amazon_api_countries() as $country_code => $country_data ) {
+					$amazon_domain = strtolower( Helper::get_base_domain( (string) ( $country_data['amazon_domain'] ?? '' ) ) );
+					if ( $base_domain === $amazon_domain ) {
+						return (string) $country_code;
+					}
+				}
 			}
 		}
 

@@ -148,7 +148,7 @@ $license_msg = $lasso_options['license_serial'] === ''
 									>
 									<span class="slider"></span>
 								</label>
-								<label class="m-0" data-tooltip="Enable new UI for Lasso Lite link management and displays. Disable to revert to Simple URLs.">
+								<label class="m-0" data-tooltip="Enable new UI for Lasso Lite link management and displays. Disable to revert to the classic link editor.">
 									<span>Enable New UI</span> <i class="far fa-info-circle light-purple"></i>
 								</label>
 							</div>

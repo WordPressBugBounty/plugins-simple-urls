@@ -7,11 +7,14 @@ $lasso_lite_url = Affiliate_Link::get_lasso_url( $post->ID );
 
 // ? custom attributes
 $title_type_start = '';
-$title_type_end = '';
+$title_type_end   = '';
 if ( '' !== $title_type ) {
-	$title_type       =  esc_html( $title_type );
-	$title_type_start = '<' . $title_type . '>';
-	$title_type_end   = '</' . $title_type . '>';
+	$title_type = strtolower( sanitize_key( $title_type ) );
+	$allowed_title_tags = array( 'h1', 'h2', 'h3', 'h4', 'h5', 'h6' );
+	if ( in_array( $title_type, $allowed_title_tags, true ) ) {
+		$title_type_start = '<' . $title_type . '>';
+		$title_type_end   = '</' . $title_type . '>';
+	}
 }
 $title_url = '' !== $title_url ? $title_url : $lasso_lite_url->public_link;
 $title_name = $lasso_lite_url->name;

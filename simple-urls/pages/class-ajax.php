@@ -150,20 +150,27 @@ class Ajax {
 	public function lasso_lite_get_link_quick_detail() {
 		Helper::verify_access_and_nonce( true );
 
-		$lasso_id = Helper::POST()['post_id'] ?? null; // phpcs:ignore
+		$lasso_id = absint( Helper::POST()['post_id'] ?? 0 ); // phpcs:ignore
 
-		if ( ! empty( $lasso_id ) ) {
-			$lasso_url = Affiliate_Link::get_lasso_url( $lasso_id, true );
-
-			wp_send_json_success(
-				array(
-					'success'   => true,
-					'lasso_url' => $lasso_url,
-				)
-			);
-		} else {
+		if ( $lasso_id <= 0 ) {
 			wp_send_json_error( 'No affiliate link to get.' );
 		}
+
+		$lasso_post = get_post( $lasso_id );
+		if ( $lasso_post && SIMPLE_URLS_SLUG === $lasso_post->post_type ) {
+			if ( ! current_user_can( 'edit_post', $lasso_id ) ) {
+				wp_send_json_error( 'Access denied.' );
+			}
+		}
+
+		$lasso_url = Affiliate_Link::get_lasso_url( $lasso_id, true );
+
+		wp_send_json_success(
+			array(
+				'success'   => true,
+				'lasso_url' => $lasso_url,
+			)
+		);
 	}
 
 	/**
@@ -173,40 +180,11 @@ class Ajax {
 		Helper::verify_access_and_nonce( true );
 
 		$data         = Helper::POST(); // phpcs:ignore
-		$lasso_id     = $data['lasso_id'] ?? null; // phpcs:ignore
+		$lasso_id     = absint( $data['lasso_id'] ?? 0 ); // phpcs:ignore
 		$lasso_post   = get_post( $lasso_id );
 		$thumbnail_id = intval( $data['thumbnail_id'] ?? 0 );
 
-		if ( $lasso_post ) {
-			$lasso_lite_post = array(
-				'ID'         => $lasso_post->ID,
-				'post_title' => trim( $data['affiliate_name'] ),
-				'meta_input' => array(
-					Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL => trim( $data['thumbnail_image_url'] ?? '' ),
-					Meta_Enum::BUY_BTN_TEXT                => trim( $data['buy_btn_text'] ?? '' ),
-					Meta_Enum::DESCRIPTION                 => trim( $data['description'] ?? '' ),
-					Meta_Enum::BADGE_TEXT                  => trim( $data['badge_text'] ?? '' ),
-				),
-			);
-
-			wp_update_post( $lasso_lite_post );
-
-			// ? update thumbnail
-			if ( $thumbnail_id > 0 ) {
-				set_post_thumbnail( $lasso_id, $thumbnail_id );
-				$image_url = wp_get_attachment_url( $thumbnail_id );
-				update_post_meta( $lasso_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, $image_url );
-			} else {
-				delete_post_thumbnail( $lasso_id );
-			}
-
-			clean_post_cache( $lasso_id ); // ? clean post cache
-			wp_send_json_success(
-				array(
-					'success' => true,
-				)
-			);
-		} else {
+		if ( ! $lasso_post || SIMPLE_URLS_SLUG !== $lasso_post->post_type ) {
 			wp_send_json_success(
 				array(
 					'success' => false,
@@ -214,6 +192,39 @@ class Ajax {
 				)
 			);
 		}
+
+		if ( ! current_user_can( 'edit_post', $lasso_id ) ) {
+			wp_send_json_error( 'Access denied.' );
+		}
+
+		$lasso_lite_post = array(
+			'ID'         => $lasso_post->ID,
+			'post_title' => $this->quick_detail_scalar_string( $data['affiliate_name'] ?? '' ),
+			'meta_input' => array(
+				Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL => $this->quick_detail_scalar_url( $data['thumbnail_image_url'] ?? '' ),
+				Meta_Enum::BUY_BTN_TEXT                => $this->quick_detail_scalar_string( $data['buy_btn_text'] ?? '' ),
+				Meta_Enum::DESCRIPTION                 => $this->quick_detail_scalar_html( $data['description'] ?? '' ),
+				Meta_Enum::BADGE_TEXT                  => $this->quick_detail_scalar_string( $data['badge_text'] ?? '' ),
+			),
+		);
+
+		wp_update_post( $lasso_lite_post );
+
+		// ? update thumbnail
+		if ( $thumbnail_id > 0 ) {
+			set_post_thumbnail( $lasso_id, $thumbnail_id );
+			$image_url = esc_url_raw( wp_get_attachment_url( $thumbnail_id ) );
+			update_post_meta( $lasso_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, $image_url );
+		} else {
+			delete_post_thumbnail( $lasso_id );
+		}
+
+		clean_post_cache( $lasso_id ); // ? clean post cache
+		wp_send_json_success(
+			array(
+				'success' => true,
+			)
+		);
 	}
 
 	/**
@@ -842,6 +853,48 @@ class Ajax {
 			'beacon_token'  => $this->realtime_ingest_beacon_token( $body ),
 			'beacon_bucket' => $this->realtime_ingest_beacon_bucket( $body ),
 		);
+	}
+
+	/**
+	 * Quick-detail text field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private function quick_detail_scalar_string( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return sanitize_text_field( wp_unslash( (string) $value ) );
+	}
+
+	/**
+	 * Quick-detail URL field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private function quick_detail_scalar_url( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return esc_url_raw( wp_unslash( (string) $value ) );
+	}
+
+	/**
+	 * Quick-detail HTML field: scalar only; arrays/objects become empty string.
+	 *
+	 * @param mixed $value Raw value.
+	 * @return string
+	 */
+	private function quick_detail_scalar_html( $value ) {
+		if ( null === $value || is_bool( $value ) || ! is_scalar( $value ) ) {
+			return '';
+		}
+
+		return wp_kses_post( wp_unslash( (string) $value ) );
 	}
 
 	/**
