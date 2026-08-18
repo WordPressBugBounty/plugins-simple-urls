@@ -3,7 +3,7 @@
 if ( ! $dismiss ) { ?>
 <?php $option_name = $option_name ?? '' ?>
 <div class="notice lasso-lite-notice">
-	<a class="lasso-lite-notice-dismiss" href="#" data-option-name="<?php echo $option_name?>" aria-label="Dismiss"></a>
+	<a class="lasso-lite-notice-dismiss" href="#" data-option-name="<?php echo esc_attr( $option_name ); ?>" aria-label="Dismiss"></a>
 	<div class="lasso-lite-notice-aside">
 		<div class="lasso-lite-notice-icon-wrapper">
 			<img width="50" src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/lasso-icon-brag.svg">

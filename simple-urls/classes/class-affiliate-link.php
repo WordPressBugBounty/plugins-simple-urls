@@ -333,8 +333,12 @@ class Affiliate_Link {
 		);
 
 		$data['settings'] = $affiliate_link;
-		$post_id          = $this->save_lasso_url( $data );
-		$is_first_url     = self::is_first_link();
+		$should_complete_onboarding = ( 0 === intval( SURL::total() ) );
+		$post_id                    = $this->save_lasso_url( $data );
+		$is_first_url               = self::is_first_link();
+		if ( $should_complete_onboarding && ! is_wp_error( $post_id ) && intval( $post_id ) > 0 ) {
+			Helper::mark_onboarding_welcome_complete();
+		}
 
 		if ( '' !== $link ) {
 			return $post_id;

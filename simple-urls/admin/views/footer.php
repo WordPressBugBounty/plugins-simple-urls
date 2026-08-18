@@ -333,7 +333,9 @@ if ( $is_show_upsell ) {
 				nonce: lassoLiteOptionsData.optionsNonce,
 			},
 		}).done(function(res) {
-			jQuery('#lasso-intercom-promotions').collapse('hide');
+			if (res && res.success) {
+				jQuery('#lasso-intercom-promotions').collapse('hide');
+			}
 		});
 	});
 	

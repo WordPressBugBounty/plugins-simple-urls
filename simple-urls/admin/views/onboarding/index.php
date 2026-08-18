@@ -12,11 +12,9 @@ use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Lasso_DB;
 
-// ? Set flag to know the Welcome page was visited
-Helper::update_option( Enum::IS_VISITED_WELCOME_PAGE, 1 );
-
 $lasso_options = Setting::get_settings();
 $should_show_import_step = Helper::should_show_import_page();
+$onboarding_resume_step  = Helper::get_onboarding_current_step( $should_show_import_step );
 ?>
 
 <section class="purple-bg pt-3 pb-5 min-vh-116">
@@ -24,6 +22,7 @@ $should_show_import_step = Helper::should_show_import_page();
 		id="onboarding_container"
 		class="container container-sm lite-container"
 		data-dashboard-url="<?php echo htmlspecialchars( Page::get_lite_page_url( Enum::PAGE_DASHBOARD ), ENT_QUOTES, 'UTF-8' ); ?>"
+		data-resume-step="<?php echo esc_attr( $onboarding_resume_step ); ?>"
 	>
 		<!-- LOGO -->
 		<div class="pb-5">
@@ -32,7 +31,11 @@ $should_show_import_step = Helper::should_show_import_page();
 			</div>
 		</div>
 
-		<div class="mt-5 mx-auto white-bg shadow rounded p-5">
+		<div class="mt-5 mx-auto white-bg shadow rounded p-5 onboarding-steps-card">
+			<div class="onboarding-resume-loading" aria-hidden="true" role="status">
+				<div class="onboarding-resume-loading__spinner"></div>
+			</div>
+			<div class="onboarding-steps-panel">
 			<!-- WELCOME -->
 			<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/welcome-step.php',
 				array(
@@ -62,6 +65,7 @@ $should_show_import_step = Helper::should_show_import_page();
 				<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/import-step.php' ); ?>
 			<?php endif; ?>
 
+			</div>
 		</div>
 	</div>
 </section>

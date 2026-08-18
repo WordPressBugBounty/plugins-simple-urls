@@ -470,6 +470,72 @@ class Helper {
 	}
 
 	/**
+	 * Whitelist landing-cookie attribution keys for Lite plugin signup (#788).
+	 *
+	 * @param mixed $raw POST attribution object or JSON string.
+	 * @return array|null Sanitized payload or null when no signal.
+	 */
+	public static function sanitize_signup_attribution( $raw ) {
+		$allowed_keys = array(
+			'url',
+			'ref',
+			'utm_source',
+			'utm_medium',
+			'utm_campaign',
+			'utm_content',
+			'ref_code',
+			'dt',
+		);
+		$signal_keys  = array(
+			'utm_source',
+			'utm_medium',
+			'utm_campaign',
+			'utm_content',
+			'ref_code',
+		);
+
+		if ( is_string( $raw ) ) {
+			$raw = json_decode( $raw, true );
+		}
+		if ( ! is_array( $raw ) || empty( $raw ) ) {
+			return null;
+		}
+
+		$payload = array();
+		foreach ( $allowed_keys as $key ) {
+			if ( ! isset( $raw[ $key ] ) || ! is_scalar( $raw[ $key ] ) ) {
+				continue;
+			}
+			$text = trim( (string) $raw[ $key ] );
+			if ( '' === $text ) {
+				continue;
+			}
+			if ( in_array( $key, array( 'url', 'ref' ), true ) ) {
+				$payload[ $key ] = substr( $text, 0, 2048 );
+			} else {
+				$payload[ $key ] = substr( $text, 0, 500 );
+			}
+		}
+
+		if ( empty( $payload ) ) {
+			return null;
+		}
+
+		$has_signal = false;
+		foreach ( $signal_keys as $key ) {
+			if ( ! empty( $payload[ $key ] ) ) {
+				$has_signal = true;
+				break;
+			}
+		}
+		if ( ! $has_signal && empty( $payload['url'] ) ) {
+			return null;
+		}
+
+		return $payload;
+	}
+
+	/**
 	 * Send request
 	 *
 	 * @param string $method Method (get or post). Default to get.
@@ -1254,6 +1320,85 @@ class Helper {
 	 */
 	public static function should_show_import_page() {
 		return ! empty( ( new Lasso_DB() )->get_import_plugins( true ) ) ? true : false;
+	}
+
+	/**
+	 * Ordered onboarding step ids (tab-item data-step values).
+	 *
+	 * @return string[]
+	 */
+	public static function get_onboarding_step_ids() {
+		return array( 'welcome', 'display', 'amazon', 'connect-lasso', 'import' );
+	}
+
+	/**
+	 * @param string $step Step id.
+	 * @return bool
+	 */
+	public static function is_valid_onboarding_step( $step ) {
+		return in_array( $step, self::get_onboarding_step_ids(), true );
+	}
+
+	/**
+	 * Last saved onboarding tab for in-progress FTUE.
+	 *
+	 * @param bool $include_import Whether the import step is available for this install.
+	 * @return string
+	 */
+	public static function get_onboarding_current_step( $include_import = true ) {
+		$step = (string) self::get_option( Enum::ONBOARDING_CURRENT_STEP, '' );
+		if ( ! self::is_valid_onboarding_step( $step ) ) {
+			return 'welcome';
+		}
+		if ( 'import' === $step && ! $include_import ) {
+			return 'connect-lasso';
+		}
+		return $step;
+	}
+
+	/**
+	 * @param string $step Step id.
+	 * @return bool
+	 */
+	public static function save_onboarding_current_step( $step ) {
+		if ( ! self::is_valid_onboarding_step( $step ) ) {
+			return false;
+		}
+		return self::update_option( Enum::ONBOARDING_CURRENT_STEP, $step );
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function clear_onboarding_current_step() {
+		return self::update_option( Enum::ONBOARDING_CURRENT_STEP, '' );
+	}
+
+	/**
+	 * FTUE gate complete: stop redirecting to onboarding and drop saved step.
+	 *
+	 * Cleared after first link creation or an explicit Hub Connect skip.
+	 *
+	 * @return void
+	 */
+	public static function mark_onboarding_welcome_complete() {
+		self::update_option( Enum::IS_VISITED_WELCOME_PAGE, 1 );
+		self::clear_onboarding_current_step();
+	}
+
+	/**
+	 * Reset FTUE onboarding state for QA (`reset-onboarding=1`).
+	 *
+	 * @return void
+	 */
+	public static function reset_onboarding_for_testing() {
+		self::update_option( Enum::IS_VISITED_WELCOME_PAGE, 0 );
+		self::clear_onboarding_current_step();
+		update_option( Enum::LASSO_LITE_ACTIVE, 1 );
+		self::update_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		self::update_option( Constant::LASSO_ACCOUNT_API_KEY, '' );
+		self::update_option( Constant::LASSO_ACCOUNT_USER_ID, 0 );
+		self::update_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' );
 	}
 
 	/**

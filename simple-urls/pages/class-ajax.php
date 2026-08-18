@@ -42,6 +42,8 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_get_setup_progress', array( $this, 'lasso_lite_get_setup_progress' ) );
 		add_action( 'wp_ajax_lasso_lite_save_support', array( $this, 'lasso_lite_save_support' ) );
 		add_action( 'wp_ajax_lasso_lite_save_lasso_account', array( $this, 'lasso_lite_save_lasso_account' ) );
+		add_action( 'wp_ajax_lasso_lite_skip_hub_connect', array( $this, 'lasso_lite_skip_hub_connect' ) );
+		add_action( 'wp_ajax_lasso_lite_save_onboarding_step', array( $this, 'lasso_lite_save_onboarding_step' ) );
 		add_action( 'wp_ajax_lasso_lite_check_existing_account', array( $this, 'lasso_lite_check_existing_account' ) );
 		add_action( 'wp_ajax_lasso_lite_review_snooze', array( $this, 'lasso_lite_review_snooze' ) );
 		add_action( 'wp_ajax_lasso_lite_disable_review', array( $this, 'lasso_lite_disable_review' ) );
@@ -430,11 +432,17 @@ class Ajax {
 			);
 		}
 
+		$query_args  = array(
+			'source'       => $source,
+			'callback_url' => $callback_url,
+		);
+		$attribution = Helper::sanitize_signup_attribution( $post['attribution'] ?? null );
+		if ( $attribution ) {
+			$query_args['attribution'] = wp_json_encode( $attribution );
+		}
+
 		$request_url = add_query_arg(
-			array(
-				'source'       => $source,
-				'callback_url' => $callback_url,
-			),
+			$query_args,
 			Constant::get_lasso_hub_url() . '/api/account/external/config'
 		);
 
@@ -473,12 +481,16 @@ class Ajax {
 			);
 		}
 
-		$data     = array(
+		$data        = array(
 			'email'    => $email,
 			'password' => $password,
 			'source'   => $source,
 		);
-		$headers  = array(
+		$attribution = Helper::sanitize_signup_attribution( $post['attribution'] ?? null );
+		if ( $attribution ) {
+			$data['attribution'] = $attribution;
+		}
+		$headers    = array(
 			'Content-Type' => 'application/json',
 		);
 		$signup_url = Constant::get_lasso_hub_url() . '/api/signup/external';
@@ -517,10 +529,10 @@ class Ajax {
 			);
 		}
 
-		$data     = array(
+		$data         = array(
 			'exchange_code' => $exchange_code,
 		);
-		$headers  = array(
+		$headers      = array(
 			'Content-Type' => 'application/json',
 		);
 		$exchange_url = Constant::get_lasso_hub_url() . '/api/signup/external/exchange';
@@ -585,6 +597,54 @@ class Ajax {
 				'msg'     => 'Account saved successfully',
 			)
 		);
+	}
+
+	/**
+	 * Record explicit Hub Connect skip during Lite onboarding.
+	 */
+	public function lasso_lite_skip_hub_connect() {
+		Helper::verify_access_and_nonce();
+
+		Helper::mark_onboarding_welcome_complete();
+
+		wp_send_json_success(
+			array(
+				'success' => true,
+			)
+		);
+	}
+
+	/**
+	 * Persist the current Lite onboarding tab while FTUE is in progress.
+	 */
+	public function lasso_lite_save_onboarding_step() {
+		Helper::verify_access_and_nonce();
+
+		if ( intval( Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE, 0 ) ) ) {
+			Helper::clear_onboarding_current_step();
+			wp_send_json_success( array( 'step' => '' ) );
+			return;
+		}
+
+		$step = sanitize_text_field( Helper::POST()['step'] ?? '' );
+		if ( '' === $step ) {
+			Helper::clear_onboarding_current_step();
+			wp_send_json_success( array( 'step' => '' ) );
+			return;
+		}
+
+		if ( ! Helper::is_valid_onboarding_step( $step ) ) {
+			wp_send_json_error( array( 'msg' => 'Invalid onboarding step' ) );
+			return;
+		}
+
+		if ( 'import' === $step && ! Helper::should_show_import_page() ) {
+			wp_send_json_error( array( 'msg' => 'Import step is not available' ) );
+			return;
+		}
+
+		Helper::save_onboarding_current_step( $step );
+		wp_send_json_success( array( 'step' => $step ) );
 	}
 
 	/**

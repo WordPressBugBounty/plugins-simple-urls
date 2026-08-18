@@ -5,7 +5,7 @@
  * Description: Stop pasting long affiliate URLs into every post. Cloak your links, add product displays, and track clicks in WordPress.
  * Author: Lasso
  * Author URI: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=plugin-header
- * Version: 153
+ * Version: 154
 
  * Text Domain: simple-urls
  * Domain Path: /languages
@@ -24,15 +24,21 @@ use LassoLite\Pages\Hook;
 
 // ? ==============================================================================================
 // ? WE SHOULD UPDATE THE VERSION NUMBER HERE AS WELL WHEN RELEASING A NEW VERSION
-define( 'LASSO_LITE_VERSION', '153' );
+define( 'LASSO_LITE_VERSION', '154' );
 // ? ==============================================================================================
 
 function activate_lasso_lite() {
 	update_option( Enum::LASSO_LITE_ACTIVE, 1 );
 	$license_active = License::get_license_status();
 	if ( $license_active === false ) {
-		Helper::update_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, '0' );
-		Helper::update_option( Constant::LASSO_OPTION_AFFILIATE_PROMOTIONS, '1' );
+		// Fresh installs show the promo banner; preserve a prior permanent dismiss on re-activation.
+		if ( false === Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, false ) ) {
+			Helper::update_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, '0' );
+		}
+		// Footer affiliate promo bar uses affiliate_promotions=1 (show); preserve user dismiss (=0).
+		if ( false === Helper::get_option( Constant::LASSO_OPTION_AFFILIATE_PROMOTIONS, false ) ) {
+			Helper::update_option( Constant::LASSO_OPTION_AFFILIATE_PROMOTIONS, '1' );
+		}
 	}
 	Hook::lasso_register_connect_snippet_rewrite();
 	flush_rewrite_rules();

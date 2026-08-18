@@ -34,6 +34,36 @@
     cursor: pointer;
 }
 
+#onboarding_container[data-resume-step]:not([data-resume-step="welcome"]):not(.onboarding-resume-ready) .onboarding-steps-panel {
+    visibility: hidden;
+}
+
+#onboarding_container .onboarding-resume-loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    min-height: 280px;
+}
+
+#onboarding_container[data-resume-step]:not([data-resume-step="welcome"]):not(.onboarding-resume-ready) .onboarding-resume-loading {
+    display: flex;
+}
+
+#onboarding_container .onboarding-resume-loading__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e9ecef;
+    border-top-color: #22baa0;
+    border-radius: 50%;
+    animation: onboarding-resume-spin 0.7s linear infinite;
+}
+
+@keyframes onboarding-resume-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* SUPPORT */
 .support-wrap {
     position: fixed;

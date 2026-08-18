@@ -224,11 +224,13 @@ class Hook {
 			exit;
 		}
 
-		// ? Reset onboarding for testing
+		// ? Reset onboarding for testing (one-shot: strip QA param so step persistence works on reload)
 		$reset_onboarding = Helper::GET()[ Enum::RESET_WELCOME_PAGE ] ?? '';
 		if ( $reset_onboarding ) {
-			Helper::update_option( Enum::IS_VISITED_WELCOME_PAGE, 0 );
-			update_option( Enum::LASSO_LITE_ACTIVE, 1 );
+			Helper::reset_onboarding_for_testing();
+
+			wp_safe_redirect( remove_query_arg( Enum::RESET_WELCOME_PAGE ) ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
+			exit;
 		}
 
 		// ? Reset request review for testing
@@ -241,7 +243,7 @@ class Hook {
 
 		// ? The new Lasso Lite active should be redirect to welcome page
 		$onboarding_page                 = Helper::add_prefix_page( Enum::PAGE_ONBOARDING );
-		$should_redirect_to_welcome_page = get_option( Enum::LASSO_LITE_ACTIVE ) && ! Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE );
+		$should_redirect_to_welcome_page = self::should_redirect_to_welcome_page();
 		if ( SIMPLE_URLS_SLUG === $post_type && $onboarding_page !== $get_page && $should_redirect_to_welcome_page ) {
 			wp_redirect( Page::get_page_url( $onboarding_page ) ); // phpcs:ignore
 			exit;
@@ -364,6 +366,11 @@ class Hook {
 			Helper::enqueue_style( 'lasso-modal-css', 'lasso-modal.css' );
 		}
 
+		global $pagenow; // phpcs:ignore
+		if ( 'index.php' === $pagenow && $this->should_show_dashboard_promo_banner() ) {
+			Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
+		}
+
 		// @codingStandardsIgnoreEnd
 	}
 
@@ -398,6 +405,9 @@ class Hook {
 			'should_open_support_modal' => $support_enabled,
 			'amazon_tracking_id_regex'  => Amazon_Api::TRACKING_ID_REGEX,
 			'is_onboard_page'           => $setting->is_setting_onboarding_page(),
+			'onboarding_current_step'   => $setting->is_setting_onboarding_page()
+				? Helper::get_onboarding_current_step( Helper::should_show_import_page() )
+				: 'welcome',
 			'block_customize'           => Constant::BLOCK_CUSTOMIZE,
 			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID ),
 		);
@@ -414,11 +424,14 @@ class Hook {
 		}
 
 		// @codingStandardsIgnoreStart
-		if ( 'index.php' === $pagenow ) {
+		if ( 'index.php' === $pagenow && $this->should_show_dashboard_promo_banner() ) {
 			$data_passed_to_js = array(
+				'ajax_url'     => admin_url( 'admin-ajax.php' ),
 				'optionsNonce' => wp_create_nonce( Constant::LASSO_LITE_NONCE . wp_salt() ),
 			);
+			wp_enqueue_script( 'jquery' );
 			wp_localize_script( 'jquery', 'lassoLiteOptionsData', $data_passed_to_js );
+			Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ), false );
 		}
 
 		if ( $setting->is_wordpress_post() || $setting->is_surls_page() || $setting->is_custom_post() ) {
@@ -944,43 +957,62 @@ class Hook {
 	}
 
 	/**
+	 * Whether Lite onboarding should redirect admin users to the welcome flow.
+	 *
+	 * @return bool
+	 */
+	public static function should_redirect_to_welcome_page() {
+		return (bool) get_option( Enum::LASSO_LITE_ACTIVE ) && ! Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE );
+	}
+
+	/**
+	 * Whether the affiliate promo dashboard banner should render.
+	 *
+	 * @return bool
+	 */
+	private function should_show_dashboard_promo_banner() {
+		global $pagenow;
+
+		if ( 'index.php' !== $pagenow || ! Helper::is_lite_using_new_ui() ) {
+			return false;
+		}
+
+		$license_active   = License::get_license_status();
+		$is_connected_aff = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
+
+		return ! $license_active
+			&& 0 === $is_connected_aff
+			&& ! intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, 0 ) );
+	}
+
+	/**
 	 * Show Performance promotion
 	 *
 	 * @return void
 	 */
 	public function lasso_lite_custom_dashboard_banner() {
-		global $pagenow;
-
-		$license_active   = License::get_license_status();
-		$is_connected_aff = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
-		$is_show_upsell   = ! $license_active && 0 === $is_connected_aff;
-		if ( ! $is_show_upsell ) {
+		if ( ! $this->should_show_dashboard_promo_banner() ) {
 			echo ''; // phpcs:ignore
-		} else {
-			$setting_data    = Setting::get_settings();
-			$support_enabled = $setting_data[ Enum::SUPPORT_ENABLED ] ?? false;
-			if ( ! $support_enabled ) {
-				$template_path = '/admin/views/notifications/affiliate-promotions-no-intercom.php';
-			} else {
-				$template_path = '/admin/views/notifications/affiliate-promotions-intercom.php';
-			}
-
-			$html = '';
-			if ( 'index.php' === $pagenow ) {
-				Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
-				Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ) );
-
-				$dismiss = intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, 0 ) );
-				$html    = Helper::include_with_variables(
-					SIMPLE_URLS_DIR . $template_path,
-					array(
-						'dismiss'     => $dismiss,
-						'option_name' => Constant::LASSO_OPTION_DISMISS_PROMOTIONS,
-					)
-				);
-			}
-			echo $html; // phpcs:ignore
+			return;
 		}
+
+		$setting_data    = Setting::get_settings();
+		$support_enabled = $setting_data[ Enum::SUPPORT_ENABLED ] ?? false;
+		if ( ! $support_enabled ) {
+			$template_path = '/admin/views/notifications/affiliate-promotions-no-intercom.php';
+		} else {
+			$template_path = '/admin/views/notifications/affiliate-promotions-intercom.php';
+		}
+
+		$html = Helper::include_with_variables(
+			SIMPLE_URLS_DIR . $template_path,
+			array(
+				'dismiss'     => 0,
+				'option_name' => Constant::LASSO_OPTION_DISMISS_PROMOTIONS,
+			)
+		);
+
+		echo $html; // phpcs:ignore
 	}
 
 	/**

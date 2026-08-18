@@ -28,7 +28,8 @@ class Enum {
 
 	const LASSO_LITE_ACTIVE       = 'is_active_lasso_lite';
 	const SWITCH_TO_NEW_UI        = 'is_lasso_live_switch_to_new_ui';
-	const IS_VISITED_WELCOME_PAGE = 'is_visited_welcome_page';
+	const IS_VISITED_WELCOME_PAGE   = 'is_visited_welcome_page';
+	const ONBOARDING_CURRENT_STEP   = 'onboarding_current_step';
 	const RESET_WELCOME_PAGE      = 'reset-onboarding';
 	const RESET_REQUEST_REVIEW    = 'reset-review';
 

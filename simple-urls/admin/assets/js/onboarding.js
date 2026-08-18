@@ -1,25 +1,83 @@
 jQuery(document).ready(function() {
+	restore_onboarding_step();
+	finish_onboarding_resume();
+
 	jQuery(document)
 		.on('click', '#onboarding_container .tab-item .next-step', go_to_next_step)
 		.on('click', '#onboarding_container .progressbar_container .progressbar li', access_step)
 		.on('click', process_up_sell_modal);
 });
 
+function finish_onboarding_resume() {
+	jQuery( '#onboarding_container' ).addClass( 'onboarding-resume-ready' );
+}
+
+function restore_onboarding_step() {
+	var step = ( window.lassoLiteOptionsData && lassoLiteOptionsData.onboarding_current_step ) || '';
+	if ( ! step ) {
+		step = jQuery( '#onboarding_container' ).data( 'resume-step' ) || 'welcome';
+	}
+	if ( ! step || 'welcome' === step ) {
+		return;
+	}
+	show_onboarding_step( step );
+}
+
+function show_onboarding_step( step ) {
+	if ( ! step ) {
+		return;
+	}
+
+	var access_step_tab = jQuery( '.tab-item[data-step="' + step + '"]' );
+	if ( access_step_tab.length ) {
+		jQuery( '#onboarding_container .tab-item' ).addClass( 'd-none' );
+		access_step_tab.removeClass( 'd-none' );
+		window.scrollTo( 0, 0 );
+	}
+}
+
+function persist_onboarding_step( step ) {
+	if ( ! window.lassoLiteOptionsData || ! lassoLiteOptionsData.ajax_url ) {
+		return;
+	}
+
+	if ( window.lassoLiteOptionsData ) {
+		lassoLiteOptionsData.onboarding_current_step = step || 'welcome';
+	}
+
+	jQuery( '#onboarding_container' ).attr( 'data-resume-step', step || 'welcome' );
+
+	jQuery.post(
+		lassoLiteOptionsData.ajax_url,
+		{
+			action: 'lasso_lite_save_onboarding_step',
+			nonce: lassoLiteOptionsData.optionsNonce,
+			step: step || ''
+		}
+	);
+}
+
 function go_to_next_step() {
-	go_to_next_step_action(this);
+	go_to_next_step_action( this );
 }
 
 function go_to_next_step_action( tab_item_child_element ) {
-	let current_tab_container = jQuery(tab_item_child_element).closest('.tab-item');
-	let next_tab_container    = current_tab_container.next('.tab-item');
+	let current_tab_container = jQuery( tab_item_child_element ).closest( '.tab-item' );
+	let next_tab_container    = current_tab_container.next( '.tab-item' );
 
 	if ( next_tab_container.length ) {
-		current_tab_container.addClass('d-none');
-		next_tab_container.removeClass('d-none');
+		current_tab_container.addClass( 'd-none' );
+		next_tab_container.removeClass( 'd-none' );
 
-		window.scrollTo(0, 0);
+		var next_step = next_tab_container.data( 'step' );
+		if ( next_step ) {
+			persist_onboarding_step( next_step );
+		}
+
+		window.scrollTo( 0, 0 );
 	} else {
-		let dashboard_url = jQuery('#onboarding_container').data('dashboard-url');
+		persist_onboarding_step( '' );
+		let dashboard_url = jQuery( '#onboarding_container' ).data( 'dashboard-url' );
 		if ( dashboard_url ) {
 			window.location.href = dashboard_url;
 		}
@@ -27,31 +85,27 @@ function go_to_next_step_action( tab_item_child_element ) {
 }
 
 function access_step() {
-	let access_step = jQuery(this).data('step');
+	let access_step = jQuery( this ).data( 'step' );
 
 	if ( access_step ) {
-		let access_step_tab = jQuery('.tab-item[data-step="' + access_step + '"]');
-		if ( access_step_tab.length ) {
-			jQuery('#onboarding_container .tab-item').addClass('d-none');
-			access_step_tab.removeClass('d-none');
-		}
-
+		show_onboarding_step( access_step );
+		persist_onboarding_step( access_step );
 	}
 }
 
 function process_up_sell_modal( event ) {
-	let up_sell_modal = jQuery('#up-sell-modal');
-	let lite_container = jQuery('.lite-container');
+	let up_sell_modal = jQuery( '#up-sell-modal' );
+	let lite_container = jQuery( '.lite-container' );
 
 	if ( up_sell_modal.length && lite_container.length ) {
 		let up_sell_modal_w = up_sell_modal.width();
 		let maximum_left = lite_container.width() + lite_container.offset().left;
-		let lasso_lite_disabled_wrapper = jQuery(event.target).closest('.lasso-lite-disabled');
-		let skip_upsell = jQuery(event.target).closest('.lasso-lite-skip-upsell');
-		let support = lasso_lite_helper.get_url_parameter('support');
+		let lasso_lite_disabled_wrapper = jQuery( event.target ).closest( '.lasso-lite-disabled' );
+		let skip_upsell = jQuery( event.target ).closest( '.lasso-lite-skip-upsell' );
+		let support = lasso_lite_helper.get_url_parameter( 'support' );
 
 		if ( skip_upsell.length !== 0 ) {
-			up_sell_modal.css('display', 'none');
+			up_sell_modal.css( 'display', 'none' );
 			return;
 		}
 
@@ -60,11 +114,11 @@ function process_up_sell_modal( event ) {
 			if ( x + up_sell_modal_w + 160 > maximum_left ) {
 				x = maximum_left - up_sell_modal_w - 200;
 			}
-			up_sell_modal.css('left', x + "px");
-			up_sell_modal.css('top', ( event.pageY - 10 ) + "px");
-			up_sell_modal.css('display', 'block');
+			up_sell_modal.css( 'left', x + "px" );
+			up_sell_modal.css( 'top', ( event.pageY - 10 ) + "px" );
+			up_sell_modal.css( 'display', 'block' );
 		} else {
-			up_sell_modal.css('display', 'none');
+			up_sell_modal.css( 'display', 'none' );
 		}
 	}
 }

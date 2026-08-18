@@ -10,6 +10,94 @@ jQuery(document).ready(function($) {
     var googleSignupPopup = null;
     var googleSignupPopupWatcher = null;
     var lastSignupWrapper = null;
+    var LITE_SIGNUP_ATTRIBUTION_KEY = 'lasso_lite_signup_attribution';
+
+    /**
+     * Strip query/hash from landing URLs so admin nonces/tokens are not persisted (#797).
+     *
+     * @param {string} href Full page URL.
+     * @return {string}
+     */
+    function sanitizeLiteSignupLandingUrl(href) {
+        try {
+            var url = new URL(href);
+            return url.origin + url.pathname;
+        } catch (e) {
+            return '';
+        }
+    }
+
+    /**
+     * Collect first-touch UTMs from URL + sessionStorage for Hub DUA (#788).
+     *
+     * @return {Object}
+     */
+    function getLiteSignupAttribution() {
+        var attribution = {};
+
+        try {
+            var stored = window.sessionStorage.getItem(LITE_SIGNUP_ATTRIBUTION_KEY);
+            if (stored) {
+                var parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === 'object') {
+                    attribution = parsed;
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        if (attribution.url) {
+            attribution.url = sanitizeLiteSignupLandingUrl(attribution.url);
+        }
+
+        try {
+            var pageUrl = new URL(window.location.href);
+            var utmKeys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'ref_code'];
+            utmKeys.forEach(function(key) {
+                var val = pageUrl.searchParams.get(key);
+                if (key === 'ref_code' && !val) {
+                    val = pageUrl.searchParams.get('ref');
+                }
+                if (val && val.trim() && !attribution[key]) {
+                    attribution[key] = val.trim();
+                }
+            });
+            if (!attribution.url) {
+                attribution.url = sanitizeLiteSignupLandingUrl(window.location.href);
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        try {
+            if (Object.keys(attribution).length) {
+                window.sessionStorage.setItem(LITE_SIGNUP_ATTRIBUTION_KEY, JSON.stringify(attribution));
+            }
+        } catch (e) {
+            // ignore
+        }
+
+        return attribution;
+    }
+
+    /**
+     * Attach sanitized attribution to Lite signup AJAX payloads (#788).
+     *
+     * @param {Object} data Base AJAX data.
+     * @return {Object}
+     */
+    function withLiteSignupAttribution(data) {
+        var payload = data || {};
+        var attribution = getLiteSignupAttribution();
+        if (attribution && Object.keys(attribution).length) {
+            payload.attribution = attribution;
+        }
+        return payload;
+    }
+
+    // Persist landing UTMs on first page load before admin navigation strips query params.
+    getLiteSignupAttribution();
 
     /**
      * Readable message from wp_send_json_error data (msg / error / WP HTTP error shape).
@@ -171,12 +259,12 @@ jQuery(document).ready(function($) {
             url: lassoLiteOptionsData.ajax_url,
             type: 'POST',
             dataType: 'json',
-            data: {
+            data: withLiteSignupAttribution({
                 action: 'lasso_lite_get_external_signup_config',
                 nonce: lassoLiteOptionsData.optionsNonce,
                 source: 'lasso-lite',
                 callback_url: window.location.href
-            },
+            }),
             success: function(response) {
                 if (response && response.success && response.data && response.data.google_auth_url) {
                     // Use a popup so the onboarding page remains in place.
@@ -246,13 +334,13 @@ jQuery(document).ready(function($) {
             url: lassoLiteOptionsData.ajax_url,
             type: 'POST',
             dataType: 'json',
-            data: {
+            data: withLiteSignupAttribution({
                 action: 'lasso_lite_external_signup',
                 nonce: lassoLiteOptionsData.optionsNonce,
                 email: email,
                 password: password,
                 source: 'lasso-lite'
-            },
+            }),
             success: function(response) {
                 isLoading = false;
                 $btn.text(originalText);
@@ -261,8 +349,7 @@ jQuery(document).ready(function($) {
                 var signupData = (response && response.success && response.data) ? response.data : null;
                 if (signupData && (signupData.success || signupData.user_id || signupData.api_key)) {
                     lastSignupResponse = signupData;
-                    saveAccountCredentials(signupData);
-                    showSuccessAndContinue(signupData, $wrapper);
+                    saveAccountCredentials(signupData, $wrapper);
                 } else {
                     var errorMsg = lassoLiteAjaxErrorText(response && response.data) || 'Signup failed. Please try again.';
                     showGeneralError(errorMsg);
@@ -279,10 +366,11 @@ jQuery(document).ready(function($) {
         });
     }
 
-    function saveAccountCredentials(response) {
-        $.ajax({
+    function saveAccountCredentials(response, $wrapper) {
+        return $.ajax({
             url: lassoLiteOptionsData.ajax_url,
             type: 'POST',
+            dataType: 'json',
             data: {
                 action: 'lasso_lite_save_lasso_account',
                 nonce: lassoLiteOptionsData.optionsNonce,
@@ -292,8 +380,16 @@ jQuery(document).ready(function($) {
             }
         }).done(function(res) {
             if (res && res.success && res.data && res.data.success) {
-                showSuccessAndContinue(lastSignupResponse || {}, lastSignupWrapper);
+                showSuccessAndContinue(lastSignupResponse || response || {}, $wrapper || lastSignupWrapper);
+            } else {
+                showGeneralError(
+                    lassoLiteAjaxErrorText(res && res.data) || 'Unable to save your account. Please try again.'
+                );
             }
+        }).fail(function(xhr) {
+            showGeneralError(
+                lassoLiteAjaxErrorText(xhr.responseJSON && xhr.responseJSON.data) || 'Unable to save your account. Please try again.'
+            );
         });
     }
 
@@ -390,8 +486,7 @@ jQuery(document).ready(function($) {
                 var signupData = (response && response.success && response.data) ? response.data : null;
                 if (signupData && (signupData.success || signupData.user_id || signupData.api_key)) {
                     lastSignupResponse = signupData;
-                    saveAccountCredentials(signupData);
-                    showSuccessAndContinue(signupData, lastSignupWrapper);
+                    saveAccountCredentials(signupData, lastSignupWrapper);
                 } else {
                     var errorMsg = lassoLiteAjaxErrorText(response && response.data)
                         || 'Signup completed, but we could not connect your account. Please try again.';
@@ -408,7 +503,46 @@ jQuery(document).ready(function($) {
 
     function handleSkipSignup(e) {
         e.preventDefault();
-        go_to_next_step_action($('#lasso-skip-signup'));
+        if (isLoading) {
+            return;
+        }
+
+        var $skip = $('#lasso-skip-signup');
+        var $wrapper = getSignupWrapper($skip);
+        lastSignupWrapper = $wrapper.length ? $wrapper : lastSignupWrapper;
+
+        isLoading = true;
+        $skip.prop('disabled', true);
+
+        $.ajax({
+            url: lassoLiteOptionsData.ajax_url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                action: 'lasso_lite_skip_hub_connect',
+                nonce: lassoLiteOptionsData.optionsNonce
+            },
+            success: function(response) {
+                isLoading = false;
+                $skip.prop('disabled', false);
+
+                if (response && response.success) {
+                    go_to_next_step_action($skip);
+                    return;
+                }
+
+                showGeneralError(
+                    lassoLiteAjaxErrorText(response && response.data) || 'Unable to skip Hub Connect. Please try again.'
+                );
+            },
+            error: function(xhr) {
+                isLoading = false;
+                $skip.prop('disabled', false);
+                showGeneralError(
+                    lassoLiteAjaxErrorText(xhr.responseJSON && xhr.responseJSON.data) || 'Unable to skip Hub Connect. Please try again.'
+                );
+            }
+        });
     }
 
     function togglePasswordVisibility(e) {

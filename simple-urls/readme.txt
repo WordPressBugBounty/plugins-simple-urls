@@ -4,7 +4,7 @@ Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campai
 Tags: affiliate link manager, affiliate links, amazon affiliate, link cloaking, product displays
 Requires at least: 5.1
 Requires PHP: 7.2
-Tested up to: 6.8.6
+Tested up to: 7.1
 Stable tag: trunk
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
