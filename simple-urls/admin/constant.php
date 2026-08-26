@@ -243,3 +243,11 @@ if ( ! defined( 'LASSO_SNIPPET_VANITY_PATH_LITE' ) ) {
 if ( ! defined( 'LASSO_CONNECT_SNIPPET_FILE_LITE' ) ) {
 	define( 'LASSO_CONNECT_SNIPPET_FILE_LITE', SIMPLE_URLS_PLUGIN_PATH . '/admin/assets/js/connect-snippet.min.js' );
 }
+
+if ( ! defined( 'LASSO_BEACON_VANITY_PATH' ) ) {
+	define( 'LASSO_BEACON_VANITY_PATH', '/js/e' );
+}
+
+if ( ! defined( 'LASSO_BEACON_QUERY' ) ) {
+	define( 'LASSO_BEACON_QUERY', 'lasso_js_e' );
+}

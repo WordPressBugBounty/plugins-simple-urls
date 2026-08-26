@@ -10,6 +10,7 @@ namespace LassoLite\Classes\Processes;
 use LassoLite\Admin\Constant;
 use LassoLite\Classes\Affiliate_Link;
 use LassoLite\Classes\Amazon_Api;
+use LassoLite\Classes\Cron;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Lasso_DB;
 use LassoLite\Classes\Meta_Enum;
@@ -127,12 +128,39 @@ class Amazon_Shortlink extends Process {
 			return false;
 		}
 
-		$limit              = 10;
-		$lasso_ids = Url_Details::get_amzn_to_shortlinks( $limit );
-		$count              = count( $lasso_ids ) ?? 0;
-
+		$limit     = 10;
+		$lasso_ids = Url_Details::get_amzn_to_shortlinks( 50 );
+		$now       = time();
+		$site      = Cron::site_schedule_key();
+		$due       = array();
 		foreach ( $lasso_ids as $lasso ) {
-			$this->push_to_queue( $lasso->lasso_id );
+			$model = new Url_Details();
+			$row   = $model->get_one( $lasso->lasso_id );
+			$url   = $row ? $row->get_redirect_url() : '';
+			if ( ! $url || ! Cron::should_send_scheduled_data_request( $url ) ) {
+				continue;
+			}
+			$due[] = array(
+				'id'   => $lasso->lasso_id,
+				'url'  => $url,
+				'late' => Cron::is_late_data_request( Cron::item_due_minute( $site, $url ), $now ) ? 0 : 1,
+				'min'  => Cron::item_due_minute( $site, $url ),
+			);
+		}
+		usort(
+			$due,
+			static function ( $a, $b ) {
+				if ( $a['late'] !== $b['late'] ) {
+					return $a['late'] - $b['late'];
+				}
+				return $a['min'] - $b['min'];
+			}
+		);
+		$due   = array_slice( $due, 0, $limit );
+		$count = count( $due );
+
+		foreach ( $due as $item ) {
+			$this->push_to_queue( $item['id'] );
 		}
 
 		$this->set_total( $count );
@@ -140,6 +168,7 @@ class Amazon_Shortlink extends Process {
 		$this->task_start_log();
 
 		$this->save()->dispatch();
+		Cron::advance_data_request_tick();
 
 		return true;
 	}

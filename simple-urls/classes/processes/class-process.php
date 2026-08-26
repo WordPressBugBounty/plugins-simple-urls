@@ -515,6 +515,29 @@ abstract class Process extends Lasso_WP_Background_Process {
 	}
 
 	/**
+	 * Log once when a configured background process class is missing.
+	 *
+	 * @param mixed $process_class Process class name from filter/map.
+	 */
+	private static function log_missing_process_class_once( $process_class ) {
+		$class_label                = is_string( $process_class ) ? $process_class : wp_json_encode( $process_class );
+		static $logged_this_request = array();
+		if ( isset( $logged_this_request[ $class_label ] ) ) {
+			return;
+		}
+		$logged_this_request[ $class_label ] = true;
+
+		$log_key = 'lasso_lite_missing_proc_' . md5( $class_label );
+		if ( get_option( $log_key ) ) {
+			return;
+		}
+		update_option( $log_key, 1, false );
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log( 'Lasso Lite: skipping missing background process class ' . $class_label );
+	}
+
+	/**
 	 * Get Background Process is running
 	 */
 	public function get_list_background_processing() {
@@ -528,6 +551,10 @@ abstract class Process extends Lasso_WP_Background_Process {
 		$process_classes = apply_filters( 'lasso_lite_all_processes', $process_classes );
 
 		foreach ( $process_classes as $process_class => $process_name ) {
+			if ( ! is_string( $process_class ) || ! class_exists( $process_class ) ) {
+				self::log_missing_process_class_once( $process_class );
+				continue;
+			}
 			/** @var Process $process_class_obj */ // phpcs:ignore
 			$process_class_obj     = new $process_class();
 			$process_next_schedule = $process_class_obj->next_schedule();

@@ -167,6 +167,10 @@ abstract class Lasso_WP_Async_Request {
 
 		check_ajax_referer( $this->identifier, 'nonce' );
 
+		if ( ! defined( 'LASSO_LITE_BACKGROUND_PROCESS' ) ) {
+			define( 'LASSO_LITE_BACKGROUND_PROCESS', true );
+		}
+
 		$this->handle();
 
 		wp_die();

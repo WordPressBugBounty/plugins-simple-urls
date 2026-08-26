@@ -140,6 +140,9 @@ class Cron {
 		}
 
 		foreach ( $crons_array as $time => $cron ) {
+			if ( ! is_array( $cron ) ) {
+				continue;
+			}
 			foreach ( $cron as $hook => $dings ) {
 				if ( strpos( $hook, 'lasso_lite_' ) === false ) {
 					continue;
@@ -163,13 +166,261 @@ class Cron {
 			}
 		}
 
+		$load_slot = self::site_load_slot( self::site_schedule_key() );
+
 		foreach ( $crons as $cron_name => $interval ) {
 			$next_scheduled = wp_next_scheduled( $cron_name );
+			$is_daily       = ( 'daily' === $interval );
+			$is_15m         = ( 'lasso_lite_15_minutes' === $interval );
+			$is_weekly      = ( 'weekly' === $interval );
+
+			if ( $next_scheduled && $is_daily && ! self::timestamp_matches_daily_slot( $next_scheduled, $load_slot ) ) {
+				wp_clear_scheduled_hook( $cron_name );
+				$next_scheduled = false;
+			} elseif ( $next_scheduled && $is_15m && ! self::timestamp_matches_15m_slot( $next_scheduled, $load_slot ) ) {
+				wp_clear_scheduled_hook( $cron_name );
+				$next_scheduled = false;
+			} elseif ( $next_scheduled && $is_weekly && ! self::timestamp_matches_daily_slot( $next_scheduled, $load_slot ) ) {
+				wp_clear_scheduled_hook( $cron_name );
+				$next_scheduled = false;
+			}
+
 			if ( ! $next_scheduled ) {
-				// No schedule exists - create a new one.
-				wp_schedule_event( time(), $interval, $cron_name );
+				$current_time  = time();
+				$next_run_time = $current_time;
+				if ( $is_daily || $is_weekly ) {
+					$next_run_time = self::next_daily_run_ts( $load_slot, $current_time );
+				} elseif ( $is_15m ) {
+					$next_run_time = self::next_15m_run_ts( $load_slot, $current_time );
+				}
+				wp_schedule_event( $next_run_time, $interval, $cron_name );
 			}
 		}
+	}
+
+	/**
+	 * Stable key for load-slot hashing. Prefer site URL.
+	 *
+	 * @return string
+	 */
+	public static function site_schedule_key() {
+		$url = '';
+		if ( function_exists( 'home_url' ) ) {
+			$url = (string) home_url();
+		}
+		if ( function_exists( 'untrailingslashit' ) ) {
+			$url = untrailingslashit( strtolower( trim( $url ) ) );
+		} else {
+			$url = strtolower( trim( $url ) );
+		}
+		if ( '' !== $url ) {
+			return $url;
+		}
+
+		return 'lasso-missing-site-key';
+	}
+
+	/**
+	 * Deterministic minute-of-day slot from a unique site key.
+	 *
+	 * @param string $site_key home_url.
+	 * @return array
+	 */
+	public static function site_load_slot( $site_key ) {
+		$key = (string) $site_key;
+		if ( '' === $key ) {
+			$key = 'lasso-missing-site-key';
+		}
+
+		$minute_of_day = abs( crc32( $key ) ) % 1440;
+
+		return array(
+			'minute_of_day' => $minute_of_day,
+			'hour'          => (int) floor( $minute_of_day / 60 ),
+			'minute'        => $minute_of_day % 60,
+		);
+	}
+
+	/**
+	 * Next daily UTC timestamp at the hashed hour:minute.
+	 *
+	 * @param array $slot         site_load_slot().
+	 * @param int   $current_time Unix timestamp.
+	 * @return int
+	 */
+	public static function next_daily_run_ts( $slot, $current_time ) {
+		$hour   = isset( $slot['hour'] ) ? max( 0, min( 23, (int) $slot['hour'] ) ) : 0;
+		$minute = isset( $slot['minute'] ) ? max( 0, min( 59, (int) $slot['minute'] ) ) : 0;
+		$today  = gmmktime( $hour, $minute, 0 );
+		if ( $today > $current_time ) {
+			return $today;
+		}
+
+		return $today + DAY_IN_SECONDS;
+	}
+
+	/**
+	 * Next 15-minute UTC timestamp at hashed offset inside the window.
+	 *
+	 * @param array $slot         site_load_slot().
+	 * @param int   $current_time Unix timestamp.
+	 * @return int
+	 */
+	public static function next_15m_run_ts( $slot, $current_time ) {
+		$offset     = isset( $slot['minute'] ) ? ( (int) $slot['minute'] % 15 ) : 0;
+		$cur_min    = (int) gmdate( 'i', $current_time );
+		$hour       = (int) gmdate( 'G', $current_time );
+		$window     = $cur_min - ( $cur_min % 15 );
+		$candidate  = gmmktime( $hour, $window + $offset, 0 );
+		if ( $candidate > $current_time ) {
+			return $candidate;
+		}
+
+		return $candidate + ( 15 * MINUTE_IN_SECONDS );
+	}
+
+	/**
+	 * Whether a scheduled timestamp sits on the daily slot.
+	 *
+	 * @param int   $timestamp Unix timestamp.
+	 * @param array $slot      site_load_slot().
+	 * @return bool
+	 */
+	public static function timestamp_matches_daily_slot( $timestamp, $slot ) {
+		return (int) gmdate( 'G', $timestamp ) === (int) $slot['hour']
+			&& (int) gmdate( 'i', $timestamp ) === (int) $slot['minute'];
+	}
+
+	/**
+	 * Whether a 15-minute event sits on the hashed offset.
+	 *
+	 * @param int   $timestamp Unix timestamp.
+	 * @param array $slot      site_load_slot().
+	 * @return bool
+	 */
+	public static function timestamp_matches_15m_slot( $timestamp, $slot ) {
+		$offset = isset( $slot['minute'] ) ? ( (int) $slot['minute'] % 15 ) : 0;
+		return ( (int) gmdate( 'i', $timestamp ) % 15 ) === $offset;
+	}
+
+	/**
+	 * 0–499ms delay so one site's URL list does not hit lasso.link as one burst.
+	 *
+	 * @param string $site_key Site URL.
+	 * @param string $item_key Request URL.
+	 * @return int
+	 */
+	public static function request_spread_delay_ms( $site_key, $item_key ) {
+		return abs( crc32( (string) $site_key . "\0" . (string) $item_key ) ) % 500;
+	}
+
+	/**
+	 * Whether the current request should spread lasso.link API calls.
+	 *
+	 * Cron handlers enqueue background-process work that runs via admin-ajax.php
+	 * where DOING_CRON is false; LASSO_LITE_BACKGROUND_PROCESS marks those workers.
+	 *
+	 * @return bool
+	 */
+	public static function is_paced_background_context() {
+		if ( defined( 'DOING_CRON' ) && DOING_CRON ) {
+			return true;
+		}
+
+		return defined( 'LASSO_LITE_BACKGROUND_PROCESS' ) && LASSO_LITE_BACKGROUND_PROCESS;
+	}
+
+	/**
+	 * Sleep only on cron/background API calls. Admin save stays instant.
+	 *
+	 * @param string $item_key      Request URL.
+	 * @param bool   $is_lasso_save Interactive save.
+	 * @return int Milliseconds slept (0 when skipped).
+	 */
+	public static function maybe_pace_background_request( $item_key, $is_lasso_save = false ) {
+		if ( $is_lasso_save ) {
+			return 0;
+		}
+		if ( ! self::is_paced_background_context() ) {
+			return 0;
+		}
+
+		$ms = self::request_spread_delay_ms( self::site_schedule_key(), $item_key );
+		$ms = (int) apply_filters( 'lasso_lite_request_spread_delay_ms', $ms, $item_key );
+		if ( $ms > 0 && $ms < 500 ) {
+			usleep( $ms * 1000 );
+		}
+
+		return $ms;
+	}
+
+	const OPTION_BLS_LAST_TICK = 'lasso_lite_bls_last_tick';
+
+	/**
+	 * Per-URL minute-of-day due slot (site + url).
+	 *
+	 * @param string $site_key Site URL.
+	 * @param string $item_key Request URL.
+	 * @return int
+	 */
+	public static function item_due_minute( $site_key, $item_key ) {
+		return abs( crc32( (string) $site_key . "\0" . (string) $item_key ) ) % 1440;
+	}
+
+	/**
+	 * Late = due more than an hour ago (skip the line vs current-hour items).
+	 *
+	 * @param int $due_minute Minute of day.
+	 * @param int $now        Unix timestamp.
+	 * @return bool
+	 */
+	public static function is_late_data_request( $due_minute, $now ) {
+		$now_minute = ( (int) gmdate( 'G', $now ) * 60 ) + (int) gmdate( 'i', $now );
+		$age        = ( $now_minute - (int) $due_minute + 1440 ) % 1440;
+		return $age > 60;
+	}
+
+	/**
+	 * Hourly due window: current hour plus up to 2h of late catch-up.
+	 *
+	 * @param string   $item_key    Request URL.
+	 * @param int|null $now         Unix timestamp.
+	 * @param int|null $last_tick   Previous tick (0 = first run).
+	 * @param int|null $due_minute  Injected slot for tests.
+	 * @return bool
+	 */
+	public static function should_send_scheduled_data_request( $item_key, $now = null, $last_tick = null, $due_minute = null ) {
+		$now = null === $now ? time() : (int) $now;
+		if ( null === $last_tick ) {
+			$last_tick = (int) get_option( self::OPTION_BLS_LAST_TICK, 0 );
+		}
+		if ( $last_tick <= 0 ) {
+			$last_tick = $now - HOUR_IN_SECONDS;
+		}
+
+		$window_start = max( $last_tick - 300, $now - ( 2 * HOUR_IN_SECONDS ) );
+		if ( null === $due_minute ) {
+			$due_minute = self::item_due_minute( self::site_schedule_key(), $item_key );
+		}
+
+		$midnight  = gmmktime( 0, 0, 0, (int) gmdate( 'n', $now ), (int) gmdate( 'j', $now ), (int) gmdate( 'Y', $now ) );
+		$due_today = $midnight + ( (int) $due_minute * 60 );
+		if ( $due_today <= $now ) {
+			return $due_today > $window_start;
+		}
+
+		// Due later today: still catch yesterday's occurrence inside the 2h window
+		// (WP-Cron often fires after UTC midnight and would otherwise skip 22:00–23:59).
+		return ( $due_today - DAY_IN_SECONDS ) > $window_start;
+	}
+
+	/**
+	 * Close this hour's window so the next tick only opens new + late-capped work.
+	 *
+	 * @param int|null $now Unix timestamp.
+	 */
+	public static function advance_data_request_tick( $now = null ) {
+		update_option( self::OPTION_BLS_LAST_TICK, null === $now ? time() : (int) $now, false );
 	}
 
 	/**

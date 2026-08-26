@@ -10,6 +10,7 @@ namespace LassoLite\Pages;
 use LassoLite\Admin\Constant;
 
 use LassoLite\Classes\Amazon_Api;
+use LassoLite\Classes\Beacon_Proxy;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
@@ -44,6 +45,7 @@ class Hook {
 		add_action( 'init', array( $this, 'register_taxonomy' ) );
 		add_action( 'admin_menu', array( $this, 'build_admin_menu' ), 2 );
 		add_action( 'init', array( $this, 'lasso_register_connect_snippet_rewrite' ) );
+		add_action( 'init', array( $this, 'maybe_flush_vanity_rewrites_on_upgrade' ), 20 );
 		add_action( 'upgrader_process_complete', array( $this, 'lasso_connect_snippet_flush_on_upgrade' ), 10, 2 );
 
 		$lasso_shortcode = new Shortcode();
@@ -89,6 +91,7 @@ class Hook {
 
 		// Serve vanity JS path /js/snippet.min.js via plugin handler (run as early as possible)
 		add_action( 'template_redirect', array( $this, 'serve_connect_snippet' ), 0 );
+		add_action( 'template_redirect', array( $this, 'serve_beacon_proxy' ), 0 );
 
 		$setting = new Setting();
 		if ( $setting->is_surls_page() ) {
@@ -1276,6 +1279,10 @@ class Hook {
 	public static function lasso_register_connect_snippet_rewrite() {
 		$snippet_query = Helper::get_snippet_query();
 		add_rewrite_rule( '^js/snippet\.min\.js$', 'index.php?' . $snippet_query . '=1', 'top' );
+
+		$beacon_path = ltrim( LASSO_BEACON_VANITY_PATH, '/' );
+		$beacon_rule = '^' . preg_quote( $beacon_path, '/' ) . '$';
+		add_rewrite_rule( $beacon_rule, 'index.php?' . LASSO_BEACON_QUERY . '=1', 'top' );
 	}
 
 	/**
@@ -1318,10 +1325,26 @@ class Hook {
 			return;
 		}
 
-		if ( in_array( SIMPLE_URLS_SLUG, $targets, true ) ) {
+		$plugin_file = plugin_basename( SIMPLE_URLS_PLUGIN_PATH . '/plugin.php' );
+		if ( in_array( $plugin_file, $targets, true ) ) {
 			$this->lasso_register_connect_snippet_rewrite();
 			flush_rewrite_rules();
 		}
+	}
+
+	/**
+	 * One-time rewrite flush after upgrade so /js/e is persisted (upgrader runs old code).
+	 *
+	 * @return void
+	 */
+	public function maybe_flush_vanity_rewrites_on_upgrade() {
+		if ( '1' !== (string) Helper::get_option( 'pending_vanity_rewrite_flush', '0' ) ) {
+			return;
+		}
+
+		self::lasso_register_connect_snippet_rewrite();
+		flush_rewrite_rules();
+		Helper::update_option( 'pending_vanity_rewrite_flush', '0' );
 	}
 
 	/**
@@ -1333,6 +1356,7 @@ class Hook {
 	public function lasso_connect_snippet_query_var( $vars ) {
 		$snippet_query = Helper::get_snippet_query();
 		$vars[]        = $snippet_query;
+		$vars[]        = LASSO_BEACON_QUERY;
 		return $vars;
 	}
 
@@ -1396,6 +1420,107 @@ class Hook {
 		}
 		ob_end_flush();
 		exit;
+	}
+
+	/**
+	 * Resolve a beacon proxy request when path or query var matches.
+	 *
+	 * @param string|null $raw_body Optional body override for tests; null reads php://input.
+	 * @return array{status:int,body:string}|null Null when not a beacon request.
+	 */
+	public function resolve_beacon_proxy_request( $raw_body = null ) {
+		$req_uri  = Helper::get_server_param( 'REQUEST_URI' );
+		$req_path = is_string( $req_uri ) ? wp_parse_url( $req_uri, PHP_URL_PATH ) : '';
+		$is_path  = is_string( $req_path ) && rtrim( $req_path, '/' ) === LASSO_BEACON_VANITY_PATH;
+		$is_query = 1 === intval( get_query_var( LASSO_BEACON_QUERY ) );
+		if ( ! $is_path && ! $is_query ) {
+			return null;
+		}
+
+		$method = Helper::get_server_param( 'REQUEST_METHOD' );
+		if ( null === $raw_body ) {
+			$raw_body = Beacon_Proxy::read_bounded_body();
+		}
+
+		return $this->handle_beacon_proxy( $method ? $method : 'GET', $raw_body );
+	}
+
+	/**
+	 * Send beacon proxy HTTP response (no exit).
+	 *
+	 * @param array{status:int,body:string} $result Response from handle_beacon_proxy.
+	 * @return void
+	 */
+	public function emit_beacon_proxy_response( $result ) {
+		status_header( intval( $result['status'] ) );
+		header( 'Content-Type: text/plain; charset=UTF-8' );
+		header( 'Cache-Control: no-store' );
+		if ( '' !== $result['body'] ) {
+			echo $result['body']; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+		}
+	}
+
+	/**
+	 * First-party POST /js/e → codedrink.com/js/e (EasyPrivacy).
+	 */
+	public function serve_beacon_proxy() {
+		$result = $this->resolve_beacon_proxy_request();
+		if ( null === $result ) {
+			return;
+		}
+
+		$this->emit_beacon_proxy_response( $result );
+		exit;
+	}
+
+	/**
+	 * Plan and forward a beacon request (testable core of serve_beacon_proxy).
+	 *
+	 * @param string $method   HTTP method.
+	 * @param string $raw_body Raw request body.
+	 * @return array{status:int,body:string}
+	 */
+	public function handle_beacon_proxy( $method, $raw_body ) {
+		$plan = Beacon_Proxy::plan( $method, is_string( $raw_body ) ? $raw_body : '' );
+
+		if ( empty( $plan['ok'] ) ) {
+			return array(
+				'status' => intval( $plan['status'] ),
+				'body'   => '',
+			);
+		}
+
+		$response = wp_remote_post(
+			$plan['upstream'],
+			array(
+				'timeout'   => 3,
+				'sslverify' => true,
+				'headers'   => array(
+					'Content-Type' => 'text/plain; charset=utf-8',
+				),
+				'body'      => $plan['body'],
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return array(
+				'status' => 200,
+				'body'   => '',
+			);
+		}
+
+		$status = intval( wp_remote_retrieve_response_code( $response ) );
+		if ( $status < 200 || $status > 299 ) {
+			return array(
+				'status' => 200,
+				'body'   => '',
+			);
+		}
+
+		return array(
+			'status' => $status,
+			'body'   => (string) wp_remote_retrieve_body( $response ),
+		);
 	}
 
 	/**

@@ -42,6 +42,54 @@ function is_lasso_lite_page() {
 	return $result;
 }
 
+if ( ! function_exists( 'lasso_lite_sentry_is_local_http_host' ) ) {
+	/**
+	 * Whether HTTP_HOST is a local dev authority (hostname with optional port).
+	 *
+	 * @param string $host HTTP_HOST value.
+	 * @return bool
+	 */
+	function lasso_lite_sentry_is_local_http_host( $host ) {
+		$host = strtolower( trim( (string) $host ) );
+		if ( '' === $host ) {
+			return false;
+		}
+
+		$hostname = $host;
+		if ( preg_match( '/^\[([^\]]+)\](?::(\d+))?$/', $host, $matches ) ) {
+			$hostname = strtolower( $matches[1] );
+		} elseif ( preg_match( '/^([^:]+):(\d+)$/', $host, $matches ) ) {
+			$hostname = strtolower( $matches[1] );
+		}
+
+		return in_array( $hostname, array( 'localhost', '127.0.0.1', '::1' ), true );
+	}
+}
+
+if ( ! function_exists( 'lasso_lite_sentry_is_dev_user' ) ) {
+	/**
+	 * Whether the Sentry event user is a known local/dev identity.
+	 *
+	 * @param \LassoLiteVendor\Sentry\Event $event Sentry event.
+	 * @return bool
+	 */
+	function lasso_lite_sentry_is_dev_user( $event ) {
+		$user = $event->getUser();
+		if ( null === $user ) {
+			return false;
+		}
+
+		$email = '';
+		if ( is_array( $user ) ) {
+			$email = isset( $user['email'] ) ? (string) $user['email'] : '';
+		} elseif ( is_object( $user ) && method_exists( $user, 'getEmail' ) ) {
+			$email = (string) $user->getEmail();
+		}
+
+		return 'admin@example.com' === strtolower( trim( $email ) );
+	}
+}
+
 if ( is_lasso_function_enabled( 'php_uname' ) && is_lasso_lite_page() ) {
 	$lasso_php_required = 7.2;
 	try {
@@ -70,6 +118,15 @@ if ( is_lasso_function_enabled( 'php_uname' ) && is_lasso_lite_page() ) {
 								|| strpos( $error_message, 'Error: Out of memory' ) !== false
 							)
 						) {
+							return null;
+						}
+
+						if ( lasso_lite_sentry_is_dev_user( $event ) ) {
+							return null;
+						}
+
+						$host = isset( $_SERVER['HTTP_HOST'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_HOST'] ) ) : '';
+						if ( lasso_lite_sentry_is_local_http_host( $host ) ) {
 							return null;
 						}
 

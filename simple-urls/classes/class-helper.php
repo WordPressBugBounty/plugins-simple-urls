@@ -1773,6 +1773,13 @@ class Helper {
 		}
 
 		$request_url = Constant::LASSO_LINK . '/link/status/?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
+		if ( ! $is_lasso_save && defined( 'DOING_CRON' ) && DOING_CRON && ! Cron::should_send_scheduled_data_request( $url ) ) {
+			return $get_res ? array(
+				'status_code' => 200,
+				'response'    => array(),
+			) : 200;
+		}
+		Cron::maybe_pace_background_request( $url, $is_lasso_save );
 		$res         = self::send_request( 'get', $request_url, array(), $headers );
 
 		// phpcs:ignore
@@ -2038,11 +2045,21 @@ class Helper {
 		}
 
 		if ( is_wp_error( $res ) || $use_bls || 403 === $status_code ) {
+			$allow_bls = $is_lasso_save
+				|| ! defined( 'DOING_CRON' )
+				|| ! DOING_CRON
+				|| Cron::should_send_scheduled_data_request( $url );
+			if ( ! $allow_bls ) {
+				$result = $get_page_title ? array( $url, $page_title ) : $url;
+				Cache_Per_Process::get_instance()->set_cache( $cache_prefix . md5( $url ) . $get_page_title, $result );
+				return $result;
+			}
 			$headers          = self::get_headers();
 			$data             = array(
 				'url' => $url,
 			);
 			$encrypted_base64 = http_build_query( $data );
+			Cron::maybe_pace_background_request( $url, $is_lasso_save );
 			$res              = self::send_request( 'get', Constant::LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
 
 			$bls_response = ( isset( $res['response'] ) && is_object( $res['response'] ) ) ? $res['response'] : null;

@@ -85,6 +85,11 @@ class Update_DB {
 			( new Url_Details() )->update_for_v152();
 			( new Revert() )->update_for_v152();
 		}
+
+		// Beacon /js/e rewrite is registered in new code; upgrader runs the old callback.
+		if ( $version < 154 && (int) LASSO_LITE_VERSION >= 154 ) {
+			Helper::update_option( 'pending_vanity_rewrite_flush', '1' );
+		}
 	}
 
 	/**
