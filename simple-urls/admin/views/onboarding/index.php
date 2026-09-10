@@ -18,6 +18,11 @@ $onboarding_resume_step  = Helper::get_onboarding_current_step( $should_show_imp
 ?>
 
 <section class="purple-bg pt-3 pb-5 min-vh-116">
+	<!-- ALERTS (settings header renders this; onboarding must too for Validate/Save banners) -->
+	<div class="container container-sm lite-container">
+		<div id="lasso_lite_notifications"></div>
+	</div>
+
 	<div
 		id="onboarding_container"
 		class="container container-sm lite-container"

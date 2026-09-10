@@ -232,7 +232,10 @@ class Cron {
 			$key = 'lasso-missing-site-key';
 		}
 
-		$minute_of_day = abs( crc32( $key ) ) % 1440;
+		$hash = abs( crc32( $key ) );
+		// Minutes 60–1439 (hour 1–23). UTC hour 0 stays for sites that never
+		// upgrade so 00Z is not re-occupied by hashed slots.
+		$minute_of_day = 60 + ( $hash % 1380 );
 
 		return array(
 			'minute_of_day' => $minute_of_day,
@@ -249,7 +252,7 @@ class Cron {
 	 * @return int
 	 */
 	public static function next_daily_run_ts( $slot, $current_time ) {
-		$hour   = isset( $slot['hour'] ) ? max( 0, min( 23, (int) $slot['hour'] ) ) : 0;
+		$hour   = isset( $slot['hour'] ) ? max( 1, min( 23, (int) $slot['hour'] ) ) : 1;
 		$minute = isset( $slot['minute'] ) ? max( 0, min( 59, (int) $slot['minute'] ) ) : 0;
 		$today  = gmmktime( $hour, $minute, 0 );
 		if ( $today > $current_time ) {
@@ -271,12 +274,16 @@ class Cron {
 		$cur_min    = (int) gmdate( 'i', $current_time );
 		$hour       = (int) gmdate( 'G', $current_time );
 		$window     = $cur_min - ( $cur_min % 15 );
-		$candidate  = gmmktime( $hour, $window + $offset, 0 );
-		if ( $candidate > $current_time ) {
-			return $candidate;
+		$candidate = gmmktime( $hour, $window + $offset, 0 );
+		if ( $candidate <= $current_time ) {
+			$candidate += 15 * MINUTE_IN_SECONDS;
+		}
+		// Do not land 15-minute events in UTC hour 0.
+		while ( 0 === (int) gmdate( 'G', $candidate ) ) {
+			$candidate += 15 * MINUTE_IN_SECONDS;
 		}
 
-		return $candidate + ( 15 * MINUTE_IN_SECONDS );
+		return $candidate;
 	}
 
 	/**
@@ -287,6 +294,10 @@ class Cron {
 	 * @return bool
 	 */
 	public static function timestamp_matches_daily_slot( $timestamp, $slot ) {
+		if ( 0 === (int) gmdate( 'G', $timestamp ) ) {
+			return false;
+		}
+
 		return (int) gmdate( 'G', $timestamp ) === (int) $slot['hour']
 			&& (int) gmdate( 'i', $timestamp ) === (int) $slot['minute'];
 	}
@@ -299,6 +310,10 @@ class Cron {
 	 * @return bool
 	 */
 	public static function timestamp_matches_15m_slot( $timestamp, $slot ) {
+		if ( 0 === (int) gmdate( 'G', $timestamp ) ) {
+			return false;
+		}
+
 		$offset = isset( $slot['minute'] ) ? ( (int) $slot['minute'] % 15 ) : 0;
 		return ( (int) gmdate( 'i', $timestamp ) % 15 ) === $offset;
 	}
@@ -381,7 +396,11 @@ class Cron {
 	}
 
 	/**
-	 * Hourly due window: current hour plus up to 2h of late catch-up.
+	 * Hourly due window: current hour plus late catch-up (2h, or 3h in UTC hour 1).
+	 *
+	 * 15-minute crons skip UTC hour 0, so the first tick after midnight is ~01:xx.
+	 * A 2h lookback from 01:xx starts ~23:xx and drops the 22:xx band that a 00:xx
+	 * tick used to catch (WP-Cron often misses the last evening window).
 	 *
 	 * @param string   $item_key    Request URL.
 	 * @param int|null $now         Unix timestamp.
@@ -398,7 +417,8 @@ class Cron {
 			$last_tick = $now - HOUR_IN_SECONDS;
 		}
 
-		$window_start = max( $last_tick - 300, $now - ( 2 * HOUR_IN_SECONDS ) );
+		$lookback     = ( 1 === (int) gmdate( 'G', $now ) ) ? ( 3 * HOUR_IN_SECONDS ) : ( 2 * HOUR_IN_SECONDS );
+		$window_start = max( $last_tick - 300, $now - $lookback );
 		if ( null === $due_minute ) {
 			$due_minute = self::item_due_minute( self::site_schedule_key(), $item_key );
 		}
@@ -409,8 +429,8 @@ class Cron {
 			return $due_today > $window_start;
 		}
 
-		// Due later today: still catch yesterday's occurrence inside the 2h window
-		// (WP-Cron often fires after UTC midnight and would otherwise skip 22:00–23:59).
+		// Due later today: still catch yesterday's occurrence inside the lookback
+		// window (WP-Cron often fires after UTC midnight and would otherwise skip 22:00–23:59).
 		return ( $due_today - DAY_IN_SECONDS ) > $window_start;
 	}
 

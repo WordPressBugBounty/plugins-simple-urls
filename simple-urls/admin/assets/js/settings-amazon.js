@@ -2,6 +2,7 @@
 jQuery(document).ready(function() {
 	const AMAZON_API_MODE_STORAGE_KEY = 'lasso_lite_amazon_api_mode';
 	const AMAZON_CREATORS_CUTOFF_AT = Date.parse('2026-05-01T00:00:00');
+	const AMAZON_CREATORS_AJAX_TIMEOUT_MS = 45000;
 	let lite_cta_signup_inner_html_backup = '';
 	let amazonApiModeApplying = false;
 
@@ -325,15 +326,17 @@ jQuery(document).ready(function() {
 		let auto_monetize_amazon = jQuery('#auto_monetize_amazon:checked').val();
 		let auto_upgrade_eligible_links = jQuery('#auto_upgrade_eligible_links:checked').val();
 		let btn_save = jQuery('.btn-save-settings-amazon');
+		let save_btn_original_label = btn_save.text().trim();
 		let is_tracking_id_valid = validate_tracking_id_format();
 		let current_page = lasso_lite_helper.get_page_name();
 
 		if ( is_tracking_id_valid ) {
 			let lasso_lite_update_popup = jQuery('#url-save');
-			lasso_lite_helper.add_loading_button( btn_save );
+			lasso_lite_helper.add_loading_button( btn_save, save_btn_original_label );
 			jQuery.ajax({
 				url: lassoLiteOptionsData.ajax_url,
 				type: 'post',
+				timeout: AMAZON_CREATORS_AJAX_TIMEOUT_MS,
 				data: {
 					action: 'lasso_lite_save_settings_amazon',
 					nonce: lassoLiteOptionsData.optionsNonce,
@@ -374,15 +377,24 @@ jQuery(document).ready(function() {
 						} else {
 							lasso_lite_helper.do_notification(res.data.msg, 'green', 'default-template-notification-amz' );
 						}
-						lasso_lite_helper.add_loading_button( btn_save, 'Save Changes', false );
+
+						if ( 'surl-onboarding' === current_page ) {
+							go_to_next_step_action(btn_save);
+						}
 					} else {
-						lasso_lite_helper.do_notification("Unexpected error!", 'red', 'default-template-notification-amz' );
+						let errorMsg = res.data && res.data.msg ? res.data.msg : 'Unexpected error!';
+						lasso_lite_helper.do_notification(errorMsg, 'red', 'default-template-notification-amz' );
 					}
 
 					// Refresh setup process data
 					refresh_setup_progress();
 				})
+				.fail(function(xhr) {
+					let errorMsg = lasso_lite_helper.get_msg_ajax_error(xhr);
+					lasso_lite_helper.do_notification(errorMsg, 'red', 'default-template-notification-amz' );
+				})
 				.always(function() {
+					lasso_lite_helper.add_loading_button( btn_save, save_btn_original_label, false );
 					lasso_lite_helper.set_progress_bar_complete();
 					setTimeout(function() {
 						// Hide update popup by setTimeout to make sure this run after lasso_update_popup.modal('show')
@@ -391,11 +403,6 @@ jQuery(document).ready(function() {
 						}
 					}, 1000);
 				});
-
-			// Go to next step if we are in Welcome page
-			if ( 'surl-onboarding' === current_page ) {
-				go_to_next_step_action(btn_save);
-			}
 		}
 	}
 
@@ -508,6 +515,7 @@ jQuery(document).ready(function() {
 		jQuery.ajax({
 			url: lassoLiteOptionsData.ajax_url,
 			type: 'post',
+			timeout: AMAZON_CREATORS_AJAX_TIMEOUT_MS,
 			data: {
 				action: 'lasso_lite_verify_amazon_creators_credentials',
 				nonce: lassoLiteOptionsData.optionsNonce,
