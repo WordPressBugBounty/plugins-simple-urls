@@ -343,7 +343,7 @@ class Setting {
 
 			$jwt          = JWT::encode( $jwt_data, Constant::JWT_SECRET_KEY, 'HS256' );
 			$data['data'] = $jwt;
-			$response      = Helper::send_request( 'post', Constant::LASSO_LINK . '/lasso-lite/enable-support', $data );
+			$response      = Helper::send_request( 'post', Constant::get_lasso_link() . '/lasso-lite/enable-support', $data );
 			$response_body = ( isset( $response['response'] ) && is_object( $response['response'] ) ) ? $response['response'] : null;
 			$is_succeed    = null !== $response_body && boolval( $response_body->succeed ?? false );
 			if ( $is_succeed ) {

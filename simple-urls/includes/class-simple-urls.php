@@ -7,6 +7,7 @@
 
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Import;
 
 /**
  * Simple URLs class.
@@ -41,7 +42,7 @@ class Simple_Urls {
 		$slug = 'surl';
 		$get  = Helper::GET();
 
-		$rewrite_slug_default = 'go';
+		$rewrite_slug = $this->get_cloak_rewrite_slug();
 
 		$labels = array(
 			'name'               => __( 'Lasso Lite', 'simple-urls' ), // phpcs:ignore
@@ -76,14 +77,7 @@ class Simple_Urls {
 
 		$labels = apply_filters( 'simple_urls_cpt_labels', $labels );
 
-		$rewrite_slug = apply_filters( 'simple_urls_slug', $rewrite_slug_default );
-
-		$rewrite_slug = sanitize_title( $rewrite_slug, $rewrite_slug_default );
-
-		// Ref: https://developer.wordpress.org/reference/functions/add_post_type_support/.
 		$supports_array = apply_filters( 'simple_urls_post_type_supports', array( 'title' ) );
-
-		// Ref: https://developer.wordpress.org/reference/functions/register_post_type/.
 		register_post_type(
 			$slug,
 			array(
@@ -288,16 +282,34 @@ class Simple_Urls {
 	}
 
 	/**
+	 * Public rewrite slug for cloaked links (matches register_post_type()).
+	 *
+	 * @return string
+	 */
+	private function get_cloak_rewrite_slug() {
+		$rewrite_slug_default = 'go';
+		$rewrite_slug         = apply_filters( 'simple_urls_slug', $rewrite_slug_default );
+
+		return sanitize_title( $rewrite_slug, $rewrite_slug_default );
+	}
+
+	/**
 	 * Check the plugin is already added rewrite url
 	 *
 	 * @return bool
 	 */
 	private function is_rewrite_url_added() {
+		$rewrite_slug  = $this->get_cloak_rewrite_slug();
+		$rule_prefix   = $rewrite_slug . '/';
+		$query_needle  = 'index.php?' . SIMPLE_URLS_SLUG . '=';
 		$is_added      = false;
 		$rewrite_rules = get_option( 'rewrite_rules' );
 		if ( ! empty( $rewrite_rules ) ) {
 			foreach ( $rewrite_rules as $rewrite_key => $rewrite_rule ) {
-				if ( strpos( $rewrite_key, 'go/[^/]' ) !== false ) {
+				if ( 0 !== strpos( $rewrite_key, $rule_prefix ) ) {
+					continue;
+				}
+				if ( false !== strpos( (string) $rewrite_rule, $query_needle ) ) {
 					$is_added = true;
 					break;
 				}
@@ -305,6 +317,172 @@ class Simple_Urls {
 		}
 
 		return $is_added;
+	}
+
+	/**
+	 * Scan published links for empty redirect meta (batched, read-only).
+	 *
+	 * @return array{findings: array<int, array<string, mixed>>, scanned: int, published_total: int, scan_complete: bool}
+	 */
+	private function collect_missing_destination_findings() {
+		$findings        = array();
+		$batch_size      = 200;
+		$offset          = 0;
+		$published_total = null;
+		$scanned         = 0;
+
+		while ( true ) {
+			$query = new WP_Query(
+				array(
+					'post_type'              => SIMPLE_URLS_SLUG,
+					'post_status'            => 'publish',
+					'posts_per_page'         => $batch_size,
+					'offset'                 => $offset,
+					'fields'                 => 'ids',
+					'no_found_rows'          => ( 0 !== $offset ),
+					'update_post_meta_cache' => false,
+					'update_post_term_cache' => false,
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+				)
+			);
+
+			if ( null === $published_total ) {
+				$published_total = (int) $query->found_posts;
+			}
+
+			$post_ids = $query->posts;
+			if ( empty( $post_ids ) ) {
+				break;
+			}
+
+			foreach ( $post_ids as $post_id ) {
+				$redirect = trim( (string) get_post_meta( $post_id, '_surl_redirect', true ) );
+				if ( '' === $redirect ) {
+					$findings[] = array(
+						'category' => 'missing_destination',
+						'code'     => 'empty_redirect_url',
+						'post_id'  => $post_id,
+						'message'  => sprintf(
+							/* translators: %d: Lasso link post ID */
+							__( 'Published link #%d has no redirect destination.', 'simple-urls' ),
+							$post_id
+						),
+						'guidance' => __( 'Edit the link in Lasso Lite and set a valid redirect URL. This check does not change links for you.', 'simple-urls' ),
+					);
+				}
+			}
+
+			$scanned += count( $post_ids );
+			if ( count( $post_ids ) < $batch_size ) {
+				break;
+			}
+			$offset += $batch_size;
+		}
+
+		$published_total = null === $published_total ? 0 : $published_total;
+		$scan_complete   = ( $scanned >= $published_total );
+
+		if ( ! $scan_complete ) {
+			$findings[] = array(
+				'category' => 'scan_incomplete',
+				'code'     => 'destination_scan_incomplete',
+				'message'  => sprintf(
+					/* translators: 1: links scanned, 2: total published links */
+					__( 'Link destination scan stopped early (%1$d of %2$d published links checked).', 'simple-urls' ),
+					$scanned,
+					$published_total
+				),
+				'guidance' => __( 'Re-run this check or contact support if this persists. Results may not include all missing destinations.', 'simple-urls' ),
+			);
+		}
+
+		return array(
+			'findings'        => $findings,
+			'scanned'         => $scanned,
+			'published_total' => $published_total,
+			'scan_complete'   => $scan_complete,
+		);
+	}
+
+	/**
+	 * Read-only link integrity snapshot for admin health checks.
+	 *
+	 * @return array{findings: array<int, array<string, mixed>>, summary: array<string, mixed>}
+	 */
+	public function get_link_integrity_report() {
+		$findings = array();
+
+		if ( ! $this->is_rewrite_url_added() ) {
+			$findings[] = array(
+				'category' => 'broken_rewrite',
+				'code'     => 'missing_rewrite_rule',
+				'message'  => __( 'Cloaked link rewrite rules are missing from WordPress.', 'simple-urls' ),
+				'guidance' => __( 'Open Settings → Permalinks and click Save, or deactivate and reactivate Lasso Lite to flush rewrite rules.', 'simple-urls' ),
+			);
+		}
+
+		$destination_scan = $this->collect_missing_destination_findings();
+		$findings         = array_merge( $findings, $destination_scan['findings'] );
+
+		$failed_imports = Import::get_failure_log();
+		foreach ( $failed_imports as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$import_id  = intval( $row['import_id'] ?? 0 );
+			$findings[] = array(
+				'category'  => 'stale_import',
+				'code'      => 'import_failure_log',
+				'import_id' => $import_id,
+				'message'   => sprintf(
+					'%s (ID %d): %s',
+					'' !== ( $row['post_title'] ?? '' ) ? $row['post_title'] : __( 'Import item', 'simple-urls' ),
+					$import_id,
+					$row['reason'] ?? ''
+				),
+				'guidance'  => __( 'Review failed imports on the Import page or use import recovery diagnostics. This health check is read-only.', 'simple-urls' ),
+			);
+		}
+
+		$diagnostics = ( new Import() )->get_recovery_diagnostics();
+		if ( in_array( $diagnostics['state'] ?? '', array( 'stuck', 'failed_partial' ), true ) ) {
+			$findings[] = array(
+				'category' => 'stale_import',
+				'code'     => 'import_queue_' . ( $diagnostics['state'] ?? 'unknown' ),
+				'message'  => sprintf(
+					/* translators: %s: import queue state */
+					__( 'Bulk import queue state: %s', 'simple-urls' ),
+					$diagnostics['state'] ?? 'unknown'
+				),
+				'guidance' => __( 'Open Import → import recovery for safe queue reset options. No link destinations are modified from this page.', 'simple-urls' ),
+			);
+		}
+
+		$by_category = array(
+			'broken_rewrite'      => 0,
+			'missing_destination' => 0,
+			'scan_incomplete'     => 0,
+			'stale_import'        => 0,
+		);
+		foreach ( $findings as $finding ) {
+			$cat = $finding['category'] ?? '';
+			if ( isset( $by_category[ $cat ] ) ) {
+				++$by_category[ $cat ];
+			}
+		}
+
+		return array(
+			'findings' => $findings,
+			'summary'  => array(
+				'total'                     => count( $findings ),
+				'by_category'               => $by_category,
+				'has_findings'              => ! empty( $findings ),
+				'published_links_total'     => $destination_scan['published_total'],
+				'published_links_scanned'   => $destination_scan['scanned'],
+				'destination_scan_complete' => $destination_scan['scan_complete'],
+			),
+		);
 	}
 
 }

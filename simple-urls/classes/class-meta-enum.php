@@ -23,5 +23,7 @@ class Meta_Enum {
 	const ENABLE_SPONSORED            = '_enable_sponsored';
 	const SHOW_PRICE                  = '_show_price';
 	const PRICE                       = '_price';
+	const CUSTOMER_PRICE_OVERRIDE     = '_lasso_lite_customer_price_override';
+	const CUSTOMER_IMAGE_OVERRIDE     = '_lasso_lite_customer_image_override';
 	const BADGE_TEXT                  = '_badge_text';
 }

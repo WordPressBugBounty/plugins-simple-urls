@@ -258,6 +258,96 @@
 
 				filter_plugin_select.html(options);
 			}
+
+			function render_import_recovery_diagnostics(data) {
+				var body = jQuery('#lasso-import-diagnostics-body');
+				var reset_btn = jQuery('#lasso-import-safe-reset');
+				if (!data) {
+					body.text('Diagnostics unavailable.');
+					reset_btn.addClass('d-none');
+					return;
+				}
+
+				var failed = data.failed_items || [];
+				var progress = data.progress || {};
+				var lines = [
+					'State: ' + (data.state || 'unknown'),
+					'Required action: ' + (data.required_action || 'none'),
+					'Queue: ' + (progress.completed || 0) + ' / ' + (progress.total || 0) + ' completed (' + (progress.remaining || 0) + ' remaining)',
+				];
+
+				if (failed.length) {
+					lines.push('Failed items (' + failed.length + '):');
+					failed.forEach(function(item) {
+						lines.push('• ' + (item.post_title || 'Item') + ' (ID ' + item.import_id + ') — ' + (item.reason || ''));
+					});
+				} else {
+					lines.push('Failed items: none recorded.');
+				}
+
+				if (data.logs && data.logs.length) {
+					lines.push('Recent log lines:');
+					data.logs.slice(0, 5).forEach(function(line) {
+						lines.push('• ' + line);
+					});
+				}
+
+				body.empty();
+				lines.forEach(function(line) {
+					body.append(jQuery('<div/>').text(line));
+				});
+
+				if (data.safe_reset_available) {
+					reset_btn.removeClass('d-none');
+				} else {
+					reset_btn.addClass('d-none');
+				}
+			}
+
+			function load_import_recovery_diagnostics() {
+				jQuery.ajax({
+					url: lassoLiteOptionsData.ajax_url,
+					type: 'post',
+					data: {
+						action: 'lasso_lite_import_recovery_diagnostics',
+						nonce: lassoLiteOptionsData.optionsNonce,
+					},
+				}).done(function(res) {
+					if (res && res.success) {
+						render_import_recovery_diagnostics(res.data);
+					} else {
+						render_import_recovery_diagnostics(null);
+					}
+				}).fail(function() {
+					render_import_recovery_diagnostics(null);
+				});
+			}
+
+			jQuery('#lasso-import-diagnostics-refresh').on('click', load_import_recovery_diagnostics);
+			jQuery('#lasso-import-safe-reset').on('click', function() {
+				if (!window.confirm('Reset the bulk import queue state? This does not rewrite link destinations.')) {
+					return;
+				}
+				jQuery.ajax({
+					url: lassoLiteOptionsData.ajax_url,
+					type: 'post',
+					data: {
+						action: 'lasso_lite_import_safe_reset',
+						nonce: lassoLiteOptionsData.optionsNonce,
+						confirm: 1,
+						clear_failures: 0,
+					},
+				}).done(function(res) {
+					if (res && res.success && res.data && res.data.diagnostics) {
+						render_import_recovery_diagnostics(res.data.diagnostics);
+						lasso_lite_helper.do_notification('Import queue reset.', 'green');
+					} else {
+						lasso_lite_helper.do_notification('Safe reset failed.', 'red');
+					}
+				});
+			});
+
+			load_import_recovery_diagnostics();
 		});
 	}
 </script>

@@ -9,6 +9,7 @@ namespace LassoLite\Classes;
 
 use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\License;
+use LassoLite\Classes\SURL;
 use LassoLite\Classes\Processes\Amazon;
 use LassoLite\Classes\Processes\Amazon_Shortlink;
 use LassoLite\Classes\Processes\Import_All;
@@ -509,7 +510,7 @@ class Cron {
 	 */
 	public function lasso_lite_cron_get_snippet() {
 		try {
-			$url     = Constant::LASSO_LINK . '/api/snippet/performance?ver=' . time();
+			$url     = Constant::get_lasso_link() . '/api/snippet/performance?ver=' . time();
 			$res     = Helper::send_request( 'get', $url );
 
 			$status_code = isset( $res['status_code'] ) ? intval( $res['status_code'] ) : 0;
@@ -537,7 +538,7 @@ class Cron {
 	 */
 	public function lasso_lite_cron_get_js_domain() {
 		try {
-			$url     = Constant::LASSO_LINK . '/api/js-domain?ver=' . time();
+			$url     = Constant::get_lasso_link() . '/api/js-domain?ver=' . time();
 			$res     = Helper::send_request( 'get', $url );
 			$status_code = intval( $res['status_code'] ?? 500 );
 			$response    = $res['response'] ?? '';
@@ -581,13 +582,15 @@ class Cron {
 	 * @return bool True when the HTTP request completes with 200.
 	 */
 	public function lasso_lite_check_lite_user() {
+		$this->sync_dormant_reengage_flag();
+
 		try {
 			$admin_email = get_option( 'admin_email' );
 			if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
 				return false;
 			}
 
-			$url     = Constant::LASSO_LINK . '/plugin/lite/users/' . rawurlencode( $admin_email );
+			$url     = Constant::get_lasso_link() . '/plugin/lite/users/' . rawurlencode( $admin_email );
 			$headers = Helper::get_headers();
 			$res     = Helper::send_request( 'get', $url, array(), $headers );
 
@@ -596,6 +599,26 @@ class Cron {
 		} catch ( \Exception $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * Mark dormant re-engage eligibility when the site has zero links and a valid admin email.
+	 *
+	 * @return void
+	 */
+	public function sync_dormant_reengage_flag() {
+		$admin_email = get_option( 'admin_email' );
+		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+			Helper::update_option( Constant::LASSO_OPTION_DORMANT_REENGAGE_ACTIVE, '0' );
+			return;
+		}
+
+		if ( 0 === (int) SURL::total() ) {
+			Helper::update_option( Constant::LASSO_OPTION_DORMANT_REENGAGE_ACTIVE, '1' );
+			return;
+		}
+
+		Helper::update_option( Constant::LASSO_OPTION_DORMANT_REENGAGE_ACTIVE, '0' );
 	}
 
 	/**

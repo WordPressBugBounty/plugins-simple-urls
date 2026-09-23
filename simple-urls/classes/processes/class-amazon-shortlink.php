@@ -87,11 +87,13 @@ class Amazon_Shortlink extends Process {
 			
 			$amazon_db = $lasso_amazon_api->get_amazon_product_from_db( $product_id );
 			if ( $amazon_db ) {
-				$product_name = $amazon_db['default_product_name'] ?? '';
-				$product_image = $amazon_db['default_image'] ?? '';
-				$product_price = $amazon_db['latest_price'] ?? '';
+				$product_name            = $amazon_db['default_product_name'] ?? '';
+				$product_image           = $amazon_db['default_image'] ?? '';
+				$product_price           = $amazon_db['latest_price'] ?? '';
+				$customer_price_override = get_post_meta( $lasso_id, Meta_Enum::CUSTOMER_PRICE_OVERRIDE, true );
+				$customer_image_override = get_post_meta( $lasso_id, Meta_Enum::CUSTOMER_IMAGE_OVERRIDE, true );
 
-				if ( $product_price ) {
+				if ( $product_price && ! $customer_price_override ) {
 					update_post_meta( $lasso_id, Meta_Enum::PRICE, $product_price );
 				}
 
@@ -105,7 +107,7 @@ class Amazon_Shortlink extends Process {
 				}
 
 				$db_thumbnail = get_post_meta( $lasso_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, true );
-				if ( $product_image && $db_thumbnail === Constant::DEFAULT_THUMBNAIL ) {
+				if ( $product_image && ! $customer_image_override && Constant::DEFAULT_THUMBNAIL === $db_thumbnail ) {
 					update_post_meta( $lasso_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, $product_image );
 				}
 			}

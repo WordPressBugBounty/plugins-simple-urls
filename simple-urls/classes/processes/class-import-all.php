@@ -67,7 +67,16 @@ class Import_All extends Process {
 
 		$lasso_import = new Lasso_Import();
 		if ( $import_id && $post_type ) {
-			$lasso_import->process_single_link_data( $import_id, $post_type, $post_title, $import_permalink );
+			list( $status, $import_data ) = $lasso_import->process_single_link_data( $import_id, $post_type, $post_title, $import_permalink );
+			if ( ! $status ) {
+				Lasso_Import::record_import_failure(
+					$import_id,
+					$post_type,
+					$post_title,
+					'Bulk import could not convert this link.',
+					'retry_single_import'
+				);
+			}
 		}
 
 		$this->set_processing_runtime();

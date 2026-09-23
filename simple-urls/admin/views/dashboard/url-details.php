@@ -58,11 +58,20 @@ if ( isset( $lasso_lite_url->category ) ) {
 	}
 }
 
-$price_disabled         = $is_amazon_link ? 'disabled' : '';
-$is_amazon_configured   = Amazon_Api::is_amazon_setting_configured();
-$is_amazon_configured_attr = $is_amazon_configured ? '1' : '0';
-$stored_thumbnail       = get_post_meta( $post_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, true );
-$show_get_amazon_images_upsell = Helper::should_show_get_amazon_images_upsell(
+// Amazon price must stay editable so the first customer override can be saved.
+$price_disabled                 = '';
+$is_amazon_configured           = Amazon_Api::is_amazon_setting_configured();
+$is_amazon_configured_attr      = $is_amazon_configured ? '1' : '0';
+// Refresh AJAX binds to #lasso-render-image. Enable for Creators/PA-API or unlicensed Marketplace free-data.
+$license_serial_for_refresh     = trim( (string) ( $lasso_lite_settings['license_serial'] ?? '' ) );
+$can_refresh_amazon_image       = $is_amazon_configured
+	|| (
+		'' !== (string) $amazon_product_id
+		&& '' === $license_serial_for_refresh
+		&& ! Amazon_Api::is_amazon_creators_configured( $lasso_lite_settings )
+	);
+$stored_thumbnail               = get_post_meta( $post_id, Meta_Enum::LASSO_LITE_CUSTOM_THUMBNAIL, true );
+$show_get_amazon_images_upsell  = Helper::should_show_get_amazon_images_upsell(
 	$is_amazon_link,
 	$stored_thumbnail,
 	$is_amazon_configured
@@ -84,6 +93,7 @@ $defer_get_amazon_images_upsell = Helper::should_defer_get_amazon_images_upsell(
 		data-disable-amazon-notification="<?php echo $disable_amazon_notification; ?>"
 		data-amazon-access-key-id="<?php echo $amazon_access_key_id; ?>"
 		data-is-amazon-configured="<?php echo esc_attr( $is_amazon_configured_attr ); ?>"
+		data-can-refresh-amazon-image="<?php echo $can_refresh_amazon_image ? '1' : '0'; ?>"
 	>
 		<?php require Helper::get_path_views_folder() . 'dashboard/header.php'; ?>
 		<form id="url-details" autocomplete="off">
@@ -284,7 +294,7 @@ $defer_get_amazon_images_upsell = Helper::should_defer_get_amazon_images_upsell(
 									<label data-tooltip="Click the button below to grab an updated image from Amazon."><strong>Amazon Image</strong> <i class="far fa-info-circle light-purple"></i></label>
 									<div class="d-flex flex-nowrap w-100 align-items-stretch lasso-amazon-refresh-row">
 										<input type="text" id="thumbnail_image_url" class="form-control form-control-append flex-grow-1 lasso-amazon-image-input" value="<?php echo esc_html( $lasso_lite_url->image_src ); ?>" readonly>
-										<a href="#" id="<?php echo $is_amazon_configured ? 'lasso-render-image' : 'lasso-lite-disabled'; ?>" class="btn btn-append refresh-image flex-shrink-0 d-flex align-items-center justify-content-center">Refresh</a>
+										<a href="#" id="<?php echo $can_refresh_amazon_image ? 'lasso-render-image' : 'lasso-lite-disabled'; ?>" class="btn btn-append refresh-image flex-shrink-0 d-flex align-items-center justify-content-center">Refresh</a>
 									</div>
 								</div>
 							</div>

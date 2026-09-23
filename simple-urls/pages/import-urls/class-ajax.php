@@ -35,6 +35,8 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_revert_single_link', array( $this, 'lasso_revert_single_link' ) );
 
 		add_action( 'wp_ajax_lasso_lite_is_import_all_processing', array( $this, 'lasso_is_import_all_processing' ) );
+		add_action( 'wp_ajax_lasso_lite_import_recovery_diagnostics', array( $this, 'lasso_import_recovery_diagnostics' ) );
+		add_action( 'wp_ajax_lasso_lite_import_safe_reset', array( $this, 'lasso_import_safe_reset' ) );
 	}
 
 	/**
@@ -103,6 +105,15 @@ class Ajax {
 		$lasso_import = new Lasso_Import();
 
 		list($status, $import_data) = $lasso_import->process_single_link_data( $import_id, $post_type, $post_title, $import_permalink );
+		if ( ! $status ) {
+			Lasso_Import::record_import_failure(
+				$import_id,
+				$post_type,
+				$post_title,
+				'Single import could not convert this link.',
+				'retry_single_import'
+			);
+		}
 
 		wp_send_json_success(
 			array(
@@ -142,6 +153,45 @@ class Ajax {
 		wp_send_json_success(
 			array(
 				'is_processing' => ( new Import_All() )->get_total_remaining() > 0, // ? Check total remaining instead of method "is_process_running()" to cover the case "wp-cron is not working"
+			)
+		);
+	}
+
+	/**
+	 * Read-only import recovery diagnostics for the Import admin screen.
+	 */
+	public function lasso_import_recovery_diagnostics() {
+		Helper::verify_access_and_nonce();
+
+		$diagnostics = ( new Lasso_Import() )->get_recovery_diagnostics();
+		wp_send_json_success( $diagnostics );
+	}
+
+	/**
+	 * Operator-initiated safe reset of bulk import queue state (no destination rewrites).
+	 */
+	public function lasso_import_safe_reset() {
+		Helper::verify_access_and_nonce();
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing
+		$post    = Helper::POST();
+		$confirm = isset( $post['confirm'] ) ? intval( $post['confirm'] ) : 0;
+		if ( 1 !== $confirm ) {
+			wp_send_json_error(
+				array(
+					'message' => 'Confirmation required to reset import queue state.',
+				),
+				400
+			);
+		}
+
+		$clear_failures = ! empty( $post['clear_failures'] );
+		Lasso_Import::safe_reset_import_state( $clear_failures );
+
+		wp_send_json_success(
+			array(
+				'status'      => true,
+				'diagnostics' => ( new Lasso_Import() )->get_recovery_diagnostics(),
 			)
 		);
 	}

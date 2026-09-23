@@ -106,7 +106,7 @@ class Estimate_Earning {
 			return rtrim( LASSO_LITE_API_BASE, '/' );
 		}
 
-		return rtrim( Constant::LASSO_LINK, '/' );
+		return Constant::get_lasso_link();
 	}
 
 	/**

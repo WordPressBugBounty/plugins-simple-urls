@@ -8,6 +8,7 @@
 namespace LassoLite\Admin;
 
 use LassoLite\Classes\Enum;
+use LassoLite\Classes\Helper;
 
 // ? wp-includes/default-constants.php
 if ( ! defined( 'SECURE_AUTH_COOKIE' ) ) {
@@ -89,6 +90,7 @@ class Constant {
 
 	const LASSO_INTERCOM_APP_ID = 'az01idfr';
 	const JWT_SECRET_KEY        = '6KpRcC60EgicHWhyEIqj';
+	/** Default FastAPI base when wp-config does not define LASSO_LINK. Use {@see self::get_lasso_link()}. */
 	const LASSO_LINK            = 'https://lasso.link';
 	const SSL_VERIFY            = true;
 	const TIME_OUT              = 30;
@@ -112,6 +114,9 @@ class Constant {
 	const LASSO_LITE_NONCE                        = 'simple-urls-nonce';
 	const LASSO_OPTION_AFFILIATE_PROMOTIONS       = 'affiliate_promotions';
 	const LASSO_OPTION_DISMISS_PROMOTIONS         = 'dismiss_aff_promotions_notice';
+	/** Daily cron: site has zero published links and a valid admin email. */
+	const LASSO_OPTION_DORMANT_REENGAGE_ACTIVE    = 'dormant_reengage_active';
+	const LASSO_OPTION_DISMISS_DORMANT_REENGAGE   = 'dismiss_dormant_reengage_notice';
 	const LASSO_OPTION_IS_CONNECTED_AFFILIATE     = 'is_connected_aff';
 	const LASSO_CHECKOUT_URL_DEFAULT              = 'https://getlasso.co/upgrade/?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress';
 
@@ -119,6 +124,13 @@ class Constant {
 	const OPTION_REALTIME_CHANNEL_ID    = 'lasso_lite_realtime_channel_id';
 	const OPTION_REALTIME_INGEST_SECRET = 'lasso_lite_realtime_ingest_secret';
 	const OPTION_REALTIME_CLICK_QUEUE   = 'lasso_lite_realtime_click_queue';
+
+	/** Activation funnel: fire install on next admin load after activation. */
+	const OPTION_FUNNEL_PENDING_INSTALL = 'lasso_lite_funnel_pending_install';
+	/** Activation funnel: one-time steps already recorded (install, welcome_view, …). */
+	const OPTION_FUNNEL_EVENTS_RECORDED = 'lasso_lite_funnel_events_recorded';
+	/** Activation funnel: Hub forwards awaiting successful POST (retry on failure). */
+	const OPTION_FUNNEL_FORWARD_QUEUE   = 'lasso_lite_funnel_forward_queue';
 
 	/** Default Hub app URL; use {@see self::get_lasso_hub_url()} for the effective base URL. */
 	const LASSO_HUB_URL         = 'https://app.getlasso.co';
@@ -220,6 +232,24 @@ class Constant {
 	);
 
 	/**
+	 * Effective FastAPI / lasso.link base (no trailing slash).
+	 * If wp-config defines LASSO_LINK, use that; otherwise {@see self::LASSO_LINK}.
+	 *
+	 * @return string
+	 */
+	public static function get_lasso_link() {
+		// constant() avoids resolving bare LASSO_LINK to this class const.
+		if ( defined( 'LASSO_LINK' ) ) {
+			$override = constant( 'LASSO_LINK' );
+			if ( is_string( $override ) && '' !== trim( $override ) ) {
+				return rtrim( $override, '/' );
+			}
+		}
+
+		return rtrim( self::LASSO_LINK, '/' );
+	}
+
+	/**
 	 * Hub base URL without trailing slash. Override via `LASSO_LITE_HUB_URL` (wp-config.php) or `lasso_lite_hub_url`.
 	 *
 	 * @return string
@@ -233,6 +263,25 @@ class Constant {
 			$url = (string) apply_filters( 'lasso_lite_hub_url', $url );
 		}
 		return rtrim( $url, '/' );
+	}
+
+	/**
+	 * Lite upgrade URL with a stable cta_id for attribution (#689).
+	 *
+	 * @param string $cta_id Stable button identifier.
+	 * @return string
+	 */
+	public static function get_lasso_upgrade_url( $cta_id ) {
+		if ( ! is_string( $cta_id ) || '' === $cta_id ) {
+			return self::LASSO_UPGRADE_URL;
+		}
+
+		return Helper::add_params_to_url(
+			self::LASSO_UPGRADE_URL,
+			array(
+				'cta_id' => $cta_id,
+			)
+		);
 	}
 }
 

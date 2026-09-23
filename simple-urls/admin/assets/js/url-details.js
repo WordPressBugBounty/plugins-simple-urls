@@ -832,6 +832,8 @@ jQuery(document).ready(function () {
         let is_amazon_link = $lite_container.data("is-amazon-link") === 1;
         let is_amazon_configured =
             $lite_container.data("is-amazon-configured") === 1;
+        let can_refresh_amazon_image =
+            $lite_container.data("can-refresh-amazon-image") === 1;
         let settings_url =
             (lassoLiteOptionsData.setup_progress &&
                 lassoLiteOptionsData.setup_progress.setting_amz_url) ||
@@ -842,7 +844,8 @@ jQuery(document).ready(function () {
                 lassoLiteOptionsData.simple_urls_slug +
                 "-settings-amazon";
 
-        if (!is_amazon_link || is_amazon_configured) {
+        // Marketplace free-data Refresh works without Creators/PA-API — skip nag.
+        if (!is_amazon_link || is_amazon_configured || can_refresh_amazon_image) {
             return;
         }
 

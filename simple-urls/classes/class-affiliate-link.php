@@ -8,6 +8,7 @@
 namespace LassoLite\Classes;
 
 use LassoLite\Admin\Constant;
+use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Lasso_DB;
 use LassoLite\Classes\Meta_Enum;
@@ -114,13 +115,17 @@ class Affiliate_Link {
 			if ( $is_amazon_page ) {
 				$product_id = Amazon_Api::get_product_id_by_url( $target_url );
 				if ( $product_id ) {
-					$lasso_amazon_api = new Amazon_Api();
-					$product          = $lasso_amazon_api->get_amazon_product_from_db( $product_id );
+					$lasso_amazon_api           = new Amazon_Api();
+					$product                    = $lasso_amazon_api->get_amazon_product_from_db( $product_id );
+					$customer_price_override    = get_post_meta( $post_id, Meta_Enum::CUSTOMER_PRICE_OVERRIDE, true );
+					$customer_image_override    = get_post_meta( $post_id, Meta_Enum::CUSTOMER_IMAGE_OVERRIDE, true );
 
 					if ( $product ) {
-						$price                = $product['latest_price'];
+						if ( ! $customer_price_override ) {
+							$price = $product['latest_price'];
+						}
 						$display_last_updated = gmdate( 'm/d/Y h:i a T', strtotime( $product['last_updated'] ) );
-						if ( Constant::DEFAULT_THUMBNAIL === $image_src ) {
+						if ( ! $customer_image_override && Constant::DEFAULT_THUMBNAIL === $image_src ) {
 							$image_src = $product['default_image'];
 						}
 					}
@@ -209,6 +214,24 @@ class Affiliate_Link {
 		$url  = esc_url_raw( $url );
 
 		$is_ajax_request = wp_doing_ajax() && '' === $link;
+
+		$marketplace_asin = '';
+		if ( $is_ajax_request && is_array( $post ) ) {
+			$marketplace_asin = sanitize_text_field( wp_unslash( $post['marketplace_asin'] ?? '' ) );
+		}
+		if ( '' !== $marketplace_asin ) {
+			$marketplace_url = '';
+			if ( is_array( $post ) && ! empty( $post['marketplace_url'] ) ) {
+				$marketplace_url = esc_url_raw( wp_unslash( $post['marketplace_url'] ) );
+			}
+			if ( '' === $marketplace_url && ! empty( $post['marketplace_target_url'] ) ) {
+				$marketplace_url = esc_url_raw( wp_unslash( $post['marketplace_target_url'] ) );
+			}
+			if ( '' === $marketplace_url ) {
+				$marketplace_url = 'https://www.amazon.com/dp/' . rawurlencode( $marketplace_asin );
+			}
+			$url = $marketplace_url;
+		}
 
 		if ( '' === $url ) {
 			if ( $is_ajax_request ) {
@@ -333,11 +356,19 @@ class Affiliate_Link {
 		);
 
 		$data['settings'] = $affiliate_link;
-		$should_complete_onboarding = ( 0 === intval( SURL::total() ) );
-		$post_id                    = $this->save_lasso_url( $data );
-		$is_first_url               = self::is_first_link();
-		if ( $should_complete_onboarding && ! is_wp_error( $post_id ) && intval( $post_id ) > 0 ) {
-			Helper::mark_onboarding_welcome_complete();
+		$post_id      = $this->save_lasso_url( $data );
+		$is_first_url = self::is_first_link();
+		if ( ! is_wp_error( $post_id ) && intval( $post_id ) > 0 ) {
+			Helper::maybe_mark_onboarding_welcome_complete_after_first_link();
+		}
+
+		if ( $is_first_url && ! is_wp_error( $post_id ) && intval( $post_id ) > 0 ) {
+			Activation_Funnel::track_admin_event(
+				Activation_Funnel::EVENT_FIRST_LINK,
+				array(
+					'post_id' => (int) $post_id,
+				)
+			);
 		}
 
 		if ( '' !== $link ) {
@@ -488,6 +519,28 @@ class Affiliate_Link {
 			$post_title = $update_title ? ( $product['default_product_name'] ?? $product['title'] ?? $post_title ) : $post_title;
 			$thumbnail  = $update_thumbnail ? ( $product['default_image'] ?? ( $product['image'] ?? $thumbnail ) ) : $thumbnail;
 			$price      = ! $price ? ( $product['price'] ?? $price ) : $price;
+
+			$customer_price_override = get_post_meta( $post_id, Meta_Enum::CUSTOMER_PRICE_OVERRIDE, true );
+			$customer_image_override = get_post_meta( $post_id, Meta_Enum::CUSTOMER_IMAGE_OVERRIDE, true );
+			$submitted_price         = trim( (string) ( $post_data['price'] ?? '' ) );
+			if ( isset( $post_data['price'] ) && '' !== $submitted_price ) {
+				$db_price = $product['latest_price'] ?? ( $product['price'] ?? '' );
+				if ( $submitted_price !== (string) $db_price ) {
+					$customer_price_override = '1';
+				}
+			}
+			if ( Helper::cast_to_boolean( $post_data['customer_price_override'] ?? false ) ) {
+				$customer_price_override = '1';
+			}
+			if ( $thumbnail_id > 0 || ( ! $update_thumbnail && Constant::DEFAULT_THUMBNAIL !== $thumbnail ) ) {
+				$customer_image_override = '1';
+			}
+			if ( Helper::cast_to_boolean( $post_data['customer_image_override'] ?? false ) ) {
+				$customer_image_override = '1';
+			}
+		} else {
+			$customer_price_override = '';
+			$customer_image_override = '';
 		}
 
 		$lasso_lite_post = array(
@@ -505,6 +558,8 @@ class Affiliate_Link {
 				Meta_Enum::DESCRIPTION                 => self::save_scalar_html( $description ),
 				Meta_Enum::SHOW_PRICE                  => $show_price,
 				Meta_Enum::PRICE                       => $price,
+				Meta_Enum::CUSTOMER_PRICE_OVERRIDE     => $customer_price_override ? '1' : '',
+				Meta_Enum::CUSTOMER_IMAGE_OVERRIDE     => $customer_image_override ? '1' : '',
 				Meta_Enum::ENABLE_SPONSORED            => $enable_sponsored,
 				Meta_Enum::SHOW_DISCLOSURE             => $show_disclosure,
 				Meta_Enum::BADGE_TEXT                  => self::save_scalar_string( $badge_text ),
@@ -528,6 +583,8 @@ class Affiliate_Link {
 		}
 
 		if ( ! is_wp_error( $post_id ) && $post_id > 0 ) {
+			Helper::maybe_mark_onboarding_welcome_complete_after_first_link();
+
 			// ? update categories
 			wp_set_object_terms( $post_id, $term, Constant::LASSO_CATEGORY );
 			$lasso_db->update_url_details( $post_id, $surl_redirect, $affiliate_homepage, $is_opportunity, $product_id, $product_type );

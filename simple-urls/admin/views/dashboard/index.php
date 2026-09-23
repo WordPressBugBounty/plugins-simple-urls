@@ -5,14 +5,16 @@
  * @package Dashboard
  */
 
+use LassoLite\Admin\Constant;
 use LassoLite\Classes\Config;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\SURL;
 
-$dashboard_link_count = SURL::total();
-$link_search_txt      = esc_html( $_GET['link-search-input'] ?? '' );
+$dashboard_link_count            = SURL::total();
+$suppress_upgrade_heavy_chrome   = Helper::should_suppress_upgrade_heavy_chrome();
+$link_search_txt                 = esc_html( $_GET['link-search-input'] ?? '' );
 $lasso_account_email  = Helper::get_option( LassoLite\Admin\Constant::LASSO_ACCOUNT_EMAIL, '' );
 $lasso_account_user_id = intval( Helper::get_option( LassoLite\Admin\Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
 // Same as header: app signup/login only; is_connected_aff alone must not skip the create-account modal.
@@ -85,6 +87,7 @@ $is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_acco
 </section>
 
 <!-- Lasso Lite Link Issues Snapshot Alert Box -->
+<?php if ( ! $suppress_upgrade_heavy_chrome ) : ?>
 <div id="lasso-lite-link-issues-snapshot-box" class="lasso-lite-link-issues-snapshot">
 	<button type="button" class="close-snapshot close-link-issues-snapshot" aria-label="Close">
 		<span aria-hidden="true">&times;</span>
@@ -109,11 +112,12 @@ $is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_acco
 				<strong class="snapshot-label">Potential earnings lost</strong>
 			</div>
 		</div>
-		<a class="lasso-lite-upgrade-btn" href="<?php echo esc_url( LassoLite\Admin\Constant::LASSO_CHECKOUT_URL_DEFAULT ); ?>" target="_blank" rel="noopener noreferrer">
+		<a class="lasso-lite-upgrade-btn" href="<?php echo esc_url( Constant::get_lasso_upgrade_url( 'dashboard_upgrade_fix_it' ) ); ?>" target="_blank" rel="noopener noreferrer">
 			Fix It
 		</a>
 	</div>
 </div>
+<?php endif; ?>
 
 <div id="lasso-lite-click-snapshot-box" class="lasso-lite-click-snapshot">
 	<button type="button" class="close-snapshot" aria-label="Close">
@@ -164,6 +168,7 @@ if ( $is_lasso_app_account_connected ) {
 
 <?php echo Helper::wrapper_js_render( 'dashboard-list', Helper::get_path_views_folder() . Enum::PAGE_DASHBOARD . '/list-jsrender.html' )?>
 
+<?php if ( ! $suppress_upgrade_heavy_chrome ) : ?>
 <div class="modal fade lasso-lite-pro-modal" id="lasso-lite-pro-modal" tabindex="-1" role="dialog" aria-hidden="true" data-backdrop="true" data-keyboard="true">
 	<div class="modal-dialog modal-dialog-centered" role="document">
 		<div class="modal-content text-center">
@@ -171,9 +176,10 @@ if ( $is_lasso_app_account_connected ) {
 				<span aria-hidden="true">&times;</span>
 			</button>
 			<h3 class="modal-title" id="lasso-lite-pro-modal-title">Link alerts are currently disabled</h3>
-			<a class="btn lasso-lite-upgrade-btn" href="https://getlasso.co/upgrade/?utm_campaign=lite-upgrade&utm_source=lasso-lite&utm_medium=wordpress" target="_blank" rel="noopener noreferrer">Enable Now</a>
+			<a class="btn lasso-lite-upgrade-btn" href="<?php echo esc_url( Constant::get_lasso_upgrade_url( 'dashboard_upgrade_primary' ) ); ?>" target="_blank" rel="noopener noreferrer">Enable Now</a>
 		</div>
 	</div>
 </div>
+<?php endif; ?>
 
 <?php Config::get_footer(); ?>

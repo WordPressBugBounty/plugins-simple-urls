@@ -8,6 +8,8 @@
 namespace LassoLite\Models;
 
 use LassoLite\Admin\Constant;
+use LassoLite\Classes\Amazon_Api;
+use LassoLite\Classes\Meta_Enum;
 
 use LassoLite\Models\Url_Details;
 
@@ -160,5 +162,76 @@ class Amazon_Products extends Model {
 		$prepare = Model::prepare( $sql, $field_value, $amazon_id ); // phpcs:ignore
 
 		return Model::query( $prepare ); // phpcs:ignore
+	}
+
+	/**
+	 * Whether any published Lite link flagged a customer price override for this ASIN.
+	 *
+	 * @param string $amazon_id Amazon product id.
+	 */
+	public static function product_has_customer_price_override( $amazon_id ) {
+		return self::product_has_customer_override_meta( $amazon_id, Meta_Enum::CUSTOMER_PRICE_OVERRIDE );
+	}
+
+	/**
+	 * Whether any published Lite link flagged a customer image override for this ASIN.
+	 *
+	 * @param string $amazon_id Amazon product id.
+	 */
+	public static function product_has_customer_image_override( $amazon_id ) {
+		return self::product_has_customer_override_meta( $amazon_id, Meta_Enum::CUSTOMER_IMAGE_OVERRIDE );
+	}
+
+	/**
+	 * Whether a linked Lite post has the given customer override meta flag.
+	 *
+	 * @param string $amazon_id Amazon product id.
+	 * @param string $meta_key  Post meta key for the override flag.
+	 */
+	private static function product_has_customer_override_meta( $amazon_id, $meta_key ) {
+		if ( '' === (string) $amazon_id ) {
+			return false;
+		}
+
+		$url_details = new Url_Details();
+		$posts       = Model::get_wp_table_name( 'posts' );
+		$postmeta    = Model::get_wp_table_name( 'postmeta' );
+		$sql         = '
+			SELECT 1
+			FROM ' . $url_details->get_table_name() . ' AS ud
+				INNER JOIN ' . $posts . ' AS p ON ud.lasso_id = p.ID
+				INNER JOIN ' . $postmeta . ' AS pm ON pm.post_id = p.ID
+			WHERE ud.product_id = %s
+				AND ud.product_type = %s
+				AND p.post_type = %s
+				AND p.post_status = %s
+				AND pm.meta_key = %s
+				AND pm.meta_value = %s
+			LIMIT 1
+		';
+		$prepare     = Model::prepare(
+			$sql,
+			$amazon_id,
+			Amazon_Api::PRODUCT_TYPE,
+			Constant::LASSO_POST_TYPE,
+			'publish',
+			$meta_key,
+			'1'
+		);
+
+		return (bool) Model::get_var( $prepare );
+	}
+
+	/**
+	 * Persist free Marketplace image/price from the eligible BLS path.
+	 *
+	 * @param array       $product    Product fields for Amazon_Api::update_amazon_product_in_db().
+	 * @param bool|string $updated_at Optional updated timestamp.
+	 * @return bool
+	 */
+	public static function store_marketplace_free_product( $product, $updated_at = false ) {
+		$api = new Amazon_Api();
+
+		return (bool) $api->update_amazon_product_in_db( $product, $updated_at, true );
 	}
 }

@@ -1,6 +1,6 @@
-=== Lasso Lite - Affiliate Link Manager & Product Displays ===
+=== Lasso Lite (Simple URLs) ===
 Contributors: lassoanalytics, mollusk, khangwithlasso, phucdolasso, chuongwithlasso, triwithlasso, caitlinwithlasso, genewithlasso, lassoteam
-Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=repo-description
+Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wporg&utm_campaign=repo-description
 Tags: affiliate link manager, affiliate links, amazon affiliate, link cloaking, product displays
 Requires at least: 5.1
 Requires PHP: 7.2
@@ -9,13 +9,15 @@ Stable tag: trunk
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Stop pasting long affiliate URLs into every post. Cloak your links, add product displays, and track clicks in WordPress.
+Free Lasso Lite (Simple URLs): cloak affiliate links, add product displays in WordPress, and connect Lasso Hub when you want clearer click reports.
 
 == Description ==
 
+**Lasso Lite** is the free WordPress affiliate plugin from Lasso — the same **Simple URLs** listing you may already know. Cloak links behind short URLs on your site, add **product displays** to posts and pages, and connect **Lasso Hub** when you want clearer reporting — without paying for core cloaking and displays.
+
 Managing affiliate links gets messy fast. You paste a long tracking URL into a post, then another, then another. When an offer changes, you dig through old content hoping you catch every instance.
 
-Lasso Lite is a free WordPress plugin for people who promote products with those links (including Amazon Associates). It keeps your links in one dashboard, cloaks them behind short URLs on your site, and turns them into product displays with images, prices, and buttons.
+Lasso Lite keeps your links in one dashboard, cloaks them behind short URLs on your site, and turns them into product displays with images, prices, and buttons (including Amazon Associates and other programs).
 
 Example: use `yoursite.com/go/best-kayak` instead of a long Amazon URL. Change the destination once, and every place that link appears stays current.
 
@@ -77,7 +79,7 @@ Import your existing links, tidy up groups, and keep publishing. No need to rebu
 
 ### When you need more later
 
-Lasso Lite covers everyday link management on its own. If you later want deeper reporting, link monitoring, or richer display layouts, you can move up to [Lasso](https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=repo-upgrade). Your existing links and displays come with you.
+Lasso Lite covers everyday link management on its own. If you later want deeper reporting, link monitoring, or richer display layouts, you can move up to [Lasso](https://getlasso.co/?utm_source=lasso-lite&utm_medium=wporg&utm_campaign=repo-upgrade). Your existing links and displays come with you.
 
 ### Help & support
 
@@ -129,6 +131,43 @@ Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.o
 3. Browse every link from one dashboard. Find and update offers without digging through old posts.
 
 == Changelog ==
+
+= 159 =
+* Released: September 23, 2026
+* Add Link modal with URL and Marketplace tabs, including Marketplace search and create
+* Unlicensed sites can force Marketplace/BLS data and Refresh
+* Manual overrides keep your Amazon image and price across cron and store updates
+* Clearer first-link onboarding before upgrade prompts
+* Prefer Marketplace product data for Amazon add-link and Refresh
+* Link-integrity self-check and import recovery diagnostics
+* Fix onboarding Continue loop that bounced back to the dashboard
+* Point the in-plugin review ask at the WordPress.org form
+
+= 158 =
+* Released: September 10, 2026
+* More reliable Amazon Creators credential validate/save during onboarding
+* Cron scheduling no longer drops evening due minutes on the hour-1 tick
+* Upgraded Lite sites are no longer hashed into UTC hour 0 for cron load
+
+= 157 =
+* Released: August 26, 2026
+* More reliable WordPress.org plugin updates with stricter release packaging checks before deploy
+
+= 156 =
+* Released: August 26, 2026
+* Maintenance release with improved plugin packaging for WordPress.org distribution
+
+= 155 =
+* Released: August 26, 2026
+* Analytics beacons use a first-party POST `/js/e` proxy so click tracking stays more reliable when ad blockers are present
+* Background cron work is spread across UTC load slots (hashed by site) with an evening BLS catch-up after midnight for more even scheduling
+* Skip missing background process classes so cron does not fatal when a process class is unavailable
+* Safer WP-cron bucket scheduling when cron entries are not in the expected array shape
+
+= 154 =
+* Released: August 18, 2026
+* WordPress 7.1 compatibility (Tested up to)
+* Onboarding step persistence improvements
 
 = 153 =
 * Released: August 5, 2026

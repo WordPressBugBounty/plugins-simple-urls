@@ -70,6 +70,12 @@ $onboarding_resume_step  = Helper::get_onboarding_current_step( $should_show_imp
 				<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/import-step.php' ); ?>
 			<?php endif; ?>
 
+			<!-- UPSELL (next step after Imports / Connect) -->
+			<?php echo Helper::include_with_variables( Helper::get_path_views_folder() . 'onboarding/upsell-step.php', array(
+				'lasso_options'           => $lasso_options,
+				'should_show_import_step' => $should_show_import_step
+			) ); ?>
+
 			</div>
 		</div>
 	</div>

@@ -22,6 +22,7 @@ jQuery(document).ready(function() {
 			action: 'lasso_lite_store_settings',
 			nonce: lassoLiteOptionsData.optionsNonce,
 			settings: settings,
+			onboarding_ftue: true,
 		};
 
 		// Send the POST request

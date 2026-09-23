@@ -16,6 +16,8 @@ use LassoLite\Classes\Helper as Lasso_Helper;
 use LassoLite\Classes\Lasso_DB;
 use LassoLite\Classes\Setting as Lasso_Setting;
 
+use LassoLite\Classes\Processes\Import_All;
+use LassoLite\Classes\Processes\Process;
 use LassoLite\Models\Model;
 use LassoLite\Models\Revert;
 
@@ -25,6 +27,8 @@ use stdClass;
  * Import
  */
 class Import {
+	const FAILURE_LOG_OPTION           = 'lasso_lite_import_failure_log';
+	const FAILURE_LOG_LIMIT            = 50;
 	const OBJECT_KEY                   = 'lasso_import';
 	const PRETTY_LINK_CATEGORY_SLUG    = 'pretty-link-category';
 	const PRETTY_LINK_TAG_SLUG         = 'pretty-link-tag';
@@ -852,5 +856,151 @@ class Import {
 		$target_url = Model::get_var( $sql );
 
 		return $target_url;
+	}
+
+	/**
+	 * Append a failed import attempt for recovery diagnostics (does not mutate links).
+	 *
+	 * @param int    $import_id        Source post id.
+	 * @param string $post_type        Source post type.
+	 * @param string $post_title       Source title.
+	 * @param string $reason           Human-readable failure reason.
+	 * @param string $required_action  Operator hint (e.g. retry_single_import).
+	 */
+	public static function record_import_failure( $import_id, $post_type, $post_title, $reason = '', $required_action = 'retry_single_import' ) {
+		$import_id = intval( $import_id );
+		if ( $import_id <= 0 ) {
+			return;
+		}
+
+		$log = get_option( self::FAILURE_LOG_OPTION, array() );
+		if ( ! is_array( $log ) ) {
+			$log = array();
+		}
+
+		$entry = array(
+			'import_id'       => $import_id,
+			'post_type'       => is_string( $post_type ) ? $post_type : '',
+			'post_title'      => is_string( $post_title ) ? $post_title : '',
+			'reason'          => '' !== $reason ? $reason : 'Import could not complete for this link.',
+			'required_action' => '' !== $required_action ? $required_action : 'retry_single_import',
+			'recorded_at'     => gmdate( 'c' ),
+		);
+
+		$filtered = array();
+		foreach ( $log as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			if ( intval( $row['import_id'] ?? 0 ) === $import_id ) {
+				continue;
+			}
+			$filtered[] = $row;
+		}
+		$filtered[] = $entry;
+		if ( count( $filtered ) > self::FAILURE_LOG_LIMIT ) {
+			$filtered = array_slice( $filtered, -self::FAILURE_LOG_LIMIT );
+		}
+
+		update_option( self::FAILURE_LOG_OPTION, $filtered, false );
+	}
+
+	/**
+	 * Failed import rows for diagnostics.
+	 *
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function get_failure_log() {
+		$log = get_option( self::FAILURE_LOG_OPTION, array() );
+		return is_array( $log ) ? $log : array();
+	}
+
+	/**
+	 * Clear persisted failure log (safe reset helper).
+	 */
+	public static function clear_failure_log() {
+		delete_option( self::FAILURE_LOG_OPTION );
+	}
+
+	/**
+	 * Read-only import recovery snapshot for admin diagnostics.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public function get_recovery_diagnostics() {
+		$import_all        = new Import_All();
+		$remaining         = $import_all->get_total_remaining();
+		$is_processing     = $remaining > 0;
+		$restart_attempted = intval( get_option( Process::OPTION_RESTART_ATTEMPTED, 0 ) );
+		$bulk_enabled      = '1' === get_option( Import_All::OPTION, '0' );
+		$failed_items      = self::get_failure_log();
+		$queue_stuck       = $restart_attempted >= Process::RESTART_ATTEMPTED_LIMIT && ! $import_all->is_queue_empty();
+
+		$state = 'idle';
+		if ( $queue_stuck ) {
+			$state = 'stuck';
+		} elseif ( $is_processing ) {
+			$state = 'running';
+		} elseif ( ! empty( $failed_items ) ) {
+			$state = 'failed_partial';
+		}
+
+		$required_action = 'none';
+		if ( $queue_stuck ) {
+			$required_action = 'safe_reset_import_queue';
+		} elseif ( $is_processing ) {
+			$required_action = 'wait_for_bulk_import';
+		} elseif ( ! empty( $failed_items ) ) {
+			$required_action = 'review_failed_items';
+		}
+
+		$logs = array();
+		foreach ( $failed_items as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+			$title  = $row['post_title'] ?? '';
+			$logs[] = sprintf(
+				'%s (ID %d): %s',
+				'' !== $title ? $title : 'Import item',
+				intval( $row['import_id'] ?? 0 ),
+				$row['reason'] ?? ''
+			);
+		}
+
+		return array(
+			'state'                => $state,
+			'is_processing'        => $is_processing,
+			'bulk_import_enabled'  => $bulk_enabled,
+			'filter_plugin'        => get_option( Import_All::FILTER_PLUGIN, '' ),
+			'progress'             => array(
+				'total'     => $import_all->get_total(),
+				'completed' => $import_all->get_total_completed(),
+				'remaining' => $remaining,
+			),
+			'failed_items'         => $failed_items,
+			'required_action'      => $required_action,
+			'retry_available'      => ! empty( $failed_items ),
+			'safe_reset_available' => $queue_stuck || $is_processing || $bulk_enabled,
+			'restart_attempted'    => $restart_attempted,
+			'logs'                 => $logs,
+		);
+	}
+
+	/**
+	 * Clear bulk-import queue flags without rewriting link destinations.
+	 *
+	 * @param bool $clear_failure_log Also clear the failure log.
+	 */
+	public static function safe_reset_import_state( $clear_failure_log = false ) {
+		$import_all = new Import_All();
+		$import_all->remove_process();
+		update_option( Import_All::OPTION, '0' );
+		delete_option( Import_All::FILTER_PLUGIN );
+		update_option( Process::OPTION_RESTART_ATTEMPTED, 0, false );
+
+		if ( $clear_failure_log ) {
+			self::clear_failure_log();
+		}
 	}
 }

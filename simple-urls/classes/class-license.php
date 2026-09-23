@@ -46,7 +46,7 @@ class License {
 	 */
 	public static function check_license( $license_id, $update_db = true ) {
 		$headers     = Lasso_Helper::get_headers( $license_id );
-		$request_url = Constant::LASSO_LINK . '/license/status';
+		$request_url = Constant::get_lasso_link() . '/license/status';
 
 		$res = Lasso_Helper::send_request( 'get', $request_url, array(), $headers );
 
@@ -151,6 +151,8 @@ class License {
 		if ( ! empty( $email_db ) ) {
 			$data['email'] = $email_db;
 		}
+		$share_diagnostics_db      = $settings[ Enum::SHARE_DIAGNOSTICS ] ?? '';
+		$data['share_diagnostics'] = Lasso_Helper::cast_to_boolean( $share_diagnostics_db ) ? 1 : 0;
 		if ( ! empty( $ignore_keys ) ) {
 			foreach ( $ignore_keys as $key ) {
 				unset( $data[ $key ] );
@@ -158,7 +160,7 @@ class License {
 		}
 
 		// phpcs:ignore
-		$response = Lasso_Helper::send_request( 'post', Constant::LASSO_LINK . '/server-lite/getinfo', $data );
+		$response = Lasso_Helper::send_request( 'post', Constant::get_lasso_link() . '/server-lite/getinfo', $data );
 
 		$response_body = ( isset( $response['response'] ) && is_object( $response['response'] ) ) ? $response['response'] : null;
 		$site_id       = ( null !== $response_body ) ? ( $response_body->site_id ?? '' ) : '';

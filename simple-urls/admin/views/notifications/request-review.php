@@ -29,7 +29,7 @@ use LassoLite\Classes\Helper;
 
         function click_review_request() {
             let a_link = `<a href="<?php echo Enum::LASSO_REVIEW_URL; ?>" target="_blank">WordPress.org</a>`;
-            let new_text = `That's what we like to hear. Please take a moment to leave a 5-star review for Lasso Lite on ${a_link}. Thanks for your support!`;
+            let new_text = `That's what we like to hear. Please take a moment to leave an honest review for Lasso Lite on ${a_link}. Thanks for your support!`;
             jQuery('.ls-review div.review').html(new_text);
         }
 

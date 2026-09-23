@@ -16,6 +16,18 @@ use LassoLite\Classes\Helper;
 	<div class="lite-container min-height">
 		<?php require_once 'header.php'; ?>
 
+		<div id="lasso-import-recovery-diagnostics" class="white-bg rounded shadow mb-3 px-4 py-3">
+			<div class="d-flex flex-wrap justify-content-between align-items-center">
+				<div>
+					<strong class="dark-gray">Import recovery</strong>
+					<p class="small text-muted mb-0">Read-only state, failed items, and safe queue reset. Does not change link destinations.</p>
+				</div>
+				<button type="button" id="lasso-import-diagnostics-refresh" class="btn btn-sm">Refresh</button>
+			</div>
+			<div id="lasso-import-diagnostics-body" class="small mt-3 text-muted">Loading diagnostics…</div>
+			<button type="button" id="lasso-import-safe-reset" class="btn btn-sm btn-outline-danger mt-2 d-none">Safe reset import queue</button>
+		</div>
+
 		<!-- LINKS TO IMPORT -->
 		<div class="white-bg rounded shadow lasso-lite-import-urls">            
 			<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">

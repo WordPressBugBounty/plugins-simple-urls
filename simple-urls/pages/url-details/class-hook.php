@@ -127,10 +127,6 @@ class Hook {
 		$is_product_url = $data['is_product_url'] ?? false;
 		$amazon_product = false;
 
-		if ( ! Amazon_Api::is_amazon_setting_configured() ) {
-			$this->lasso_ajax_error( 'This feature is disabled due to Amazon setting issue.' );
-		}
-
 		$product_id = Amazon_Api::get_product_id_by_url( $product_url );
 
 		if ( 0 === $lasso_id ) {
@@ -141,10 +137,14 @@ class Hook {
 			$this->lasso_ajax_error( 'Product ID is invalid.' );
 		}
 
+		if ( ! Amazon_Api::is_amazon_refresh_allowed_for_product( $product_id, $product_url ) ) {
+			$this->lasso_ajax_error( 'This feature is disabled due to Amazon setting issue.' );
+		}
+
 		// ? send request to broken link service
 		$lasso_amazon_api = new Amazon_Api();
 		if ( $is_product_url ) {
-			$fetch_result   = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $product_url, true, true, true );
+			$fetch_result   = $lasso_amazon_api->fetch_product_info( $product_id, true, false, $product_url, true, false, true );
 			$amazon_product = is_array( $fetch_result['product'] ?? null ) ? $fetch_result['product'] : array();
 
 			if ( isset( $amazon_product['status_code'] ) && 200 === intval( $amazon_product['status_code'] ) ) {

@@ -8,6 +8,7 @@
 namespace LassoLite\Pages\Settings;
 
 use LassoLite\Admin\Constant;
+use LassoLite\Classes\Activation_Funnel;
 
 use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Amazon_Creators_Api;
@@ -96,7 +97,7 @@ class Ajax {
 
 		$lookup = Helper::send_request(
 			'get',
-			rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing',
+			Constant::get_lasso_link() . '/account/existing',
 			array(),
 			array(
 				'site-url' => site_url(),
@@ -175,7 +176,7 @@ class Ajax {
 			wp_send_json_error( array( 'msg' => 'Email is required.' ) );
 		}
 
-		$url             = rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing';
+		$url             = Constant::get_lasso_link() . '/account/existing';
 		$request_payload = array(
 			'email'    => $email,
 			'site_url' => site_url(),
@@ -774,6 +775,11 @@ class Ajax {
 
 		// ? update settings
 		Setting::set_settings( $options );
+
+		$onboarding_ftue = ! empty( $data['onboarding_ftue'] ) || ! empty( $data['onboarding'] );
+		if ( $onboarding_ftue ) {
+			Activation_Funnel::track_admin_event( Activation_Funnel::EVENT_DISPLAY_RENDER );
+		}
 
 		wp_send_json_success(
 			array(

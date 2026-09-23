@@ -16,8 +16,10 @@ use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Shortcode;
+use LassoLite\Classes\Activation_Funnel;
 use LassoLite\Classes\License;
 use LassoLite\Classes\Realtime_Click;
+use LassoLite\Classes\SURL;
 
 /**
  * Hook.
@@ -42,8 +44,11 @@ class Hook {
 	 */
 	public function register_hooks() {
 		add_action( 'admin_init', array( $this, 'amazon_api_pre_populated_automatically' ) );
+		add_action( 'admin_init', array( $this, 'maybe_track_activation_funnel_install' ) );
+		add_action( 'admin_init', array( $this, 'maybe_flush_activation_funnel_queue' ) );
 		add_action( 'init', array( $this, 'register_taxonomy' ) );
 		add_action( 'admin_menu', array( $this, 'build_admin_menu' ), 2 );
+		add_action( 'admin_menu', array( $this, 'register_tools_health_page' ) );
 		add_action( 'init', array( $this, 'lasso_register_connect_snippet_rewrite' ) );
 		add_action( 'init', array( $this, 'maybe_flush_vanity_rewrites_on_upgrade' ), 20 );
 		add_action( 'upgrader_process_complete', array( $this, 'lasso_connect_snippet_flush_on_upgrade' ), 10, 2 );
@@ -55,6 +60,7 @@ class Hook {
 		add_action( 'wp_head', array( $this, 'lasso_custom_css' ) ); // ? frontend
 		add_action( 'admin_head', array( $this, 'lasso_custom_css' ) ); // ? admin
 		add_action( 'admin_head', array( $this, 'lasso_custom_menu' ) ); // ? admin
+		add_action( 'admin_footer', array( $this, 'lasso_lite_admin_upgrade_click_tracking' ) ); // ? admin
 		add_action( 'wp_enqueue_scripts', array( $this, 'add_scripts_frontend' ) ); // ? frontend
 		add_filter( 'body_class', array( $this, 'filter_body_class_lasso_lite_version' ) ); // ? frontend
 
@@ -184,6 +190,8 @@ class Hook {
 			add_action( 'admin_notices', array( $this, 'lasso_lite_custom_dashboard_banner' ) );
 		}
 
+		add_action( 'admin_notices', array( $this, 'lasso_lite_dormant_reengage_notice' ) );
+
 		add_action( 'wp_footer', array( $this, 'lasso_lite_event_tracking' ) );
 		add_action( 'admin_footer', array( $this, 'open_links_in_new_tab' ) );
 	}
@@ -289,6 +297,39 @@ class Hook {
 	}
 
 	/**
+	 * Tools → Lasso health (read-only link integrity self-check).
+	 */
+	public function register_tools_health_page() {
+		add_management_page(
+			__( 'Lasso health', 'simple-urls' ),
+			__( 'Lasso health', 'simple-urls' ),
+			'manage_options',
+			SIMPLE_URLS_SLUG . '-health',
+			array( $this, 'render_tools_health_page' )
+		);
+	}
+
+	/**
+	 * Render Tools health page.
+	 */
+	public function render_tools_health_page() {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_die( esc_html__( 'Sorry, you are not allowed to access this page.', 'simple-urls' ) );
+		}
+
+		$simple_urls = new \Simple_Urls();
+		$report      = $simple_urls->get_link_integrity_report();
+
+		Helper::include_with_variables(
+			Helper::get_path_views_folder() . 'health/index.php',
+			array(
+				'report' => $report,
+			),
+			false
+		);
+	}
+
+	/**
 	 * Apply new UI's menus
 	 */
 	private function apply_new_ui_menus() {
@@ -374,6 +415,10 @@ class Hook {
 			Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
 		}
 
+		if ( $this->should_show_dormant_reengage_notice() ) {
+			Helper::enqueue_style( 'lasso-lite-admin', 'lasso-lite-admin.css' );
+		}
+
 		// @codingStandardsIgnoreEnd
 	}
 
@@ -397,7 +442,7 @@ class Hook {
 			'ajax_url'                  => admin_url( 'admin-ajax.php' ),
 			'site_url'                  => site_url(),
 			'plugin_url'                => SIMPLE_URLS_URL,
-			'lasso_link'                => Constant::LASSO_LINK,
+			'lasso_link'                => Constant::get_lasso_link(),
 			'lasso_hub_url'             => Constant::get_lasso_hub_url(),
 			'upgrade_url'               => Constant::LASSO_UPGRADE_URL,
 			'rewrite_slug_default'      => Enum::REWRITE_SLUG_DEFAULT,
@@ -408,11 +453,13 @@ class Hook {
 			'should_open_support_modal' => $support_enabled,
 			'amazon_tracking_id_regex'  => Amazon_Api::TRACKING_ID_REGEX,
 			'is_onboard_page'           => $setting->is_setting_onboarding_page(),
+			'pending_first_link'        => Helper::is_lite_onboarding_pending_first_link(),
 			'onboarding_current_step'   => $setting->is_setting_onboarding_page()
 				? Helper::get_onboarding_current_step( Helper::should_show_import_page() )
 				: 'welcome',
 			'block_customize'           => Constant::BLOCK_CUSTOMIZE,
 			'userId'                    => Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID ),
+			'activation_funnel'         => Activation_Funnel::get_js_config(),
 		);
 		$data_passed_to_js['realtime'] = Realtime_Click::get_js_config();
 
@@ -428,13 +475,11 @@ class Hook {
 
 		// @codingStandardsIgnoreStart
 		if ( 'index.php' === $pagenow && $this->should_show_dashboard_promo_banner() ) {
-			$data_passed_to_js = array(
-				'ajax_url'     => admin_url( 'admin-ajax.php' ),
-				'optionsNonce' => wp_create_nonce( Constant::LASSO_LITE_NONCE . wp_salt() ),
-			);
-			wp_enqueue_script( 'jquery' );
-			wp_localize_script( 'jquery', 'lassoLiteOptionsData', $data_passed_to_js );
-			Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ), false );
+			$this->enqueue_lasso_lite_admin_dismiss_assets();
+		}
+
+		if ( $this->should_show_dormant_reengage_notice() ) {
+			$this->enqueue_lasso_lite_admin_dismiss_assets();
 		}
 
 		if ( $setting->is_wordpress_post() || $setting->is_surls_page() || $setting->is_custom_post() ) {
@@ -530,7 +575,30 @@ class Hook {
 			Helper::enqueue_script( 'groups', 'groups.js', array( 'jquery' ) );
 		}
 
+		Helper::enqueue_script( 'activation-funnel', 'activation-funnel.js', array( 'jquery' ) );
+
 		// @codingStandardsIgnoreEnd
+	}
+
+	/**
+	 * Fire install funnel event once after plugin activation.
+	 *
+	 * @return void
+	 */
+	public function maybe_track_activation_funnel_install() {
+		Activation_Funnel::maybe_track_pending_install();
+	}
+
+	/**
+	 * Retry queued activation funnel Hub forwards from prior requests.
+	 *
+	 * @return void
+	 */
+	public function maybe_flush_activation_funnel_queue() {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+		Activation_Funnel::maybe_flush_forward_queue();
 	}
 
 	/**
@@ -626,7 +694,7 @@ class Hook {
 			$new_submenu[100] = array(
 				'<b class="green">Upgrade to Pro</b>',
 				'manage_options',
-				Constant::LASSO_UPGRADE_URL,
+				Constant::get_lasso_upgrade_url( 'admin_menu_upgrade' ),
 			);
 		}
 
@@ -732,9 +800,62 @@ class Hook {
 		?>
 		<script type="text/javascript">
 			jQuery( document ).ready( function( $ ) {
-				jQuery( "ul#adminmenu a[href$='<?php echo Constant::LASSO_SUPPORT_URL; // phpcs:ignore ?>']" ).attr( 'target', '_blank' );
-				jQuery( "ul#adminmenu a[href$='<?php echo Constant::LASSO_UPGRADE_URL; // phpcs:ignore ?>']" ).attr( 'target', '_blank' );
+				var supportUrl = <?php echo wp_json_encode( Constant::LASSO_SUPPORT_URL ); ?>;
+				var upgradePrefix = <?php echo wp_json_encode( Constant::LASSO_UPGRADE_URL ); ?>;
+				jQuery( "ul#adminmenu a[href$='" + supportUrl + "']" ).attr( 'target', '_blank' );
+				jQuery( "ul#adminmenu a[href^='" + upgradePrefix + "']" ).attr( 'target', '_blank' );
 			} );
+		</script>
+		<?php
+	}
+
+	/**
+	 * Fire lite_upgrade_click admin beacon when instrumented upgrade CTAs are clicked (#689).
+	 */
+	public function lasso_lite_admin_upgrade_click_tracking() {
+		if ( Helper::is_lasso_pro_installed() || ! is_admin() ) {
+			return;
+		}
+
+		$lasso_options = Setting::get_settings();
+		if ( empty( $lasso_options['performance_event_tracking'] ) ) {
+			return;
+		}
+
+		$beacon_url = add_query_arg( LASSO_BEACON_QUERY, '1', home_url( '/' ) );
+		?>
+		<script type="text/javascript">
+			(function () {
+				var beaconUrl = <?php echo wp_json_encode( $beacon_url ); ?>;
+				function lassoLiteTrackUpgradeClick(ctaId) {
+					if (!ctaId || !beaconUrl) {
+						return;
+					}
+					var payload = JSON.stringify({ n: 'lite_upgrade_click', cta_id: ctaId });
+					if (navigator.sendBeacon) {
+						navigator.sendBeacon(beaconUrl, payload);
+						return;
+					}
+					try {
+						fetch(beaconUrl, {
+							method: 'POST',
+							body: payload,
+							keepalive: true,
+							headers: { 'Content-Type': 'text/plain;charset=UTF-8' }
+						});
+					} catch (err) {}
+				}
+				function lassoLiteUpgradeCtaFromHref(href) {
+					try {
+						return new URL(href, window.location.href).searchParams.get('cta_id') || '';
+					} catch (err) {
+						return '';
+					}
+				}
+				jQuery(document).on('click', 'a[href*="getlasso.co/upgrade"]', function () {
+					lassoLiteTrackUpgradeClick(lassoLiteUpgradeCtaFromHref(this.href || ''));
+				});
+			})();
 		</script>
 		<?php
 	}
@@ -928,7 +1049,7 @@ class Hook {
 			$url  = Enum::LASSO_REVIEW_URL;
 			$text = sprintf(
 				wp_kses(
-					'Enjoying %1$s? Please rate <a href="%2$s" target="_blank" rel="noopener noreferrer">&#9733;&#9733;&#9733;&#9733;&#9733;</a> on <a href="%3$s" target="_blank" rel="noopener">WordPress.org</a> to help us spread the word. Thanks from the Lasso team!',
+					'Enjoying %1$s? Please leave a review on <a href="%2$s" target="_blank" rel="noopener noreferrer">WordPress.org</a> to help us spread the word. Thanks from the Lasso team!',
 					array(
 						'a' => array(
 							'href'   => array(),
@@ -938,7 +1059,6 @@ class Hook {
 					)
 				),
 				'<strong>Lasso Lite</strong>',
-				$url,
 				$url
 			);
 		}
@@ -962,10 +1082,26 @@ class Hook {
 	/**
 	 * Whether Lite onboarding should redirect admin users to the welcome flow.
 	 *
+	 * Redirect until FTUE is explicitly finished (first link or skip-to-dashboard).
+	 *
 	 * @return bool
 	 */
 	public static function should_redirect_to_welcome_page() {
-		return (bool) get_option( Enum::LASSO_LITE_ACTIVE ) && ! Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE );
+		if ( ! (bool) get_option( Enum::LASSO_LITE_ACTIVE ) ) {
+			return false;
+		}
+
+		// Explicit finish (upsell "go to dashboard") or first-link completion.
+		if ( intval( Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE, 0 ) ) ) {
+			return false;
+		}
+
+		if ( ! Helper::is_lite_onboarding_pending_first_link() ) {
+			Helper::maybe_mark_onboarding_welcome_complete_after_first_link();
+			return false;
+		}
+
+		return true;
 	}
 
 	/**
@@ -983,13 +1119,94 @@ class Hook {
 		$license_active   = License::get_license_status();
 		$is_connected_aff = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
 
+		if ( Helper::should_suppress_upgrade_heavy_chrome() ) {
+			return false;
+		}
+
 		return ! $license_active
 			&& 0 === $is_connected_aff
 			&& ! intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_PROMOTIONS, 0 ) );
 	}
 
 	/**
-	 * Show Performance promotion
+	 * Enqueue dismiss-handler assets for Lasso Lite admin notices.
+	 *
+	 * @return void
+	 */
+	private function enqueue_lasso_lite_admin_dismiss_assets() {
+		$data_passed_to_js = array(
+			'ajax_url'          => admin_url( 'admin-ajax.php' ),
+			'optionsNonce'      => wp_create_nonce( Constant::LASSO_LITE_NONCE . wp_salt() ),
+			'activation_funnel' => Activation_Funnel::get_js_config(),
+		);
+		wp_enqueue_script( 'jquery' );
+		wp_localize_script( 'jquery', 'lassoLiteOptionsData', $data_passed_to_js );
+		Helper::enqueue_script( 'lasso-lite-admin-js', 'lasso-lite-admin.js', array( 'jquery' ), false );
+	}
+
+	/**
+	 * Whether the dormant re-engage notice should render.
+	 *
+	 * @return bool
+	 */
+	public function should_show_dormant_reengage_notice() {
+		if ( ! Helper::is_lite_using_new_ui() ) {
+			return false;
+		}
+
+		$setting = new Setting();
+		if ( ! $setting->is_surls_page() ) {
+			return false;
+		}
+
+		$admin_email = get_option( 'admin_email' );
+		if ( empty( $admin_email ) || ! is_email( $admin_email ) ) {
+			return false;
+		}
+
+		if ( 0 !== (int) SURL::total() ) {
+			return false;
+		}
+
+		if ( ! intval( Helper::get_option( Constant::LASSO_OPTION_DORMANT_REENGAGE_ACTIVE, '0' ) ) ) {
+			return false;
+		}
+
+		if ( intval( Helper::get_option( Constant::LASSO_OPTION_DISMISS_DORMANT_REENGAGE, '0' ) ) ) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Dormant zero-link re-engage notice on Lasso Lite admin screens.
+	 *
+	 * @return void
+	 */
+	public function lasso_lite_dormant_reengage_notice() {
+		if ( ! $this->should_show_dormant_reengage_notice() ) {
+			echo ''; // phpcs:ignore
+			return;
+		}
+
+		$cta_url = Page::get_lite_page_url(
+			self::should_redirect_to_welcome_page() ? Enum::PAGE_ONBOARDING : Enum::PAGE_DASHBOARD
+		);
+
+		$html = Helper::include_with_variables(
+			SIMPLE_URLS_DIR . '/admin/views/notifications/dormant-reengage.php',
+			array(
+				'option_name' => Constant::LASSO_OPTION_DISMISS_DORMANT_REENGAGE,
+				'cta_url'     => $cta_url,
+			)
+		);
+
+		echo $html; // phpcs:ignore
+	}
+
+	/**
+	 * Show Performance promotion on the WP dashboard home.
 	 *
 	 * @return void
 	 */

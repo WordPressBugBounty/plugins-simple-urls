@@ -153,7 +153,7 @@ class Helper {
 		$pages[ Enum::PAGE_GROUPS ]           = new Page( 'Groups', Enum::PAGE_GROUPS, '/groups/index.php' );
 		$pages[ Enum::PAGE_GROUP_DETAIL ]     = new Page( 'Group Detail', Enum::PAGE_GROUP_DETAIL, '/groups/detail.php' );
 
-		if ( get_option( Enum::LASSO_LITE_ACTIVE ) && ! self::get_option( Enum::IS_VISITED_WELCOME_PAGE ) ) {
+		if ( self::is_lite_onboarding_pending_first_link() ) {
 			$pages[ Enum::PAGE_ONBOARDING ] = new Page( 'Onboarding', Enum::PAGE_ONBOARDING, 'onboarding/index.php' );
 		}
 
@@ -1328,7 +1328,7 @@ class Helper {
 	 * @return string[]
 	 */
 	public static function get_onboarding_step_ids() {
-		return array( 'welcome', 'display', 'amazon', 'connect-lasso', 'import' );
+		return array( 'welcome', 'display', 'amazon', 'connect-lasso', 'import', 'upsell' );
 	}
 
 	/**
@@ -1375,9 +1375,44 @@ class Helper {
 	}
 
 	/**
+	 * Lite FTUE is active until the site has at least one Simple URL link.
+	 *
+	 * @return bool
+	 */
+	public static function is_lite_onboarding_pending_first_link() {
+		if ( ! (bool) get_option( Enum::LASSO_LITE_ACTIVE ) ) {
+			return false;
+		}
+
+		return intval( SURL::total() ) < 1;
+	}
+
+	/**
+	 * Whether upgrade-heavy Lite chrome should stay hidden until the first link exists.
+	 *
+	 * @return bool
+	 */
+	public static function should_suppress_upgrade_heavy_chrome() {
+		return self::is_lite_onboarding_pending_first_link();
+	}
+
+	/**
+	 * Mark FTUE complete when the site has its first Simple URL link.
+	 *
+	 * @return void
+	 */
+	public static function maybe_mark_onboarding_welcome_complete_after_first_link() {
+		if ( intval( SURL::total() ) < 1 ) {
+			return;
+		}
+
+		self::mark_onboarding_welcome_complete();
+	}
+
+	/**
 	 * FTUE gate complete: stop redirecting to onboarding and drop saved step.
 	 *
-	 * Cleared after first link creation or an explicit Hub Connect skip.
+	 * Cleared after first link creation or a finished import path.
 	 *
 	 * @return void
 	 */
@@ -1772,7 +1807,7 @@ class Helper {
 			$query['refresh_image'] = 1;
 		}
 
-		$request_url = Constant::LASSO_LINK . '/link/status/?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
+		$request_url = Constant::get_lasso_link() . '/link/status/?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
 		if ( ! $is_lasso_save && defined( 'DOING_CRON' ) && DOING_CRON && ! Cron::should_send_scheduled_data_request( $url ) ) {
 			return $get_res ? array(
 				'status_code' => 200,
@@ -2060,7 +2095,7 @@ class Helper {
 			);
 			$encrypted_base64 = http_build_query( $data );
 			Cron::maybe_pace_background_request( $url, $is_lasso_save );
-			$res              = self::send_request( 'get', Constant::LASSO_LINK . '/link/final-url/?' . $encrypted_base64, array(), $headers );
+			$res              = self::send_request( 'get', Constant::get_lasso_link() . '/link/final-url/?' . $encrypted_base64, array(), $headers );
 
 			$bls_response = ( isset( $res['response'] ) && is_object( $res['response'] ) ) ? $res['response'] : null;
 			$final_url    = ( null !== $bls_response ) ? ( $bls_response->finalUrl ?? $url ) : $url;

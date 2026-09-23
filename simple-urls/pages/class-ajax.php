@@ -9,10 +9,12 @@ namespace LassoLite\Pages;
 
 use LassoLite\Admin\Constant;
 
+use LassoLite\Classes\Activation_Funnel;
 use LassoLite\Classes\Affiliate_Link;
 use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Meta_Enum;
+use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Realtime_Click;
 use LassoLite\Classes\Setting;
@@ -27,6 +29,7 @@ class Ajax {
 	 */
 	public function register_hooks() {
 		add_action( 'wp_ajax_lasso_lite_add_a_new_link', array( $this, 'lasso_lite_add_a_new_link' ) );
+		add_action( 'wp_ajax_lasso_lite_search_marketplace_products', array( $this, 'lasso_lite_search_marketplace_products' ) );
 		add_action( 'wp_ajax_lasso_lite_get_single', array( $this, 'lasso_lite_get_single' ) );
 		add_action( 'wp_ajax_lasso_lite_get_shortcode_content', array( $this, 'lasso_lite_get_shortcode_content' ) );
 		add_action( 'wp_ajax_lasso_lite_get_display_html', array( $this, 'lasso_lite_get_display_html' ) );
@@ -52,6 +55,7 @@ class Ajax {
 		add_action( 'wp_ajax_nopriv_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
 		add_action( 'wp_ajax_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
 		add_action( 'wp_ajax_lasso_lite_realtime_pull', array( $this, 'lasso_lite_realtime_pull' ) );
+		add_action( 'wp_ajax_lasso_lite_track_activation_funnel', array( $this, 'lasso_lite_track_activation_funnel' ) );
 	}
 
 	/**
@@ -62,6 +66,37 @@ class Ajax {
 
 		$lasso_lite_affiliate_link = new Affiliate_Link();
 		return $lasso_lite_affiliate_link->add_a_new_link();
+	}
+
+	/**
+	 * Proxy Marketplace catalog search (Lite FastAPI list).
+	 */
+	public function lasso_lite_search_marketplace_products() {
+		Helper::verify_access_and_nonce( true );
+
+		$post   = Helper::POST();
+		$search = sanitize_text_field( wp_unslash( $post['search'] ?? $post['q'] ?? '' ) );
+		$page   = max( 1, intval( $post['page'] ?? 1 ) );
+		$limit  = max( 1, min( 50, intval( $post['limit'] ?? 20 ) ) );
+
+		$country = '';
+		if ( ! empty( $post['country'] ) ) {
+			$country = sanitize_text_field( wp_unslash( $post['country'] ) );
+		} elseif ( ! empty( $post['store'] ) ) {
+			$country = sanitize_text_field( wp_unslash( $post['store'] ) );
+		}
+
+		$amazon_api = new Amazon_Api();
+		$list       = $amazon_api->fetch_marketplace_products_list(
+			array(
+				'search'  => $search,
+				'page'    => $page,
+				'limit'   => $limit,
+				'country' => $country,
+			)
+		);
+
+		wp_send_json_success( $list );
 	}
 
 	/**
@@ -250,7 +285,7 @@ class Ajax {
 
 		$response = Helper::send_request(
 			'get',
-			Constant::LASSO_LINK . '/clicks/lasso-lite/monthly',
+			Constant::get_lasso_link() . '/clicks/lasso-lite/monthly',
 			array(),
 			array(
 				'site-url' => \site_url(),
@@ -295,7 +330,7 @@ class Ajax {
 
 		$response = Helper::send_request(
 			'get',
-			Constant::LASSO_LINK . '/lite/notify-snappshot',
+			Constant::get_lasso_link() . '/lite/notify-snappshot',
 			array(),
 			array(
 				'site-url' => \site_url(),
@@ -340,7 +375,7 @@ class Ajax {
 
 		$response = Helper::send_request(
 			'get',
-			Constant::LASSO_LINK . '/api/links/issues',
+			Constant::get_lasso_link() . '/api/links/issues',
 			array(),
 			array(
 				'site-url' => \site_url(),
@@ -591,6 +626,13 @@ class Ajax {
 		Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
 		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
 
+		Activation_Funnel::track_admin_event(
+			Activation_Funnel::EVENT_CONNECT_SUCCESS,
+			array(
+				'user_id' => $user_id,
+			)
+		);
+
 		wp_send_json_success(
 			array(
 				'success' => true,
@@ -600,12 +642,38 @@ class Ajax {
 	}
 
 	/**
+	 * Record activation funnel admin event from browser (welcome_view, upgrade_click, …).
+	 */
+	public function lasso_lite_track_activation_funnel() {
+		Helper::verify_access_and_nonce();
+
+		$post     = Helper::POST();
+		$event    = sanitize_text_field( $post['event'] ?? '' );
+		$metadata = $post['metadata'] ?? array();
+		$metadata = is_array( $metadata ) ? $metadata : array();
+		$cta_id   = sanitize_text_field( $post['cta_id'] ?? '' );
+		if ( '' !== $cta_id ) {
+			$metadata['cta_id'] = $cta_id;
+		}
+
+		$payload = Activation_Funnel::track_admin_event( $event, $metadata );
+		if ( false === $payload ) {
+			wp_send_json_error( array( 'msg' => 'Invalid or duplicate funnel event.' ) );
+			return;
+		}
+
+		wp_send_json_success(
+			array(
+				'event' => $event,
+			)
+		);
+	}
+
+	/**
 	 * Record explicit Hub Connect skip during Lite onboarding.
 	 */
 	public function lasso_lite_skip_hub_connect() {
 		Helper::verify_access_and_nonce();
-
-		Helper::mark_onboarding_welcome_complete();
 
 		wp_send_json_success(
 			array(
@@ -620,15 +688,16 @@ class Ajax {
 	public function lasso_lite_save_onboarding_step() {
 		Helper::verify_access_and_nonce();
 
-		if ( intval( Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE, 0 ) ) ) {
-			Helper::clear_onboarding_current_step();
+		if ( ! Helper::is_lite_onboarding_pending_first_link() ) {
+			Helper::mark_onboarding_welcome_complete();
 			wp_send_json_success( array( 'step' => '' ) );
 			return;
 		}
 
 		$step = sanitize_text_field( Helper::POST()['step'] ?? '' );
 		if ( '' === $step ) {
-			Helper::clear_onboarding_current_step();
+			// Empty step = explicit finish (e.g. upsell "go to dashboard").
+			Helper::mark_onboarding_welcome_complete();
 			wp_send_json_success( array( 'step' => '' ) );
 			return;
 		}
@@ -670,7 +739,7 @@ class Ajax {
 
 		$lookup = Helper::send_request(
 			'get',
-			rtrim( Constant::LASSO_LINK, '/' ) . '/account/existing',
+			Constant::get_lasso_link() . '/account/existing',
 			array(),
 			array(
 				'site-url' => \site_url(),
@@ -783,7 +852,15 @@ class Ajax {
 			return;
 		}
 
-		if ( ! in_array( $option_name, array( Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE, Constant::LASSO_OPTION_DISMISS_PROMOTIONS ), true ) ) {
+		if ( ! in_array(
+			$option_name,
+			array(
+				Constant::LASSO_OPTION_DISMISS_PERFORMANCE_NOTICE,
+				Constant::LASSO_OPTION_DISMISS_PROMOTIONS,
+				Constant::LASSO_OPTION_DISMISS_DORMANT_REENGAGE,
+			),
+			true
+		) ) {
 			wp_send_json_error( 'Invalid option name.' );
 		}
 

@@ -53,7 +53,7 @@ class Enum {
 
 	const TWITTER_URL       = 'https://twitter.com/lassowp';
 	const TWITTER_SHARE_URL = 'https://twitter.com/intent/tweet?text=I%27m%20using%20@LassoWP%20to%20improve%20the%20conversions%20on%20my%20niche%20site.%20I%20also%20got%20a%20discount%20upgrading%20to%20Pro%20%F0%9F%98%8E';
-	const LASSO_REVIEW_URL  = 'https://wordpress.org/plugins/simple-urls/#reviews';
+	const LASSO_REVIEW_URL  = 'https://wordpress.org/support/plugin/simple-urls/reviews/#new-post';
 
 	const SLUG_CLOAK_FOLLOW_TWITTER   = Constant::LASSO_POST_TYPE . '=follow-lassowp';
 	const SLUG_CLOAK_SHARE_TWITTER    = Constant::LASSO_POST_TYPE . '=share-lassowp';

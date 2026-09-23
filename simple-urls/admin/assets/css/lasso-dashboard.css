@@ -217,6 +217,16 @@ button.lasso-header-account-status--inactive{
 .logo-large{position: relative; display: block; width: 170px;}
 .logo img, .logo-large img{position: absolute; transition: ease 0.5s; display: block; width: 100%;}
 .nav.nav-tabs {border-bottom: 0px;}
+.lasso-url-add-tab-nav .nav-link {
+	border: 0;
+	border-bottom: 2px solid transparent;
+	color: var(--dark-gray);
+	font-weight: 600;
+}
+.lasso-url-add-tab-nav .nav-link.active {
+	border-bottom-color: var(--purple);
+	color: var(--purple);
+}
 .nav-item{margin-bottom: 0 !important;}
 .nav-link:hover, .nav-link.active{text-shadow: 0px 0px 10px var(--white) !important; transition: ease 0.25s !important;}
 .hover-underline{display: inline-block; vertical-align: middle; -webkit-transform: perspective(1px) translateZ(0); transform: perspective(1px) translateZ(0); box-shadow: 0 0 1px rgba(0, 0, 0, 0); position: relative; overflow: hidden;}

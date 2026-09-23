@@ -30,6 +30,8 @@ class Amazon_Api {
 	const TRACKING_ID_REGEX                                 = '^[a-zA-Z0-9-]+-\d{2,3}$';
 	const CURRENCY_ISO                                      = array( 'USD', 'AUD', 'CAD', 'EUR', 'MXN', 'CNY', 'JPY', 'INR', 'SEK', 'BRL', 'TRY', 'GBP', 'PLN', 'EGP', 'SGD', 'AED' );
 	const VARIATION_PAGE_LIMIT                              = 2;
+	const MARKETPLACE_ELIGIBILITY_OPTION                    = 'lasso_lite_marketplace_eligibility';
+	const LITE_MARKETPLACE_PRODUCT_PATH                     = '/lite/marketplace/products';
 
 	/**
 	 * Get amazon API countries
@@ -452,6 +454,471 @@ class Amazon_Api {
 	}
 
 	/**
+	 * Normalize hub/API marketplace_eligible flag from mixed payload shapes.
+	 *
+	 * @param mixed $value Raw flag value.
+	 * @return bool|null True/false when present; null when missing.
+	 */
+	public static function normalize_marketplace_eligible_flag( $value ) {
+		if ( null === $value ) {
+			return null;
+		}
+		if ( is_bool( $value ) ) {
+			return $value;
+		}
+		if ( is_numeric( $value ) ) {
+			return (bool) intval( $value );
+		}
+		if ( is_string( $value ) ) {
+			$parsed = filter_var( $value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE );
+			return null === $parsed ? null : $parsed;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Read marketplace_eligible from a hub/BLS product payload (object or array).
+	 *
+	 * @param array|object|null $payload Product payload.
+	 * @return bool|null
+	 */
+	public static function parse_marketplace_eligible_from_payload( $payload ) {
+		if ( null === $payload ) {
+			return null;
+		}
+
+		// Normalize objects to arrays so hub camelCase keys stay PHPCS-clean.
+		if ( is_object( $payload ) ) {
+			return self::parse_marketplace_eligible_from_payload( (array) $payload );
+		}
+
+		if ( ! is_array( $payload ) ) {
+			return null;
+		}
+
+		if ( array_key_exists( 'marketplace_eligible', $payload ) ) {
+			return self::normalize_marketplace_eligible_flag( $payload['marketplace_eligible'] );
+		}
+		if ( array_key_exists( 'marketplaceEligible', $payload ) ) {
+			return self::normalize_marketplace_eligible_flag( $payload['marketplaceEligible'] );
+		}
+
+		if ( isset( $payload['additionalData'] ) ) {
+			$additional = $payload['additionalData'];
+			if ( is_object( $additional ) ) {
+				$additional = (array) $additional;
+			}
+			if ( is_array( $additional ) && array_key_exists( 'marketplace_eligible', $additional ) ) {
+				return self::normalize_marketplace_eligible_flag( $additional['marketplace_eligible'] );
+			}
+			if ( is_array( $additional ) && array_key_exists( 'marketplaceEligible', $additional ) ) {
+				return self::normalize_marketplace_eligible_flag( $additional['marketplaceEligible'] );
+			}
+		}
+
+		return null;
+	}
+
+	/**
+	 * Persist eligibility for display/cron without re-calling hub on every page view.
+	 *
+	 * @param string $product_id Amazon ASIN.
+	 * @param bool   $eligible     Eligibility flag.
+	 */
+	public static function remember_marketplace_eligibility( $product_id, $eligible ) {
+		$product_id = (string) $product_id;
+		if ( '' === $product_id ) {
+			return;
+		}
+
+		$map = get_option( self::MARKETPLACE_ELIGIBILITY_OPTION, array() );
+		if ( ! is_array( $map ) ) {
+			$map = array();
+		}
+
+		$map[ $product_id ] = $eligible ? 1 : 0;
+		update_option( self::MARKETPLACE_ELIGIBILITY_OPTION, $map, false );
+	}
+
+	/**
+	 * Read remembered Marketplace eligibility for an ASIN (null when unknown).
+	 *
+	 * @param string $product_id Amazon ASIN.
+	 * @return bool|null
+	 */
+	public static function get_remembered_marketplace_eligibility( $product_id ) {
+		$product_id = (string) $product_id;
+		if ( '' === $product_id ) {
+			return null;
+		}
+
+		$map = get_option( self::MARKETPLACE_ELIGIBILITY_OPTION, array() );
+		if ( ! is_array( $map ) || ! array_key_exists( $product_id, $map ) ) {
+			return null;
+		}
+
+		return (bool) intval( $map[ $product_id ] );
+	}
+
+	/**
+	 * API base for Lite hub calls. Honors wp-config LASSO_LINK when defined (local FastAPI).
+	 *
+	 * @return string
+	 */
+	public static function get_lasso_api_base() {
+		return Constant::get_lasso_link();
+	}
+
+	/**
+	 * Fetch hub Marketplace product payload for an ASIN (includes marketplace_eligible when hub provides it).
+	 *
+	 * @param string $product_id   Amazon ASIN.
+	 * @param string $amz_link     Amazon URL.
+	 * @param bool   $bypass_cache Skip per-process cache (Refresh button).
+	 * @return array
+	 */
+	public function fetch_marketplace_product_payload( $product_id, $amz_link = '', $bypass_cache = false ) {
+		$product_id = (string) $product_id;
+		if ( '' === $product_id ) {
+			return array();
+		}
+
+		// Free-data catalog is only for unlicensed Lite without Creators API credentials.
+		$lasso_settings = Setting::get_settings();
+		$license_serial = trim( (string) ( $lasso_settings['license_serial'] ?? '' ) );
+		if ( '' !== $license_serial || self::is_amazon_creators_configured( $lasso_settings ) ) {
+			return array();
+		}
+
+		$url       = $this->resolve_marketplace_catalog_amazon_url( $product_id, $amz_link );
+		$cache_key = $this->build_marketplace_product_payload_cache_key( $product_id, $url );
+		if ( ! $bypass_cache ) {
+			$cached = Cache_Per_Process::get_instance()->get_cache( $cache_key, null );
+			if ( null !== $cached && is_array( $cached ) ) {
+				return $cached;
+			}
+		} else {
+			Cache_Per_Process::get_instance()->un_set( $cache_key );
+		}
+
+		// FastAPI GET /lite/marketplace/products/{asin}?url=…
+		// resolve_marketplace_catalog_amazon_url() always yields a non-empty Amazon URL.
+		$path        = self::LITE_MARKETPLACE_PRODUCT_PATH . '/' . rawurlencode( $product_id );
+		$query       = array( 'url' => $url );
+		$request_url = self::get_lasso_api_base() . $path . '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
+		$res         = Helper::send_request( 'get', $request_url, array(), Helper::get_headers() );
+
+		$payload = array();
+		if ( 200 === intval( $res['status_code'] ?? 0 ) && isset( $res['response'] ) ) {
+			$response = $res['response'];
+			if ( is_object( $response ) && isset( $response->product ) ) {
+				$payload = (array) $response->product;
+			} elseif ( is_object( $response ) ) {
+				$payload = (array) $response;
+			} elseif ( is_array( $response ) ) {
+				$payload = isset( $response['product'] ) && is_array( $response['product'] )
+					? $response['product']
+					: $response;
+			}
+		}
+
+		Cache_Per_Process::get_instance()->set_cache( $cache_key, $payload );
+
+		$eligible = self::parse_marketplace_eligible_from_payload( $payload );
+		if ( null !== $eligible ) {
+			self::remember_marketplace_eligibility( $product_id, $eligible );
+		}
+
+		return $payload;
+	}
+
+	/**
+	 * Fetch Marketplace product list/search from Lite FastAPI (GET /lite/marketplace/products).
+	 *
+	 * @param array $args Query args: search|q, country|store, page, limit.
+	 * @return array{products:array,total:int,pageSize:int,pageNumber:int,totalPages:int,hasNextPage:bool}
+	 */
+	public function fetch_marketplace_products_list( $args = array() ) {
+		$search = isset( $args['search'] ) ? (string) $args['search'] : '';
+		if ( '' === $search && isset( $args['q'] ) ) {
+			$search = (string) $args['q'];
+		}
+		$search = sanitize_text_field( $search );
+
+		$page  = max( 1, intval( $args['page'] ?? 1 ) );
+		$limit = max( 1, min( 50, intval( $args['limit'] ?? 20 ) ) );
+
+		$country = '';
+		if ( isset( $args['country'] ) && '' !== (string) $args['country'] ) {
+			$country = sanitize_text_field( (string) $args['country'] );
+		} elseif ( isset( $args['store'] ) && '' !== (string) $args['store'] ) {
+			$country = sanitize_text_field( (string) $args['store'] );
+		}
+
+		$query = array(
+			'page'  => $page,
+			'limit' => $limit,
+		);
+		if ( '' !== $search ) {
+			$query['search'] = $search;
+			$query['q']      = $search;
+		}
+		if ( '' !== $country ) {
+			$query['country'] = $country;
+			$query['store']   = $country;
+		}
+
+		$request_url = self::get_lasso_api_base() . self::LITE_MARKETPLACE_PRODUCT_PATH;
+		$request_url = $request_url . '?' . http_build_query( $query, '', '&', PHP_QUERY_RFC3986 );
+		$res         = Helper::send_request( 'get', $request_url, array(), Helper::get_headers() );
+
+		$empty = array(
+			'products'    => array(),
+			'total'       => 0,
+			'pageSize'    => $limit,
+			'pageNumber'  => $page,
+			'totalPages'  => 0,
+			'hasNextPage' => false,
+		);
+
+		if ( 200 !== intval( $res['status_code'] ?? 0 ) || ! isset( $res['response'] ) ) {
+			return $empty;
+		}
+
+		$response  = $res['response'];
+		$data      = null;
+		$data_list = array();
+		if ( is_object( $response ) && isset( $response->data ) ) {
+			$data = $response->data;
+		} elseif ( is_array( $response ) && isset( $response['data'] ) ) {
+			$data = $response['data'];
+		}
+
+		if ( null === $data ) {
+			return $empty;
+		}
+
+		if ( is_object( $data ) ) {
+			$data_list = (array) $data;
+		} elseif ( is_array( $data ) ) {
+			$data_list = $data;
+		}
+
+		$products = array();
+		if ( isset( $data_list['products'] ) && is_array( $data_list['products'] ) ) {
+			$products = $data_list['products'];
+		}
+
+		$normalized_products = array();
+		foreach ( $products as $product ) {
+			if ( is_object( $product ) ) {
+				$product = (array) $product;
+			}
+			if ( ! is_array( $product ) || empty( $product ) ) {
+				continue;
+			}
+			$normalized_products[] = $product;
+		}
+
+		$total = isset( $data_list['total'] ) ? intval( $data_list['total'] ) : count( $normalized_products );
+
+		$page_size = isset( $data_list['pageSize'] ) ? intval( $data_list['pageSize'] ) : $limit;
+
+		$page_number = isset( $data_list['pageNumber'] ) ? intval( $data_list['pageNumber'] ) : $page;
+
+		$total_pages = isset( $data_list['totalPages'] ) ? intval( $data_list['totalPages'] ) : 0;
+
+		$has_next = ! empty( $data_list['hasNextPage'] );
+
+		return array(
+			'products'    => $normalized_products,
+			'total'       => $total,
+			'pageSize'    => $page_size,
+			'pageNumber'  => $page_number,
+			'totalPages'  => $total_pages,
+			'hasNextPage' => $has_next,
+		);
+	}
+
+	/**
+	 * Amazon URL optionally sent to /lite/marketplace/products/{asin} (parse country + ASIN).
+	 *
+	 * @param string $product_id Amazon ASIN.
+	 * @param string $amz_link   Caller-provided Amazon URL.
+	 * @return string
+	 */
+	private function resolve_marketplace_catalog_amazon_url( $product_id, $amz_link = '' ) {
+		$url = $amz_link ? $amz_link : $this->get_amazon_link_by_product_id( $product_id, $amz_link );
+		if ( ! $url ) {
+			$url = 'https://www.amazon.com/dp/' . rawurlencode( (string) $product_id );
+		}
+
+		return $url;
+	}
+
+	/**
+	 * Per-process catalog cache key (ASIN + Amazon store host).
+	 *
+	 * @param string $product_id  Amazon ASIN.
+	 * @param string $catalog_url Resolved Amazon URL for the hub request.
+	 * @return string
+	 */
+	private function build_marketplace_product_payload_cache_key( $product_id, $catalog_url ) {
+		$host = wp_parse_url( $catalog_url, PHP_URL_HOST );
+		if ( ! is_string( $host ) || '' === $host ) {
+			$host = 'www.amazon.com';
+		}
+
+		return 'lite_marketplace_product_payload_' . $product_id . '_' . strtolower( $host );
+	}
+
+	/**
+	 * Map /lite/marketplace/products catalog fields onto Lite Amazon product shape.
+	 *
+	 * @param array  $payload    Product object from hub.
+	 * @param string $product_id ASIN.
+	 * @param string $amz_link   Amazon URL.
+	 * @return array|null
+	 */
+	public function map_marketplace_catalog_product_to_amazon_product( $payload, $product_id, $amz_link = '' ) {
+		if ( ! is_array( $payload ) || empty( $payload ) ) {
+			return null;
+		}
+
+		$title = '';
+		if ( ! empty( $payload['label'] ) ) {
+			$title = (string) $payload['label'];
+		} elseif ( ! empty( $payload['productName'] ) ) {
+			$title = (string) $payload['productName'];
+		} elseif ( ! empty( $payload['product_name'] ) ) {
+			$title = (string) $payload['product_name'];
+		}
+		$title = trim( $title );
+		if ( '' === $title ) {
+			return null;
+		}
+
+		$asin = '';
+		if ( ! empty( $payload['asin'] ) ) {
+			$asin = (string) $payload['asin'];
+		} elseif ( ! empty( $payload['productDetailAsin'] ) ) {
+			$asin = (string) $payload['productDetailAsin'];
+		}
+		$asin = strtoupper( trim( $asin ) );
+		if ( '' === $asin ) {
+			$asin = strtoupper( trim( (string) $product_id ) );
+		}
+
+		$image = '';
+		if ( ! empty( $payload['image'] ) ) {
+			$image = (string) $payload['image'];
+		}
+
+		$target = $amz_link ? $amz_link : '';
+		if ( '' === $target && ! empty( $payload['targetURL'] ) ) {
+			$target = (string) $payload['targetURL'];
+		} elseif ( '' === $target && ! empty( $payload['targetUrl'] ) ) {
+			$target = (string) $payload['targetUrl'];
+		}
+		if ( '' === $target && $asin ) {
+			$target = 'https://www.amazon.com/dp/' . $asin;
+		}
+
+		$price_raw = '';
+		if ( isset( $payload['price'] ) && '' !== $payload['price'] && null !== $payload['price'] ) {
+			$price_raw = (string) $payload['price'];
+		}
+		$symbol = '';
+		if ( ! empty( $payload['priceSymbol'] ) ) {
+			$symbol = (string) $payload['priceSymbol'];
+		} elseif ( ! empty( $payload['currency'] ) ) {
+			$symbol = (string) $payload['currency'];
+		}
+		$display_price = $price_raw;
+		if ( '' !== $price_raw && '' !== $symbol && false === strpos( $price_raw, $symbol ) ) {
+			$display_price = $symbol . $price_raw;
+		}
+		$amount = Helper::get_price_value_from_price_text( $price_raw, $symbol );
+
+		return array(
+			'product_id'  => $asin,
+			'title'       => $title,
+			'url'         => $target,
+			'default_url' => $target,
+			'image'       => trim( $image ),
+			'quantity'    => 200,
+			'is_prime'    => false,
+			'price'       => $display_price,
+			'amount'      => $amount,
+			'currency'    => $symbol,
+			'features'    => array(),
+		);
+	}
+
+	/**
+	 * Prefer Marketplace catalog free-data before Creators / PA-API / BLS.
+	 *
+	 * @param string      $product_id    ASIN.
+	 * @param bool        $store_product Persist locally.
+	 * @param bool|string $updated_at    Optional timestamp.
+	 * @param string      $amz_link      Amazon URL.
+	 * @param bool        $bypass_cache  Bypass per-process catalog cache (Refresh).
+	 * @return array|null fetch_product_info shape, or null to fall back.
+	 */
+	private function fetch_product_info_from_marketplace_catalog( $product_id, $store_product, $updated_at, $amz_link, $bypass_cache = false ) {
+		$payload = $this->fetch_marketplace_product_payload( $product_id, $amz_link, $bypass_cache );
+		$product = $this->map_marketplace_catalog_product_to_amazon_product( $payload, $product_id, $amz_link );
+		if ( null === $product ) {
+			return null;
+		}
+
+		$product = $this->enrich_fetched_amazon_product( $product, false, $updated_at, $amz_link );
+
+		if ( $store_product ) {
+			if ( '' === trim( (string) ( $product['image'] ?? '' ) ) ) {
+				return null;
+			}
+			$store_data = array(
+				'product_id'  => $product['product_id'],
+				'title'       => $product['title'],
+				'price'       => $product['price'],
+				'default_url' => $product['default_url'],
+				'url'         => $product['url'],
+				'image'       => $product['image'],
+				'quantity'    => intval( $product['quantity'] ?? 200 ),
+				'is_manual'   => 1,
+				'currency'    => $product['currency'] ?? '',
+			);
+			$stored = Amazon_Products::store_marketplace_free_product( $store_data, $updated_at );
+			if ( ! $stored ) {
+				return null;
+			}
+		}
+
+		return $this->build_fetch_product_info_response( $product, 'marketplace', $payload, 'success', '' );
+	}
+
+	/**
+	 * Whether Lite may use the Marketplace/BLS free image+price path for this ASIN.
+	 *
+	 * @param string $product_id Amazon ASIN.
+	 * @param string $amz_link   Amazon URL.
+	 * @return bool
+	 */
+	public function is_marketplace_eligible_for_free_data( $product_id, $amz_link = '' ) {
+		$remembered = self::get_remembered_marketplace_eligibility( $product_id );
+		if ( null !== $remembered ) {
+			return $remembered;
+		}
+
+		$payload  = $this->fetch_marketplace_product_payload( $product_id, $amz_link );
+		$eligible = self::parse_marketplace_eligible_from_payload( $payload );
+
+		return true === $eligible;
+	}
+
+	/**
 	 * Fetch amazon product from Amazon API v5
 	 *
 	 * @param string      $product_id    Amazon product id.
@@ -468,6 +935,33 @@ class Amazon_Api {
 
 		$lasso_settings       = Setting::get_settings();
 		$is_amazon_configured = $lasso_settings['amazon_access_key_id'] && $lasso_settings['amazon_secret_key'] && $lasso_settings['amazon_tracking_id'];
+		$license_serial       = trim( (string) ( $lasso_settings['license_serial'] ?? '' ) );
+		$use_marketplace_free = '' === $license_serial && ! self::is_amazon_creators_configured( $lasso_settings );
+
+		// Unlicensed Lite without Creators: catalog for add-link/Refresh. Skip pricing workers ($updated_at) and explicit force_bls.
+		if (
+			$use_marketplace_free
+			&& '' !== trim( (string) $product_id )
+			&& ! $force_bls
+			&& false === $updated_at
+		) {
+			$catalog_result = $this->fetch_product_info_from_marketplace_catalog(
+				$product_id,
+				$store_product,
+				$updated_at,
+				$amz_link,
+				(bool) $refresh_image
+			);
+			if ( null !== $catalog_result ) {
+				return $catalog_result;
+			}
+		}
+
+		if ( $use_marketplace_free && ! $force_bls && '' !== trim( (string) $product_id ) ) {
+			if ( $this->is_marketplace_eligible_for_free_data( $product_id, $amz_link ) ) {
+				$force_bls = true;
+			}
+		}
 
 		if (
 			self::is_amazon_creators_verified( $lasso_settings )
@@ -525,7 +1019,17 @@ class Amazon_Api {
 				'status'     => 'success',
 				'error_code' => '',
 			);
-		} elseif ( '' !== $lasso_settings['license_serial'] || $force_bls ) {
+		} elseif ( '' !== $license_serial || $force_bls ) {
+			if ( ! $this->is_marketplace_eligible_for_free_data( $product_id, $amz_link ) ) {
+				return array(
+					'product'    => array(),
+					'api'        => 'no',
+					'full_item'  => array(),
+					'status'     => 'failed',
+					'error_code' => 'NotFound',
+				);
+			}
+
 			list( $product, $status ) = $this->fetch_product_from_bls( $product_id, $store_product, $updated_at, $amz_link, $url_version_param, $force_bls, $refresh_image );
 
 			return array(
@@ -603,6 +1107,14 @@ class Amazon_Api {
 				$product_name = trim( $product_name );
 			}
 
+			$bls_eligible = self::parse_marketplace_eligible_from_payload( $bls_response );
+			if ( null === $bls_eligible ) {
+				$bls_eligible = $this->is_marketplace_eligible_for_free_data( $product_id, $amz_link );
+			} else {
+				self::remember_marketplace_eligibility( $product_id, $bls_eligible );
+			}
+
+			// Persist any successful BLS product payload (eligibility gates opening this path, not storage).
 			if ( $product_id && $store_product ) {
 				$store_data = array(
 					'product_id'  => $product_id,
@@ -633,7 +1145,7 @@ class Amazon_Api {
 					$amazon_product['savings_percent'] = $store_data['savings_percent'];
 				}
 
-				$this->update_amazon_product_in_db( $store_data, $updated_at, true ); // allow_partial: BLS may omit imgUrl.
+				Amazon_Products::store_marketplace_free_product( $store_data, $updated_at );
 			}
 
 			$amazon_product['title']       = $product_name;
@@ -680,6 +1192,13 @@ class Amazon_Api {
 		$base_url             = self::get_amazon_product_url( $product['default_url'] ?? '', false, false );
 		$monetized_url        = self::get_amazon_product_url( $product['url'] ?? '', true, false );
 		$default_image        = trim( $product['image'] ?? '' );
+		$existing_product     = $amazon_id ? $this->get_amazon_product_from_db( $amazon_id ) : false;
+		if ( Amazon_Products::product_has_customer_price_override( $amazon_id ) && is_array( $existing_product ) ) {
+			$latest_price = $existing_product['latest_price'] ?? $latest_price;
+		}
+		if ( Amazon_Products::product_has_customer_image_override( $amazon_id ) && is_array( $existing_product ) ) {
+			$default_image = $existing_product['default_image'] ?? $default_image;
+		}
 		$last_updated         = gmdate( 'Y-m-d H:i:s', time() );
 		$last_updated         = $updated_at ? $updated_at : $last_updated;
 		$is_prime             = $product['is_prime'] ?? '';
@@ -1515,6 +2034,28 @@ class Amazon_Api {
 	}
 
 	/**
+	 * Whether Refresh may run for an Amazon ASIN without PA-API/Creators (Marketplace-only).
+	 *
+	 * @param string $product_id  Amazon ASIN.
+	 * @param string $product_url Amazon product URL.
+	 * @return bool
+	 */
+	public static function is_amazon_refresh_allowed_for_product( $product_id, $product_url = '' ) {
+		if ( self::is_amazon_setting_configured() ) {
+			return true;
+		}
+
+		$product_id = trim( (string) $product_id );
+		if ( '' === $product_id ) {
+			return false;
+		}
+
+		$api = new self();
+
+		return $api->is_marketplace_eligible_for_free_data( $product_id, $product_url );
+	}
+
+	/**
 	 * Whether Amazon Creators API credentials are complete in settings.
 	 *
 	 * @param array|false $lasso_settings Settings array. Default false loads current settings.
@@ -1652,7 +2193,8 @@ class Amazon_Api {
 			$error_code = (string) ( $api_result['error_code'] ?? '' );
 
 			if ( 'NotFound' === $error_code ) {
-				return $this->build_fetch_product_info_response( array(), 'yes', array(), 'failed', 'NotFound' );
+				// Fall through to PA-API; BLS free-data path applies its own eligibility gate.
+				return null;
 			}
 
 			return null;

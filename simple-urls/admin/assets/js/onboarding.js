@@ -38,7 +38,7 @@ function show_onboarding_step( step ) {
 
 function persist_onboarding_step( step ) {
 	if ( ! window.lassoLiteOptionsData || ! lassoLiteOptionsData.ajax_url ) {
-		return;
+		return jQuery.Deferred().resolve().promise();
 	}
 
 	if ( window.lassoLiteOptionsData ) {
@@ -47,7 +47,7 @@ function persist_onboarding_step( step ) {
 
 	jQuery( '#onboarding_container' ).attr( 'data-resume-step', step || 'welcome' );
 
-	jQuery.post(
+	return jQuery.post(
 		lassoLiteOptionsData.ajax_url,
 		{
 			action: 'lasso_lite_save_onboarding_step',
@@ -57,7 +57,10 @@ function persist_onboarding_step( step ) {
 	);
 }
 
-function go_to_next_step() {
+function go_to_next_step( event ) {
+	if ( event && event.preventDefault ) {
+		event.preventDefault();
+	}
 	go_to_next_step_action( this );
 }
 
@@ -76,12 +79,17 @@ function go_to_next_step_action( tab_item_child_element ) {
 
 		window.scrollTo( 0, 0 );
 	} else {
-		persist_onboarding_step( '' );
-		let dashboard_url = jQuery( '#onboarding_container' ).data( 'dashboard-url' );
+		finish_onboarding_and_go_dashboard();
+	}
+}
+
+function finish_onboarding_and_go_dashboard() {
+	var dashboard_url = jQuery( '#onboarding_container' ).data( 'dashboard-url' );
+	persist_onboarding_step( '' ).always( function() {
 		if ( dashboard_url ) {
 			window.location.href = dashboard_url;
 		}
-	}
+	} );
 }
 
 function access_step() {
