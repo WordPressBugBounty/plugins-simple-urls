@@ -153,3 +153,49 @@
     margin-bottom: 15px;
 }
 .lasso-none, .lasso-lite.lasso-container .lasso-none {display: none;}
+
+/*********************************************************
+	Marketplace search rows: 2-line title clamp + per-row Add Link
+	Shared by Lite admin (lasso-dashboard) and editor shells (lasso-modal).
+	lasso-lite.css is enqueued on both surfaces in pages/class-hook.php.
+*********************************************************/
+.lasso-marketplace-result{
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	min-width: 0;
+}
+.lasso-marketplace-result-image{
+	width: 40px;
+	height: 40px;
+	flex: 0 0 40px;
+	object-fit: cover;
+	border-radius: 0.25rem;
+}
+.lasso-marketplace-result-title{
+	flex: 1 1 auto;
+	min-width: 0;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 2;
+	overflow: hidden;
+	word-break: break-word;
+	white-space: normal;
+	line-height: 1.35;
+	text-align: left;
+}
+.lasso-marketplace-result-add{
+	flex: 0 0 auto;
+	white-space: nowrap;
+	background-color: var(--green) !important;
+	color: var(--white) !important;
+}
+.lasso-marketplace-result-add:hover,
+.lasso-marketplace-result-add:focus{
+	background-color: var(--green) !important;
+	color: var(--white) !important;
+}
+.lasso-marketplace-result-add:disabled{
+	opacity: 0.65;
+	cursor: not-allowed;
+}

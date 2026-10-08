@@ -1,7 +1,7 @@
-=== Lasso Lite (Simple URLs) ===
-Contributors: lassoanalytics, mollusk, khangwithlasso, phucdolasso, chuongwithlasso, triwithlasso, caitlinwithlasso, genewithlasso, lassoteam
+=== Lasso Lite - Affiliate Link Manager, URL Shortener & Link Tracking ===
+Contributors: lassoanalytics, mollusk, khangwithlasso, phucdolasso, chuongwithlasso, triwithlasso, lanhvo94, caitlinwithlasso, genewithlasso, lassoteam
 Plugin link: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wporg&utm_campaign=repo-description
-Tags: affiliate link manager, affiliate links, amazon affiliate, link cloaking, product displays
+Tags: affiliate link manager, affiliate links, amazon affiliate, link cloaking, url shortener
 Requires at least: 5.1
 Requires PHP: 7.2
 Tested up to: 7.1
@@ -9,7 +9,7 @@ Stable tag: trunk
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Free Lasso Lite (Simple URLs): cloak affiliate links, add product displays in WordPress, and connect Lasso Hub when you want clearer click reports.
+Free Lasso Lite (Simple URLs): cloak affiliate links with a URL shortener and link tracking, add product displays in WordPress, and connect Lasso Hub when you want clearer click reports — the same Simple URLs listing on WordPress.org.
 
 == Description ==
 
@@ -109,6 +109,9 @@ Yes. Cloak Amazon links and optionally connect credentials for product details o
 = Can I import links from another plugin? =
 Yes. Pretty Links, ThirstyAffiliates, Easy Affiliate Links, AAWP, EasyAzon, AmaLinks Pro, Earnist, and Affiliate URLs.
 
+= Is Lasso Lite a Pretty Links alternative? =
+Yes for link cloaking, short URLs on your site, and importing from Pretty Links. It is not a one-to-one Pretty Links Pro feature match — Lasso Lite focuses on free cloaking, product displays, and basic click counts.
+
 = Will it work with my theme and the Block Editor? =
 Yes. Standard WordPress themes, plus Block Editor and Classic Editor.
 
@@ -131,6 +134,18 @@ Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.o
 3. Browse every link from one dashboard. Find and update offers without digging through old posts.
 
 == Changelog ==
+
+= 160 =
+* Released: October 8, 2026
+* Interactive dashboard product tour for new Lite users
+* PostHog product analytics in wp-admin for clearer usage insights
+* Marketplace Add Link polish: wider modal, clearer product titles, and improved search
+* Dashboard layout improvements for link titles and account status
+* Review prompt as a corner card with milestone-based re-ask
+* PHP 7.2 compatibility for older hosting environments
+* Fix Marketplace Amazon Image Refresh when Prime badge logic failed
+* Fix setup-progress dropdown blocking Settings tabs when closed
+* Clearer review card support step without a misleading alternate review link
 
 = 159 =
 * Released: September 23, 2026

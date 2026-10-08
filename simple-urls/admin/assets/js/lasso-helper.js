@@ -121,8 +121,8 @@ var lasso_lite_helper = {
             displayedPages: 3,
             itemsOnPage: items_on_page,
             cssStyle: "light-theme",
-            prevText: '<i class="far fa-angle-double-left"></i> Previous',
-            nextText: 'Next <i class="far fa-angle-double-right"></i>',
+            prevText: '<i class="far fa-chevron-left" aria-hidden="true"></i><span class="screen-reader-text">Previous</span>',
+            nextText: '<i class="far fa-chevron-right" aria-hidden="true"></i><span class="screen-reader-text">Next</span>',
             onPageClick: function (page_number) {
                 if (typeof click_page_number_callback === "function") {
                     return click_page_number_callback(page_number);
@@ -134,6 +134,71 @@ var lasso_lite_helper = {
             data_helper.currentPage = set_page;
         }
         pagination_helper.pagination(data_helper);
+        // One-page / empty list: hide chevron group; range label still updates.
+        pagination_helper.toggleClass(
+            "lasso-pager-single-page",
+            (total_items || 0) <= items_on_page
+        );
+        this.update_link_range(
+            paging_el,
+            set_page > 0 ? set_page : 1,
+            total_items,
+            items_on_page
+        );
+    },
+    /**
+     * Fill .lasso-card-pager-range inside the same .lasso-card-pager as paging_el.
+     * No-op when the pager is not in a card footer (e.g. import-locations modal).
+     *
+     * @param {Element|jQuery} paging_el Pagination element.
+     * @param {number} page Current page (1-based).
+     * @param {number} total Total item count.
+     * @param {number} per_page Items per page.
+     */
+    update_link_range: function (paging_el, page, total, per_page) {
+        let $pager = jQuery(paging_el).closest(".lasso-card-pager");
+        if (!$pager.length) {
+            return;
+        }
+        let el = $pager.find(".lasso-card-pager-range");
+        if (!el.length) {
+            return;
+        }
+        let total_count = parseInt(total, 10);
+        if (isNaN(total_count) || total_count < 0) {
+            total_count = 0;
+        }
+        let page_num = parseInt(page, 10);
+        if (isNaN(page_num) || page_num < 1) {
+            page_num = 1;
+        }
+        let size = parseInt(per_page, 10);
+        if (isNaN(size) || size < 1) {
+            size = 10;
+        }
+        let format_count = function (n) {
+            return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        };
+        if (total_count === 0) {
+            el.text("");
+            return;
+        }
+        let start_index = (page_num - 1) * size + 1;
+        let end_index = Math.min(page_num * size, total_count);
+        if (start_index > total_count) {
+            start_index = Math.max(
+                1,
+                (Math.ceil(total_count / size) - 1) * size + 1
+            );
+            end_index = total_count;
+        }
+        el.text(
+            format_count(start_index) +
+                "\u2013" +
+                format_count(end_index) +
+                " of " +
+                format_count(total_count)
+        );
     },
     build_pagination_cache_key(key, suffix = "") {
         if (!suffix && this.pagination_includes_post_id.includes(key)) {

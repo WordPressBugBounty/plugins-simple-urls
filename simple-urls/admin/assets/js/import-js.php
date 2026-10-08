@@ -49,13 +49,14 @@
 			function full_list_paginate(set_page) {
 				lasso_lite_helper.set_pagination_cache(lasso_lite_helper.get_page_name(), set_page);
 
+				var total_items = jQuery('#total-posts').val();
 				var data = {
-					items: jQuery('#total-posts').val(),
+					items: total_items,
 					displayedPages: 3,
 					itemsOnPage: limit,
 					cssStyle: 'light-theme',
-					prevText: '<i class="far fa-angle-double-left"></i> Previous',
-					nextText: 'Next <i class="far fa-angle-double-right"></i>',
+					prevText: '<i class="far fa-chevron-left" aria-hidden="true"></i><span class="screen-reader-text">Previous</span>',
+					nextText: '<i class="far fa-chevron-right" aria-hidden="true"></i><span class="screen-reader-text">Next</span>',
 					onPageClick: function(pageNumber, event) {
 						var sortable = jQuery('.sortable-col.active');
 						var orderBy = '';
@@ -67,6 +68,7 @@
 
 						lasso_lite_helper.set_pagination_cache(lasso_lite_helper.get_page_name(), pageNumber);
 						lasso_lite_helper.remove_page_number_out_of_url();
+						lasso_lite_helper.update_link_range(pagination, pageNumber, jQuery('#total-posts').val(), limit);
 
 						if(['asc', 'desc'].includes(orderType) && orderBy !== '') {
 							get_data_via_ajax(pageNumber, limit, orderBy, orderType);
@@ -80,6 +82,14 @@
 					data.currentPage = set_page;
 				}
 				pagination.pagination(data);
+				// One-page / empty list: hide the pager control, keep the range label (same as generate_paging()).
+				pagination.toggleClass('lasso-pager-single-page', (parseInt(total_items, 10) || 0) <= limit);
+				lasso_lite_helper.update_link_range(
+					pagination,
+					set_page > 0 ? set_page : 1,
+					total_items,
+					limit
+				);
 
 				return pagination;
 			}

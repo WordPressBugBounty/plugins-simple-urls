@@ -16,6 +16,7 @@ use LassoLite\Classes\Enum;
 use LassoLite\Classes\Meta_Enum;
 use LassoLite\Classes\Amazon_Api;
 use LassoLite\Classes\Helper;
+use LassoLite\Classes\Product_Tour;
 use LassoLite\Classes\Realtime_Click;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\SURL;
@@ -56,6 +57,7 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
 		add_action( 'wp_ajax_lasso_lite_realtime_pull', array( $this, 'lasso_lite_realtime_pull' ) );
 		add_action( 'wp_ajax_lasso_lite_track_activation_funnel', array( $this, 'lasso_lite_track_activation_funnel' ) );
+		add_action( 'wp_ajax_lasso_dismiss_dashboard_tour', array( $this, 'lasso_dismiss_dashboard_tour' ) );
 	}
 
 	/**
@@ -77,7 +79,7 @@ class Ajax {
 		$post   = Helper::POST();
 		$search = sanitize_text_field( wp_unslash( $post['search'] ?? $post['q'] ?? '' ) );
 		$page   = max( 1, intval( $post['page'] ?? 1 ) );
-		$limit  = max( 1, min( 50, intval( $post['limit'] ?? 20 ) ) );
+		$limit  = max( 1, min( 50, intval( $post['limit'] ?? 10 ) ) );
 
 		$country = '';
 		if ( ! empty( $post['country'] ) ) {
@@ -798,10 +800,7 @@ class Ajax {
 	public function lasso_lite_review_snooze() {
 		Helper::verify_access_and_nonce();
 
-		$link_count = SURL::total();
-
-		Helper::update_option( Constant::LASSO_OPTION_REVIEW_SNOOZE, '1' );
-		Helper::update_option( Constant::LASSO_OPTION_REVIEW_LINK_COUNT, $link_count );
+		Helper::snooze_request_review();
 
 		wp_send_json_success(
 			array(
@@ -816,7 +815,7 @@ class Ajax {
 	public function lasso_lite_disable_review() {
 		Helper::verify_access_and_nonce();
 
-		Helper::update_option( Constant::LASSO_OPTION_REVIEW_ALLOW, '0' );
+		Helper::disable_request_review();
 
 		wp_send_json_success(
 			array(
@@ -1094,5 +1093,24 @@ class Ajax {
 		}
 
 		return 0;
+	}
+
+	/**
+	 * Persist Dashboard product tour dismiss (Skip / Done).
+	 */
+	public function lasso_dismiss_dashboard_tour() {
+		check_ajax_referer( 'lasso_ajax', 'security' );
+
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'simple-urls' ) ), 403 );
+		}
+
+		Product_Tour::mark_done_for_user();
+
+		wp_send_json_success(
+			array(
+				'status' => 1,
+			)
+		);
 	}
 }

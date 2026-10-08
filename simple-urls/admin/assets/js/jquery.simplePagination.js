@@ -173,7 +173,7 @@
 
 			tagName = (typeof this.prop === 'function') ? this.prop('tagName') : this.attr('tagName');
 
-			var $panel = tagName === 'UL' ? this : $('<ul class="pagination justify-content-end mb-0"></ul>').appendTo(this);
+			var $panel = tagName === 'UL' ? this : $('<ul class="pagination justify-content-end pb-0 pt-0 mb-0"></ul>').appendTo(this);
 
 			// Generate Prev link
 			if (o.prevText) {

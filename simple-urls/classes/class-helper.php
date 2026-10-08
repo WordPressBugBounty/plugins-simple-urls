@@ -1618,28 +1618,66 @@ class Helper {
 	}
 
 	/**
-	 * Whether show Request Review at the top of the page
+	 * Highest review milestone reached (Constant::REVIEW_MILESTONES), or 0 below the first.
+	 *
+	 * @param int $link_count Link count.
+	 * @return int
 	 */
-	public static function show_request_review() {
-		$link_count = SURL::total();
+	public static function get_review_milestone( $link_count ) {
+		$reached = 0;
+		foreach ( Constant::REVIEW_MILESTONES as $milestone ) {
+			if ( $link_count >= $milestone ) {
+				$reached = $milestone;
+			}
+		}
 
-		$lasso_review_allow      = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_REVIEW_ALLOW, '1' ) );
-		$lasso_review_snooze     = self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_REVIEW_SNOOZE, '0' ) );
-		$lasso_review_link_count = intval( self::get_option( Constant::LASSO_OPTION_REVIEW_LINK_COUNT, $link_count ) );
+		return $reached;
+	}
 
-		// Ask after early success (enough links to be real usage), not after a large catalog.
-		$show            = ! $lasso_review_snooze && $link_count >= 5;
-		$snooze_but_show = $lasso_review_snooze && $link_count - $lasso_review_link_count >= 5;
-
-		if ( ! $lasso_review_allow ) {
+	/**
+	 * Whether to show the review card (#1077).
+	 *
+	 * Shows once per link milestone (5, 50, 100, 200, 300, 500). A snooze covers the milestone
+	 * reached at that time and starts a cooldown, so adding links fast never re-asks sooner.
+	 * Only "Don't ask again" turns it off for good.
+	 *
+	 * @param int|null $link_count Link count; defaults to the current total.
+	 * @return bool
+	 */
+	public static function show_request_review( $link_count = null ) {
+		if ( self::cast_to_boolean( self::get_option( Constant::LASSO_OPTION_REVIEW_DISABLED, '0' ) ) ) {
 			return false;
 		}
 
-		if ( $show || $snooze_but_show ) {
-			return true;
+		$link_count = null === $link_count ? SURL::total() : intval( $link_count );
+		$milestone  = self::get_review_milestone( $link_count );
+		$snoozed    = intval( self::get_option( Constant::LASSO_OPTION_REVIEW_MILESTONE, 0 ) );
+		$snoozed_at = intval( self::get_option( Constant::LASSO_OPTION_REVIEW_SNOOZED_AT, 0 ) );
+
+		if ( $milestone <= $snoozed ) {
+			return false;
 		}
 
-		return false;
+		return time() - $snoozed_at >= Constant::REVIEW_SNOOZE_COOLDOWN;
+	}
+
+	/**
+	 * Snooze the review card until the next milestone, and at least the cooldown.
+	 *
+	 * @param int|null $link_count Link count; defaults to the current total.
+	 */
+	public static function snooze_request_review( $link_count = null ) {
+		$link_count = null === $link_count ? SURL::total() : intval( $link_count );
+
+		self::update_option( Constant::LASSO_OPTION_REVIEW_MILESTONE, self::get_review_milestone( $link_count ) );
+		self::update_option( Constant::LASSO_OPTION_REVIEW_SNOOZED_AT, time() );
+	}
+
+	/**
+	 * "Don't ask again": turn the review card off for good.
+	 */
+	public static function disable_request_review() {
+		self::update_option( Constant::LASSO_OPTION_REVIEW_DISABLED, '1' );
 	}
 
 	/**
@@ -1690,8 +1728,7 @@ class Helper {
 	/**
 	 * Whether the footer credentials banner should block the upsell CTA.
 	 *
-	 * The upsell may show after the customer dismisses the banner once, even if the
-	 * banner reappears on a later page load until the second dismiss is recorded.
+	 * While the credentials notice is visible and not yet dismissed once, the upsell stays hidden.
 	 *
 	 * @return bool
 	 */
@@ -1721,6 +1758,12 @@ class Helper {
 		}
 
 		if ( ! self::uses_default_thumbnail( $stored_thumbnail ) ) {
+			return false;
+		}
+
+		if ( self::cast_to_boolean(
+			self::get_option( Constant::LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED, '0' )
+		) ) {
 			return false;
 		}
 

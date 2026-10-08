@@ -153,14 +153,40 @@
 }
 
 /* Request Review */
-.ls-review .icon{display: inline-block; width: fit-content; padding: 15px;}
-.ls-review .icon img{width: 50px; border-radius: 50%;}
-.ls-review .review{display: inline-block; vertical-align: middle;}
-.ls-review .review p{margin-bottom: 0;}
-.ls-review .review span{margin-right: 20px;}
-.ls-review .dismiss{color: var(--lasso-blue);}
-.ls-review .dismiss{font-size: 150%;}
-.ls-review .dismiss:hover{cursor: pointer;}
+/* #1077: review ask as a dismissible bottom-right card; bottom clears the 48px Intercom launcher */
+.ls-review-card{position: fixed; right: 20px; bottom: 84px; z-index: 9990; width: min(380px, calc(100vw - 32px)); background: #fff; border: 1px solid rgb(94 54 202 / 22%); border-radius: 12px; box-shadow: 0 4px 12px rgb(29 27 44 / 14%), 0 18px 48px rgb(64 37 138 / 32%) !important; /* beats the global div{box-shadow:none !important} in lasso-dashboard.css */ overflow: hidden; font-size: 14px; line-height: 1.5; animation: ls-review-card-in .35s cubic-bezier(.2,.8,.2,1); transition: opacity .3s, transform .3s;}
+.ls-review-card.is-leaving{opacity: 0; transform: translateY(16px);}
+@keyframes ls-review-card-in{from{opacity: 0; transform: translateY(24px);} to{opacity: 1; transform: none;}}
+.ls-review-card-close{position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: rgb(255 255 255 / 16%); color: #fff; font-size: 18px; line-height: 28px; cursor: pointer;}
+.ls-review-card-close:hover{background: rgb(255 255 255 / 28%);}
+.ls-review-card-head{background: linear-gradient(135deg, var(--lasso-purple, #5E36CA), var(--lasso-dark-purple, #40258A)); color: #fff; padding: 20px 20px 18px;}
+.ls-review-card-brand{display: flex; align-items: center; gap: 12px; padding-right: 28px;}
+.ls-review-card-brand img{width: 44px; height: 44px; flex: none; border-radius: 50%; box-shadow: 0 0 0 2px rgb(255 255 255 / 35%) !important;}
+.ls-review-card-head h3{margin: 0 0 2px; color: #fff; font-size: 18px; font-weight: 700; line-height: 1.3;}
+.ls-review-card-head p{margin: 0; font-size: 13px; opacity: .85;}
+.ls-review-card-head p strong{font-weight: 700; opacity: 1;}
+.ls-review-card-step{padding: 18px 20px 20px;}
+.ls-review-card-step[hidden]{display: none;}
+.ls-review-card-step > p{margin: 0 0 14px; color: #6b6880;}
+.ls-review-card-step > p strong{color: #1d1b2c;}
+.ls-review-card-step h4{margin: 0; color: #1d1b2c; font-size: 15px; font-weight: 700; line-height: 1.4;}
+.ls-review-card-title{display: flex; align-items: center; gap: 12px; margin-bottom: 8px;}
+.ls-review-card-badge{display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: rgb(246 189 96 / 22%); font-size: 18px; line-height: 1;}
+.ls-review-card-badge.is-support{background: rgb(94 54 202 / 10%);}
+.ls-review-card-done{padding: 28px 20px; text-align: center;}
+.ls-review-card-done > p{margin: 0;}
+.ls-review-card-check{display: grid; place-items: center; width: 48px; height: 48px; margin: 0 auto 10px; border-radius: 50%; background: rgb(34 186 160 / 14%); color: var(--lasso-dark-green, #1B8F7B); font-size: 24px; font-weight: 700;}
+.ls-review-card-btns{display: grid; grid-template-columns: 1fr 1fr; gap: 8px;}
+.ls-review-card-btn{display: inline-flex; align-items: center; justify-content: center; padding: 10px 8px; white-space: nowrap; border: 1px solid transparent; border-radius: 6px; font-size: 13px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: background .15s, border-color .15s;}
+.ls-review-card-btn.block{display: flex; width: 100%;}
+.ls-review-card-btn.primary{background: var(--lasso-purple, #5E36CA); color: #fff;}
+.ls-review-card-btn.primary:hover, .ls-review-card-btn.primary:focus{background: var(--lasso-dark-purple, #40258A); color: #fff; text-decoration: none;}
+.ls-review-card-btn.ghost{background: #fff; color: #1d1b2c; border-color: var(--lasso-gray, #E2E2E2);}
+.ls-review-card-btn.ghost:hover{background: #F7F7FC; border-color: var(--lasso-light-purple, #B09AE5);}
+.ls-review-card-foot{display: flex; justify-content: space-between; gap: 12px; margin-top: 14px; font-size: 12px;}
+.ls-review-card-foot a{color: #6b6880; text-decoration: none;}
+.ls-review-card-foot a:only-child{margin: 0 auto;}
+.ls-review-card-foot a:hover{color: var(--lasso-purple, #5E36CA); text-decoration: underline;}
 
 /* Lasso Signup UI */
 #lasso-signup-wrapper {
@@ -611,4 +637,406 @@
     .lasso-lite-layout {
         min-height: calc(100vh - 46px);
     }
+}
+
+/* HEADER RESPONSIVE (#1066 + #1078)
+   #1078: Pro-style flex row (.lasso-lite-header) — logo · nav · utils.
+   ≥1500px full row; 1280–1499px compact row; <1280px nav collapses behind .lasso-lite-header-toggle (logo · chip · progress · CTA stay on row 1). */
+.lasso-lite-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.25rem 1.5rem;
+    min-height: 100px;
+    margin: 0 -15px;
+    padding: 1rem 1.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.lasso-lite-header .logo {
+    width: 120px;
+    height: 58px;
+    flex: 0 0 auto;
+    position: relative;
+    display: block;
+}
+
+.lasso-lite-header .logo img {
+    position: absolute;
+    display: block;
+    width: 100%;
+    transition: ease 0.5s;
+}
+
+#lasso-lite-header-nav {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.lasso-lite-header-nav {
+    flex: 1 1 auto;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 1.5rem;
+    font-size: 15px;
+    width: 100%;
+}
+
+.lasso-lite-header-nav .nav-link {
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    white-space: nowrap;
+}
+
+.lasso-lite-header-ext {
+    font-size: 0.65em;
+    opacity: 0.75;
+    margin-left: 0.15rem;
+    vertical-align: 1px;
+}
+
+.lasso-lite-header-utils {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex: 0 0 auto;
+    margin-left: auto;
+}
+
+/* Keep setup-progress circle as containing block for url-add.js absolute children. */
+.lasso-lite-header-utils #wrapper-circle {
+    position: relative;
+    top: 0;
+    width: 75px;
+    height: 75px;
+    flex: 0 0 auto;
+    /* #1089: round hit area — only the icon toggles the dropdown, not the square corners. */
+    border-radius: 50%;
+}
+
+/* #1089: square canvas + % label pass clicks through to the round wrapper. */
+.lasso-lite-header-utils #wrapper-circle > #circle,
+.lasso-lite-header-utils #wrapper-circle > #circle-holder {
+    pointer-events: none;
+}
+
+/* Closed setup-progress dropdown must not intercept clicks on the settings sub-nav. */
+.lasso-lite-header-utils #wrapper-circle #setup-progress-wrapper:not(.animation) {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.lasso-lite-header-utils .btn {
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+/* #1081: Add New Link + Inactive chip stacked under the CTA column. */
+.lasso-lite-header-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.lasso-lite-account-chip {
+    position: relative;
+    display: flex;
+    justify-content: center;
+}
+
+/*
+ * Hoverable bridge on the chip (not the popover). The card uses pointer-events: none
+ * while hidden, so a ::after on the popover cannot keep :hover alive across the gap.
+ */
+.lasso-lite-account-chip::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 14px;
+    z-index: 10049;
+}
+
+/* Explainer card: CSS-only on hover / keyboard focus (avoids general_disable_tooltip). */
+.lasso-lite-account-popover {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    left: auto;
+    width: min(260px, calc(100vw - 32px));
+    max-width: calc(100vw - 32px);
+    padding: 12px 14px;
+    background: #fff;
+    border: 0;
+    border-radius: 5px;
+    box-shadow: rgb(0 0 0 / 15%) 0 2px 10px;
+    color: var(--black, #555);
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    text-align: left;
+    z-index: 10050;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, visibility 0.15s ease;
+    box-sizing: border-box;
+}
+
+.lasso-lite-account-popover::before {
+    content: '';
+    position: absolute;
+    top: -6px;
+    right: 24px;
+    border: 6px solid transparent;
+    border-top-width: 0;
+    border-bottom-color: #fff;
+}
+
+.lasso-lite-account-chip:hover .lasso-lite-account-popover,
+.lasso-lite-account-chip:focus-within .lasso-lite-account-popover {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+/* Narrow viewports: shrink + keep right-anchored so the card stays in the header's no-side-scroll layout. */
+@media (max-width: 480px) {
+    .lasso-lite-account-popover {
+        width: min(240px, calc(100vw - 24px));
+        max-width: calc(100vw - 24px);
+        right: 0;
+        left: auto;
+    }
+
+    .lasso-lite-account-popover::before {
+        right: 16px;
+    }
+}
+
+.lasso-lite-account-popover__heading {
+    margin: 0 0 6px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--black, #555);
+}
+
+.lasso-lite-account-popover__body {
+    margin: 0 0 10px;
+    color: var(--black, #555);
+}
+
+.lasso-lite-account-popover__cta {
+    width: 100%;
+    white-space: normal;
+}
+
+/* Account status chip (#1078 review): quiet pill with a status dot instead of the uppercase label + white badge. */
+.lasso-lite-header .lasso-header-account-status--inactive {
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: none !important;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0;
+}
+
+.lasso-lite-header .lasso-header-account-status--inactive:hover {
+    background: rgba(255, 255, 255, 0.16);
+    transform: none;
+}
+
+.lasso-lite-header .lasso-header-account-status__dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 auto;
+    border-radius: 50%;
+    background: #ff8a94;
+    box-shadow: 0 0 0 3px rgba(255, 138, 148, 0.25);
+}
+
+.lasso-lite-header .lasso-header-account-status__label {
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    font-weight: 600;
+    opacity: 0.85;
+}
+
+.lasso-lite-header .lasso-header-account-status__badge {
+    padding: 0;
+    background: none;
+    color: #ffc2c8;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.lasso-lite-header-toggle {
+    background: transparent;
+    border: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 6px;
+    font-size: 18px;
+    color: var(--white);
+    cursor: pointer;
+    flex: 0 0 auto;
+}
+
+.lasso-lite-header-toggle:hover,
+.lasso-lite-header-toggle:focus,
+.lasso-lite-header-toggle[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--white);
+    outline: none;
+}
+
+.lasso-lite-header-toggle:focus-visible {
+    /* Beat lasso-dashboard.css button/button:focus outline:none !important */
+    outline: 2px solid var(--white) !important;
+    outline-offset: 2px !important;
+}
+
+/* ≥1280px: nav always visible, menu button hidden (custom breakpoint — Bootstrap's xl is 1200px, too narrow with the WP sidebar). */
+@media (min-width: 1280px) {
+    #lasso-lite-header-nav.collapse {
+        display: flex !important;
+    }
+
+    .lasso-lite-header .lasso-lite-header-toggle {
+        display: none !important;
+    }
+}
+
+/* 1280–1499px: compact one row — smaller logo/nav, chip shows only the status. */
+@media (min-width: 1280px) and (max-width: 1499.98px) {
+    .lasso-lite-header {
+        gap: 0.25rem 0.75rem;
+        padding: 0.75rem 1rem;
+    }
+
+    .lasso-lite-header .logo {
+        width: 100px;
+        height: 48px;
+    }
+
+    .lasso-lite-header-nav {
+        gap: 0.85rem;
+        font-size: 14px;
+    }
+
+    .lasso-lite-header-utils {
+        gap: 0.5rem;
+    }
+
+    .lasso-lite-header-utils .btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.9rem;
+    }
+
+    .lasso-lite-header .lasso-header-account-status__label {
+        display: none;
+    }
+}
+
+/* <1280px: nav collapses behind the menu button so logo · chip · progress · Add New Link stay on one row. */
+@media (max-width: 1279.98px) {
+    .lasso-lite-header {
+        min-height: 0;
+        padding: 0.5rem 0.85rem;
+        gap: 0 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .lasso-lite-header .logo {
+        width: 110px;
+        height: 53px;
+    }
+
+    #lasso-lite-header-nav {
+        order: 3;
+        flex: 1 0 100%;
+    }
+
+    #lasso-lite-header-nav .lasso-lite-header-nav {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 0;
+        padding: 0.25rem 0 0.5rem;
+        font-size: 15px;
+    }
+
+    #lasso-lite-header-nav .lasso-lite-header-nav .nav-item {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    #lasso-lite-header-nav .lasso-lite-header-nav .nav-link {
+        padding: 0.7rem 0.25rem;
+    }
+
+    /* Let utils wrap inside the header width so phones never get horizontal scroll. */
+    .lasso-lite-header-utils {
+        order: 2;
+        gap: 0.35rem;
+        flex: 1 1 auto;
+        flex-wrap: wrap;
+        min-width: 0;
+        max-width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* Phones: utilities wrap and the account pill shows only its badge so the header never scrolls sideways. */
+@media (max-width: 575.98px) {
+    .lasso-lite-header-utils {
+        flex: 1 0 100%;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .lasso-lite-header-utils .lasso-header-account-status__label {
+        display: none;
+    }
+
+    /* Menu button sits on the logo row (header is position: relative). */
+    .lasso-lite-header .lasso-lite-header-toggle {
+        position: absolute;
+        top: 0.85rem;
+        right: 0.85rem;
+    }
+}
+
+/* #1078: Import toolbar — match select + search to 40px without touching global .form-control. */
+.lasso-lite-page-toolbar .form-control {
+    height: 40px !important;
+}
+
+/* 40px border-box + 8px padding left ~22px for WP core's ~40px select line-height, clipping "All Plugins".
+   !important: .form-control padding is !important in lasso-display-modal.css and lasso-dashboard.css. */
+.lasso-lite-page-toolbar select.form-control {
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 38px;
 }

@@ -68,6 +68,7 @@ class Enum {
 	const IS_PRE_POPULATED_AMAZON_API = 'is_pre_populated_amazon_api';
 	const CUSTOMER_FLOW_ENABLED       = 'customer_flow_enabled';
 	const SHARE_DIAGNOSTICS           = 'share_diagnostics';
+	const USER_META_DASHBOARD_TOUR_DONE   = 'lasso_lite_dashboard_tour_done';
 
 	const SUB_PAGE_GROUP_DETAIL = 'detail';
 	const SUB_PAGE_GROUP_URLS   = 'urls';

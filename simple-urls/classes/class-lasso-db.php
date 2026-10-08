@@ -651,7 +651,7 @@ class Lasso_DB {
 					Setting_Enum::AFFILIATE_URL_SLUG,
 					Setting_Enum::AAWP_SLUG,
 					Setting_Enum::EASY_AFFILIATE_LINK_SLUG,
-					Setting_Enum::LASSO_PRO_SLUG,
+					Setting_Enum::LASSO_PRO_SLUG
 				);
 			}
 			$sql = $sql . "
@@ -774,8 +774,9 @@ class Lasso_DB {
 		$sql = '
 			SELECT *
 			FROM ' . $this->pretty_links . '
-			WHERE link_cpt_id = ' . $id . ';
+			WHERE link_cpt_id = %d;
 		';
+		$sql = Model::prepare( $sql, $id );
 
 		return $this->get_row( $sql );
 	}

@@ -390,4 +390,81 @@ jQuery(document).ready(function () {
         lasso_lite_helper.update_url_parameter('link-search-input', keyword);
         load_dashboard('', keyword );
     });
+
+    // Copy shortcode from Dashboard row (clipboard + textarea fallback).
+    jQuery(document).on('click', '.lasso-lite-copy-shortcode', function (e) {
+        e.preventDefault();
+        var btn = jQuery(this);
+        if (btn.prop('disabled')) {
+            return;
+        }
+        var text = btn.attr('data-shortcode') || '';
+        if (!text) {
+            return;
+        }
+
+        // Capture an immutable label once — never re-read data-tooltip, which
+        // briefly becomes "Copied!" during the flash and would stick on re-click.
+        var originalTooltip = btn.data('lassoLiteCopyShortcodeOriginalTooltip');
+        if (!originalTooltip) {
+            originalTooltip = btn.attr('aria-label') || 'Copy shortcode';
+            btn.data('lassoLiteCopyShortcodeOriginalTooltip', originalTooltip);
+        }
+        var restoreTimerId = btn.data('lassoLiteCopyShortcodeRestoreTimer');
+        if (restoreTimerId) {
+            clearTimeout(restoreTimerId);
+            btn.removeData('lassoLiteCopyShortcodeRestoreTimer');
+        }
+
+        var restore = function () {
+            btn.attr('data-tooltip', originalTooltip);
+            btn.find('.lasso-lite-copy-shortcode-icon')
+                .removeClass('fa-check')
+                .addClass('fa-copy');
+            btn.removeAttr('aria-live');
+            btn.removeData('lassoLiteCopyShortcodeRestoreTimer');
+        };
+
+        var flashCopied = function () {
+            btn.attr('data-tooltip', 'Copied!');
+            btn.attr('aria-live', 'polite');
+            btn.find('.lasso-lite-copy-shortcode-icon')
+                .removeClass('fa-copy')
+                .addClass('fa-check');
+            var timerId = setTimeout(restore, 1600);
+            btn.data('lassoLiteCopyShortcodeRestoreTimer', timerId);
+        };
+
+        var fallbackCopy = function (done) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.top = '0';
+            ta.style.left = '0';
+            ta.style.width = '1px';
+            ta.style.height = '1px';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            var ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {
+                ok = false;
+            }
+            document.body.removeChild(ta);
+            if (ok) {
+                done();
+            }
+        };
+
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(flashCopied).catch(function () {
+                fallbackCopy(flashCopied);
+            });
+            return;
+        }
+        fallbackCopy(flashCopied);
+    });
 });

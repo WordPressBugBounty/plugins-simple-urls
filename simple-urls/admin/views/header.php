@@ -43,6 +43,19 @@ if ( Setting::get_setting( 'general_disable_tooltip' ) ) {
 
 <script src="https://kit.fontawesome.com/21b80bd767.js" crossorigin="anonymous"></script>
 
+<script>
+	// Broken thumbnails (deleted media, missing uploads on a restored backup) show the default image instead.
+	// Capture phase: image error events do not bubble. The flag stops a loop if the default is missing too.
+	document.addEventListener( 'error', function ( e ) {
+		var img = e.target;
+		if ( ! img || 'IMG' !== img.tagName || img.dataset.lassoLiteThumbFallback ) {
+			return;
+		}
+		img.dataset.lassoLiteThumbFallback = '1';
+		img.src = '<?php echo esc_url( Constant::DEFAULT_THUMBNAIL ); ?>';
+	}, true );
+</script>
+
 <!-- REQUEST REVIEW -->
 <?php
 if ( Helper::show_request_review() ) {
@@ -51,52 +64,67 @@ if ( Helper::show_request_review() ) {
 ?>
 
 <!-- HEADER -->
+<?php // #1078/#1081: one full-height row — logo · nav · progress · CTA (Add New Link + Inactive chip under it). <1280px: nav collapses behind menu. ?>
 <div class="container-fluid">
-	<header class="row align-items-center purple-bg p-3 shadow">
+	<header class="lasso-lite-header purple-bg shadow">
 
 		<!-- LASSO LOGO -->
-		<div class="col-lg-2">
-			<a href="<?php echo Page::get_page_url( $available_pages[ Enum::PAGE_DASHBOARD ]->slug ); ?>" class="logo mx-auto mx-lg-0">
-				<img src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/lasso-logo.svg">
-			</a>
-		</div>
+		<a href="<?php echo Page::get_page_url( $available_pages[ Enum::PAGE_DASHBOARD ]->slug ); ?>" class="logo">
+			<img src="<?php echo SIMPLE_URLS_URL; ?>/admin/assets/images/lasso-logo.svg" alt="Lasso">
+		</a>
 
 		<!-- NAVIGATION -->
-		<div class="col-lg py-lg-0 py-3 ml-5">
-			<ul class="nav justify-content-center font-weight-bold">
+		<div id="lasso-lite-header-nav" class="collapse">
+			<ul id="lasso-header-nav" class="nav justify-content-center font-weight-bold lasso-lite-header-nav">
 			<?php foreach ( $header_menu as $menu ) : ?>
 				<?php $page = $available_pages[ $menu ]; ?>
-				<li class="nav-item mx-3">
-					<a class="nav-link px-0 white <?php echo $page->active_class; ?>" 
+				<li class="nav-item">
+					<a class="nav-link px-0 white <?php echo $page->active_class; ?>"
 						href="<?php echo Page::get_page_url( $page->slug ); ?>">
 						<?php echo $page->title; ?>
 					</a>
 				</li>
 			<?php endforeach; ?>
-				<li class="nav-item mx-3">
+				<li class="nav-item">
 					<a class="nav-link px-0 white" href="<?php echo Constant::LASSO_ANALYTICS_URL; ?>" target="_blank">
-						Analytics
+						Analytics <i class="far fa-external-link-alt lasso-lite-header-ext" aria-hidden="true"></i>
 					</a>
 				</li>
-				<li class="nav-item mx-3">
+				<li class="nav-item">
 					<a class="nav-link px-0 white" href="<?php echo Constant::LASSO_AFFILIATE_PLUS_URL; ?>" target="_blank">
-						Marketplace
+						Marketplace <i class="far fa-external-link-alt lasso-lite-header-ext" aria-hidden="true"></i>
 					</a>
 				</li>
 			</ul>
 		</div>
-		<div class="col-lg-1 text-lg-right text-center pb-lg-0 pb-3 pl-1">
+
+		<!-- UTILITIES: progress · CTA (Add New Link + inactive chip) · menu toggle -->
+		<div class="lasso-lite-header-utils">
 			<div id="wrapper-circle"></div>
-		</div>
-		<div class="col-lg-3 d-flex flex-column flex-lg-row align-items-center justify-content-lg-end justify-content-center pb-lg-0 pb-3 pl-1 lasso-header-actions">
-			<?php if ( ! $is_lasso_app_account_connected ) : ?>
-			<button type="button" class="lasso-header-account-status lasso-header-account-status--inactive mb-2 mb-lg-0 mr-lg-3 order-lg-1 order-2" data-toggle="modal" data-target="#lasso-lite-analytics-modal" title="<?php echo esc_attr( __( 'Create your free Lasso account', 'simple-urls' ) ); ?>" aria-label="<?php echo esc_attr( __( 'Account status: inactive. Create your free Lasso account.', 'simple-urls' ) ); ?>">
-				<span class="lasso-header-account-status__label"><?php echo esc_html( __( 'Account status', 'simple-urls' ) ); ?></span>
-				<span class="lasso-header-account-status__badge"><?php echo esc_html( __( 'Inactive', 'simple-urls' ) ); ?></span>
-			</button>
-			<?php endif; ?>
-			<button class="btn order-lg-2 order-1 mb-2 mb-lg-0" data-toggle="modal" data-target="#url-add">
-				<i class="far fa-plus-circle large-screen-only"></i> Add New Link
+			<div class="lasso-lite-header-cta">
+				<button id="lasso-header-add" type="button" class="btn" data-toggle="modal" data-target="#url-add">
+					<i class="far fa-plus-circle" aria-hidden="true"></i> Add New Link
+				</button>
+				<?php if ( ! $is_lasso_app_account_connected ) : ?>
+				<div class="lasso-lite-account-chip">
+					<button type="button" class="lasso-header-account-status lasso-header-account-status--inactive" data-toggle="modal" data-target="#lasso-lite-analytics-modal" aria-haspopup="dialog" aria-controls="lasso-lite-account-popover" aria-label="<?php echo esc_attr( __( 'Account status: inactive. Create your free Lasso account.', 'simple-urls' ) ); ?>">
+						<span class="lasso-header-account-status__dot" aria-hidden="true"></span>
+						<span class="lasso-header-account-status__label"><?php echo esc_html( __( 'Account', 'simple-urls' ) ); ?></span>
+						<span class="lasso-header-account-status__badge"><?php echo esc_html( __( 'Inactive', 'simple-urls' ) ); ?></span>
+					</button>
+					<div class="lasso-lite-account-popover" id="lasso-lite-account-popover" role="region" aria-labelledby="lasso-lite-account-popover-heading">
+						<p class="lasso-lite-account-popover__heading" id="lasso-lite-account-popover-heading"><?php echo esc_html( __( "Your Lasso account isn't connected", 'simple-urls' ) ); ?></p>
+						<p class="lasso-lite-account-popover__body"><?php echo esc_html( __( "This site isn't linked to a free Lasso account yet, so click analytics and link alerts are off.", 'simple-urls' ) ); ?></p>
+						<button type="button" class="btn btn-sm lasso-lite-account-popover__cta" data-toggle="modal" data-target="#lasso-lite-analytics-modal">
+							<?php echo esc_html( __( 'Connect free account', 'simple-urls' ) ); ?>
+						</button>
+					</div>
+				</div>
+				<?php endif; ?>
+			</div>
+			<!-- MENU TOGGLE (#1066 + #1078: below 1280px — opens #lasso-lite-header-nav) -->
+			<button type="button" class="lasso-lite-header-toggle white" data-toggle="collapse" data-target="#lasso-lite-header-nav" aria-controls="lasso-lite-header-nav" aria-expanded="false" aria-label="<?php echo esc_attr__( 'Menu', 'simple-urls' ); ?>">
+				<i class="far fa-bars" aria-hidden="true"></i>
 			</button>
 		</div>
 

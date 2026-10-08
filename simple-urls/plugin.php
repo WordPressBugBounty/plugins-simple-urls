@@ -2,10 +2,10 @@
 /**
  * Plugin Name: Lasso Lite
  * Plugin URI: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=plugin-header
- * Description: Stop pasting long affiliate URLs into every post. Cloak your links, add product displays, and track clicks in WordPress.
+ * Description: Stop pasting long affiliate URLs into every post. Cloak links with a URL shortener and link tracking in WordPress.
  * Author: Lasso
  * Author URI: https://getlasso.co/?utm_source=lasso-lite&utm_medium=wp&utm_campaign=plugin-header
- * Version: 159
+ * Version: 160
 
  * Text Domain: simple-urls
  * Domain Path: /languages
@@ -24,7 +24,7 @@ use LassoLite\Pages\Hook;
 
 // ? ==============================================================================================
 // ? WE SHOULD UPDATE THE VERSION NUMBER HERE AS WELL WHEN RELEASING A NEW VERSION
-define( 'LASSO_LITE_VERSION', '159' );
+define( 'LASSO_LITE_VERSION', '160' );
 // ? ==============================================================================================
 
 function activate_lasso_lite() {

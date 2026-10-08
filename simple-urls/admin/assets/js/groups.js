@@ -100,13 +100,13 @@ jQuery(document).ready(function() {
 				let data = res.data;
 				let json_data = data.output;
 
-				// empty data
-				if (json_data.length == 0) {
+				if ( json_data.length == 0 ) {
 					container.html(lasso_lite_helper.empty_html());
-					return;
+				} else {
+					lasso_lite_helper.inject_to_template(jQuery("#report-content"), 'group-list', json_data);
 				}
 
-				lasso_lite_helper.inject_to_template(jQuery("#report-content"), 'group-list', json_data);
+				// Always rebuild pager (incl. total 0) so chevrons hide after a prior multi-page result.
 				lasso_lite_helper.generate_paging( jQuery('.dashboard-pagination'), data.page, data.total, function (page_number) {
 					load_groups(page_number);
 				}, data.limit_on_page);

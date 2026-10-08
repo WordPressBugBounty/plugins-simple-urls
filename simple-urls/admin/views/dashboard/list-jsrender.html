@@ -7,22 +7,31 @@
 			</a>
 		</div>
 
-		<!-- TITLE -->
-		<div class="col-lg-4 text-lg-left text-center pb-lg-0 pb-1">
-			<a href="{{:link_detail}}" class="black hover-purple-text font-weight-bold">
+		<!-- TITLE + URL (stacked, 2-line clamp each) -->
+		<div class="col-lg-8 text-lg-left text-center pb-lg-0 pb-1 lasso-lite-link-name-col">
+			<a href="{{:link_detail}}" class="black hover-purple-text font-weight-bold lasso-lite-link-name" title="{{:title}}">
 				{{:title}}
 			</a>
-		</div>
-
-		<div class="col-lg-5 d-lg-block">
-			<a href="{{:public_link}}" class="dark-gray hover-purple-text cursor-pointer" target="_blank">
+			<a href="{{:public_link}}" class="dark-gray hover-purple-text small cursor-pointer lasso-lite-link-url" target="_blank" rel="noopener noreferrer" title="{{>public_link}}">
 				{{:public_link}}
 			</a>
 		</div>
 
-		<!-- Clicks -->
+		<!-- GROUPS -->
 		<div class="col-lg-2 d-lg-block">
 			{{:groups}}
+		</div>
+
+		<!-- COPY SHORTCODE -->
+		<div class="col-lg-1 text-center d-lg-block pb-lg-0 pb-2">
+			<button type="button"
+				class="btn btn-sm lasso-lite-copy-shortcode"
+				data-shortcode="{{>shortcode}}"
+				data-tooltip="Copy shortcode"
+				aria-label="Copy shortcode"
+				{{if shortcode}}{{else}}disabled{{/if}}>
+				<i class="far fa-copy lasso-lite-copy-shortcode-icon" aria-hidden="true"></i>
+			</button>
 		</div>
 	</div>
 </div>

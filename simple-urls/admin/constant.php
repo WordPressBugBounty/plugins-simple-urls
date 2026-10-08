@@ -10,6 +10,46 @@ namespace LassoLite\Admin;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 
+/**
+ * Browser project key for PostHog.
+ *
+ * An explicit LASSO_POSTHOG_API_KEY wins. Otherwise a wp-config
+ * LASSO_POSTHOG_PROJECT_KEY (the pre-rename override) wins over the bundled default.
+ * Passing the bundled default as $api_key still yields the legacy key, so a later
+ * read cannot ignore a site that only set the old constant.
+ *
+ * @param mixed $legacy_project_key LASSO_POSTHOG_PROJECT_KEY when defined, otherwise null.
+ * @param mixed $api_key            LASSO_POSTHOG_API_KEY when defined, otherwise null.
+ * @return string
+ */
+function lasso_lite_resolve_posthog_api_key( $legacy_project_key, $api_key = null ) {
+	$bundled = 'phc_QZaXdXM6OcqzRiVcTp3dAFJDEwVsqZgNJgar8NzKSot';
+
+	if ( is_string( $api_key ) && '' === $api_key ) {
+		return '';
+	}
+	if ( null === $api_key && is_string( $legacy_project_key ) && '' === $legacy_project_key ) {
+		return '';
+	}
+
+	$legacy  = is_string( $legacy_project_key ) ? $legacy_project_key : '';
+	$api     = is_string( $api_key ) ? $api_key : '';
+
+	if ( '' !== $api && $api !== $bundled ) {
+		return $api;
+	}
+	if ( '' !== $legacy && $legacy !== $api ) {
+		return $legacy;
+	}
+	if ( '' !== $api ) {
+		return $api;
+	}
+	if ( '' !== $legacy ) {
+		return $legacy;
+	}
+	return $bundled;
+}
+
 // ? wp-includes/default-constants.php
 if ( ! defined( 'SECURE_AUTH_COOKIE' ) ) {
 	if ( ! function_exists( 'wp_cookie_constants' ) ) {
@@ -21,6 +61,31 @@ if ( ! defined( 'SECURE_AUTH_COOKIE' ) ) {
 
 if ( ! defined( 'SENTRY_LITE_DSN' ) ) {
 	define( 'SENTRY_LITE_DSN', 'https://6416a56005214ca4966296529ef86479@o51581.ingest.sentry.io/6568051' );
+}
+
+/**
+ * PostHog browser ingest (public project key). Override in wp-config.php; align with Pro affiliate-plugin#5910.
+ */
+if ( ! defined( 'LASSO_POSTHOG_API_HOST' ) ) {
+	define( 'LASSO_POSTHOG_API_HOST', 'https://ph.getlasso.co' );
+}
+
+if ( ! defined( 'LASSO_POSTHOG_API_KEY' ) ) {
+	define(
+		'LASSO_POSTHOG_API_KEY',
+		lasso_lite_resolve_posthog_api_key(
+			defined( 'LASSO_POSTHOG_PROJECT_KEY' ) ? LASSO_POSTHOG_PROJECT_KEY : null
+		)
+	);
+}
+
+/**
+ * Deprecated alias of LASSO_POSTHOG_API_KEY for older wp-config overrides.
+ *
+ * @deprecated  Use LASSO_POSTHOG_API_KEY (Pro parity).
+ */
+if ( ! defined( 'LASSO_POSTHOG_PROJECT_KEY' ) ) {
+	define( 'LASSO_POSTHOG_PROJECT_KEY', LASSO_POSTHOG_API_KEY );
 }
 
 class Constant {
@@ -76,6 +141,7 @@ class Constant {
 		'general_enable_new_ui'                => true,
 		'check_duplicate_link'                 => false,
 		'performance_event_tracking'           => true,
+		'product_analytics'                    => true,
 
 		// ? url detail
 		'enable_nofollow'                      => true,
@@ -102,9 +168,12 @@ class Constant {
 	const LASSO_CATEGORY            = 'lasso-lite-cat';
 	const LASSO_PRO_POST_TYPE       = 'lasso-urls';
 
-	const LASSO_OPTION_REVIEW_ALLOW               = 'review_allow_notification';
-	const LASSO_OPTION_REVIEW_SNOOZE              = 'review_snooze';
-	const LASSO_OPTION_REVIEW_LINK_COUNT          = 'review_link_count';
+	// #1077 review card. New keys on purpose: dismiss state from the old inline notice does not carry over.
+	const LASSO_OPTION_REVIEW_DISABLED                     = 'review_card_disabled';
+	const LASSO_OPTION_REVIEW_MILESTONE                    = 'review_card_milestone';
+	const LASSO_OPTION_REVIEW_SNOOZED_AT                   = 'review_card_snoozed_at';
+	const REVIEW_MILESTONES                                = array( 5, 50, 100, 200, 300, 500 );
+	const REVIEW_SNOOZE_COOLDOWN                           = 604800; // 7 days: never re-ask sooner, however fast links are added.
 	const LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED = 'dismiss_amazon_credentials_update_notice';
 	/** Second dismiss; banner hides only when both dismiss flags are set. */
 	const LASSO_OPTION_AMAZON_CREDENTIALS_NOTICE_DISMISSED_FINAL = 'dismiss_amazon_credentials_update_notice_final';
@@ -263,6 +332,40 @@ class Constant {
 			$url = (string) apply_filters( 'lasso_lite_hub_url', $url );
 		}
 		return rtrim( $url, '/' );
+	}
+
+	/**
+	 * PostHog API host (defaults to ph.* mirror of Hub URL when unset).
+	 *
+	 * @return string
+	 */
+	public static function get_posthog_api_host() {
+		$host = LASSO_POSTHOG_API_HOST;
+		if ( is_string( $host ) && '' !== $host ) {
+			return rtrim( $host, '/' );
+		}
+
+		$hub = self::get_lasso_hub_url();
+		if ( false !== strpos( $hub, '://app.' ) ) {
+			return str_replace( '://app.', '://ph.', $hub );
+		}
+
+		return 'https://ph.getlasso.co';
+	}
+
+	/**
+	 * PostHog project API key (browser-safe). Filterable for tests.
+	 *
+	 * @return string
+	 */
+	public static function get_posthog_project_key() {
+		$legacy = defined( 'LASSO_POSTHOG_PROJECT_KEY' ) ? LASSO_POSTHOG_PROJECT_KEY : null;
+		$api    = defined( 'LASSO_POSTHOG_API_KEY' ) ? LASSO_POSTHOG_API_KEY : null;
+		$key    = lasso_lite_resolve_posthog_api_key( $legacy, $api );
+		if ( function_exists( 'apply_filters' ) ) {
+			$key = (string) apply_filters( 'lasso_lite_posthog_project_key', $key );
+		}
+		return is_string( $key ) ? $key : '';
 	}
 
 	/**

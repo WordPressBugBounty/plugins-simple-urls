@@ -12,7 +12,7 @@ $bulk_revert = $_GET['bulk-revert'] ?? '';
 $page        = $_GET['page'] ?? '';
 ?>
 
-<div class="row align-items-center">
+<div class="row align-items-center lasso-lite-page-toolbar">
 	<!-- TITLE -->
 	<div class="col-lg mb-4 text-lg-left text-center">
 		<?php if ( Helper::add_prefix_page( Enum::PAGE_IMPORT ) === $page ): ?>
@@ -34,7 +34,7 @@ $page        = $_GET['page'] ?? '';
 		<?php } ?>
 	</div>
 
-    <div class="col-lg text-center large mb-4">
+    <div class="col-lg text-center mb-4">
         <select name="filter_plugin" id="filter-plugin" class="form-control">
             <option value="">All Plugins</option>
         </select>

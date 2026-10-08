@@ -16,7 +16,7 @@ use LassoLite\Classes\Helper;
 	<div class="lite-container min-height">
 		<?php require_once 'header.php'; ?>
 
-		<div id="lasso-import-recovery-diagnostics" class="white-bg rounded shadow mb-3 px-4 py-3">
+		<div id="lasso-import-recovery-diagnostics" class="white-bg rounded shadow lasso-card mb-4 px-4 py-3">
 			<div class="d-flex flex-wrap justify-content-between align-items-center">
 				<div>
 					<strong class="dark-gray">Import recovery</strong>
@@ -29,7 +29,7 @@ use LassoLite\Classes\Helper;
 		</div>
 
 		<!-- LINKS TO IMPORT -->
-		<div class="white-bg rounded shadow lasso-lite-import-urls">            
+		<div class="white-bg rounded shadow lasso-card lasso-lite-import-urls">
 			<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">
 				<div class="row align-items-center">
 					<div class="col-4">Link Title</div>
@@ -40,11 +40,14 @@ use LassoLite\Classes\Helper;
 				</div>
 			</div>
 
-			<div id="report-content"></div>
-		</div>
+			<div id="report-content"><div class="py-5"><div class="loader"></div></div></div>
 
-		<!-- PAGINATION -->
-		<div class="pagination row align-items-center no-gutters pb-3 pt-0"></div>
+			<!-- PAGINATION (card footer) -->
+			<div class="lasso-card-pager">
+				<span id="lasso-link-range" class="lasso-card-pager-range" aria-live="polite"></span>
+				<div class="pagination"></div>
+			</div>
+		</div>
 	</div>
 
 </section>

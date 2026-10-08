@@ -223,7 +223,10 @@ class Amazon_Products extends Model {
 	}
 
 	/**
-	 * Persist free Marketplace image/price from the eligible BLS path.
+	 * Persist free product fields from the eligible BLS path into amazon_products.
+	 *
+	 * Marketplace catalog (/lite/marketplace/products) must not use this — those
+	 * images are often Lasso placeholders, not Amazon product imagery.
 	 *
 	 * @param array       $product    Product fields for Amazon_Api::update_amazon_product_in_db().
 	 * @param bool|string $updated_at Optional updated timestamp.

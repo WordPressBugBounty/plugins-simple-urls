@@ -66,23 +66,26 @@ $is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_acco
 		</div>
 
 		<!-- TABLE -->
-		<div class="white-bg rounded shadow">
+		<div class="white-bg rounded shadow lasso-card">
 
 			<!-- TABLE HEADER -->
 			<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">
 				<div class="row align-items-center">
 					<div class="col-lg-1 text-center">Image</div>
-					<div class="col-lg-4">Title</div>
-					<div class="col-lg-5">Link</div>
+					<div class="col-lg-8">Title</div>
 					<div class="col-lg-2">Groups</div>
+					<div class="col-lg-1 text-center">Shortcode</div>
 				</div>
 			</div>
 
-			<div id="report-content"></div>
-		</div>
+			<div id="report-content"><div class="py-5"><div class="loader"></div></div></div>
 
-		<!-- PAGINATION -->
-		<div class="pagination row align-items-center no-gutters pb-3 pt-0 dashboard-pagination"></div>
+			<!-- PAGINATION (card footer) -->
+			<div class="lasso-card-pager">
+				<span id="lasso-link-range" class="lasso-card-pager-range" aria-live="polite"></span>
+				<div class="pagination dashboard-pagination"></div>
+			</div>
+		</div>
 	</div>
 </section>
 

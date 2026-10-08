@@ -1,6 +1,8 @@
 jQuery(document).ready(function () {
     var show_discount_pricing = false;
     var discount_pricing_html = "";
+    // Guard for updatePriceSection() — undeclared amazonIsPrime threw on Marketplace Refresh and left the spinner stuck.
+    var amazonIsPrime = "0";
     let is_update = parseInt(jQuery("#is-update").val()) === 1;
     let initial_value = {};
     jQuery(".lasso-box-2").html(jQuery("#image_editor").html());
@@ -166,14 +168,6 @@ jQuery(document).ready(function () {
         });
 
     amazon_notification();
-    jQuery(document).on(
-        "lasso_lite_amazon_credentials_notice_dismissed",
-        function () {
-            jQuery("#lasso-get-amazon-images-upsell.d-none").removeClass(
-                "d-none"
-            );
-        }
-    );
     product_duplicate_notification();
     first_link_notification();
     jQuery(".image_loading").html(lasso_lite_helper.get_loading_image());
@@ -909,78 +903,98 @@ jQuery(document).ready(function () {
                     },
                 })
                 .done(function (res) {
-                    if (!res.success) {
-                        lasso_lite_helper.do_notification(
-                            res.data || "Something went wrong.",
-                            "red"
-                        );
-                        return;
-                    }
-
-                    res = res.data;
-                    if (res.status === 0) {
-                        if (res.error) {
+                    try {
+                        if (!res.success) {
                             lasso_lite_helper.do_notification(
-                                res.error,
+                                res.data || "Something went wrong.",
                                 "red"
                             );
-                        }
-                        return;
-                    }
-
-                    update_thumbnail_preview(res.thumbnail);
-                    jQuery("#thumbnail_id").val(res.thumbnail_id);
-                    jQuery("#thumbnail_image_url").val(res.thumbnail);
-
-                    var lasso_name = jQuery("#affiliate_name");
-                    if (
-                        lasso_name.val().trim() == "" ||
-                        lasso_name.val().trim() == "Amazon" ||
-                        lasso_name.val().trim() == "Add a Link Title"
-                    ) {
-                        lasso_name.val(res.product_name);
-                        jQuery(".lasso-title").text(res.product_name);
-                        jQuery("#lasso-url-heading").text(res.product_name);
-                        jQuery("#affiliate_name").text(res.product_name);
-                    }
-
-                    if (res.amazon_product) {
-                        jQuery("#price").val(res.amazon_product.price);
-                        jQuery("div.lasso-price > div.lasso-price-value").val(
-                            res.amazon_product.price
-                        );
-
-                        show_discount_pricing = res.amazon_product.hasOwnProperty(
-                            "show_discount_pricing"
-                        )
-                            ? !!res.amazon_product.show_discount_pricing
-                            : false;
-                        discount_pricing_html =
-                            res.amazon_product.discount_pricing_html || "";
-
-                        if (res.amazon_product.url != "") {
-                            jQuery("#affiliate_url").val(
-                                res.amazon_product.url
-                            );
-                            jQuery(".js-permalink").text(
-                                res.amazon_product.url
-                            );
-                            jQuery(".js-permalink").attr(
-                                "href",
-                                res.amazon_product.url
-                            );
-                            jQuery(".lasso-title").attr(
-                                "href",
-                                res.amazon_product.url
-                            );
-                            jQuery(".lasso-button-1").attr(
-                                "href",
-                                res.amazon_product.url
-                            );
-
+                            return;
                         }
 
-                        updatePriceSection();
+                        res = res.data;
+                        if (res.status === 0) {
+                            if (res.error) {
+                                lasso_lite_helper.do_notification(
+                                    res.error,
+                                    "red"
+                                );
+                            }
+                            return;
+                        }
+
+                        update_thumbnail_preview(res.thumbnail);
+                        jQuery("#thumbnail_id").val(res.thumbnail_id);
+                        jQuery("#thumbnail_image_url").val(res.thumbnail);
+
+                        var lasso_name = jQuery("#affiliate_name");
+                        var lasso_name_val = (
+                            lasso_name.val() ||
+                            ""
+                        ).toString().trim();
+                        if (
+                            lasso_name_val == "" ||
+                            lasso_name_val == "Amazon" ||
+                            lasso_name_val == "Add a Link Title"
+                        ) {
+                            lasso_name.val(res.product_name);
+                            jQuery(".lasso-title").text(res.product_name);
+                            jQuery("#lasso-url-heading").text(res.product_name);
+                            jQuery("#affiliate_name").text(res.product_name);
+                        }
+
+                        if (res.amazon_product) {
+                            jQuery("#price").val(res.amazon_product.price);
+                            jQuery(
+                                "div.lasso-price > div.lasso-price-value"
+                            ).val(res.amazon_product.price);
+
+                            show_discount_pricing =
+                                res.amazon_product.hasOwnProperty(
+                                    "show_discount_pricing"
+                                )
+                                    ? !!res.amazon_product
+                                          .show_discount_pricing
+                                    : false;
+                            discount_pricing_html =
+                                res.amazon_product.discount_pricing_html ||
+                                "";
+
+                            // Marketplace catalog often has is_prime:false and empty price.
+                            amazonIsPrime = res.amazon_product.is_prime
+                                ? "1"
+                                : "0";
+
+                            if (
+                                res.amazon_product.url != null &&
+                                res.amazon_product.url !== ""
+                            ) {
+                                jQuery("#affiliate_url").val(
+                                    res.amazon_product.url
+                                );
+                                jQuery(".js-permalink").text(
+                                    res.amazon_product.url
+                                );
+                                jQuery(".js-permalink").attr(
+                                    "href",
+                                    res.amazon_product.url
+                                );
+                                jQuery(".lasso-title").attr(
+                                    "href",
+                                    res.amazon_product.url
+                                );
+                                jQuery(".lasso-button-1").attr(
+                                    "href",
+                                    res.amazon_product.url
+                                );
+                            }
+
+                            updatePriceSection();
+                        }
+                    } finally {
+                        // Clear spinner even if a field update throws (e.g. missing globals).
+                        jQuery(".image_loading").addClass("d-none");
+                        jQuery("#demo_display_box").removeClass("d-none");
                     }
                 })
                 .fail(function (xhr, status, error) {

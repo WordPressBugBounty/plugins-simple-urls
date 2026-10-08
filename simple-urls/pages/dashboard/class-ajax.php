@@ -28,6 +28,22 @@ class Ajax {
 	}
 
 	/**
+	 * Build a Dashboard/Link Details shortcode string.
+	 *
+	 * @param int    $post_id Post ID.
+	 * @param string $slug    Post slug (post_name).
+	 * @return string Empty when $post_id is 0; otherwise [lasso rel="..." id="..."].
+	 */
+	public static function build_shortcode( $post_id, $slug ) {
+		$post_id = (int) $post_id;
+		if ( 0 === $post_id ) {
+			return '';
+		}
+
+		return '[lasso rel="' . $slug . '" id="' . $post_id . '"]';
+	}
+
+	/**
 	 * Add a Field to a Product
 	 */
 	public function lasso_lite_dashboard_get_list() {
@@ -56,6 +72,7 @@ class Ajax {
 				'img_src'     => $surl->get_thumbnail_url(),
 				'clicks'      => $surl->get_clicks(),
 				'groups'      => $groups,
+				'shortcode'   => self::build_shortcode( $surl->get_id(), get_post_field( 'post_name', $surl->get_id() ) ),
 			);
 		}
 		$data['output']        = $output;

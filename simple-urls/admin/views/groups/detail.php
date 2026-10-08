@@ -63,7 +63,7 @@ use LassoLite\Classes\Enum;
 		</form>
 		<?php elseif ( Enum::SUB_PAGE_GROUP_URLS === $subpage ): ?>
 			<!-- TABLE -->
-			<div class="white-bg rounded shadow mb-5">
+			<div class="white-bg rounded shadow lasso-card mb-5">
 
 				<!-- TABLE HEADER -->
 				<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">
@@ -74,7 +74,7 @@ use LassoLite\Classes\Enum;
 					</div>
 				</div>
 
-				<div id="report-content"></div>
+				<div id="report-content"><div class="py-5"><div class="loader"></div></div></div>
 			</div>
 
 			<!-- DETELE -->

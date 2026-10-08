@@ -14,6 +14,8 @@ use LassoLite\Classes\Beacon_Proxy;
 use LassoLite\Classes\Enum;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
+use LassoLite\Classes\Product_Analytics;
+use LassoLite\Classes\Product_Tour;
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Shortcode;
 use LassoLite\Classes\Activation_Funnel;
@@ -247,9 +249,9 @@ class Hook {
 		// ? Reset request review for testing
 		$reset_review = Helper::GET()[ Enum::RESET_REQUEST_REVIEW ] ?? '';
 		if ( $reset_review ) {
-			Helper::update_option( Constant::LASSO_OPTION_REVIEW_ALLOW, 1 );
-			Helper::update_option( Constant::LASSO_OPTION_REVIEW_SNOOZE, 0 );
-			Helper::update_option( Constant::LASSO_OPTION_REVIEW_LINK_COUNT, 0 );
+			Helper::update_option( Constant::LASSO_OPTION_REVIEW_DISABLED, '0' );
+			Helper::update_option( Constant::LASSO_OPTION_REVIEW_MILESTONE, 0 );
+			Helper::update_option( Constant::LASSO_OPTION_REVIEW_SNOOZED_AT, 0 );
 		}
 
 		// ? The new Lasso Lite active should be redirect to welcome page
@@ -528,8 +530,13 @@ class Hook {
 			}
 		}
 
+		if ( Product_Analytics::should_load( $setting ) ) {
+			Helper::enqueue_script( 'lasso-lite-product-analytics', 'product-analytics.js', array( 'jquery' ) );
+		}
+
 		if ( $setting->is_dashboard_page() ) {
 			Helper::enqueue_script( 'dashboard', 'dashboard.js', array( 'jquery' ) );
+			Product_Tour::enqueue_assets();
 		}
 
 		if ( $setting->is_opportunities_page() ) {
@@ -817,18 +824,31 @@ class Hook {
 			return;
 		}
 
-		$lasso_options = Setting::get_settings();
-		if ( empty( $lasso_options['performance_event_tracking'] ) ) {
+		$lasso_options       = Setting::get_settings();
+		$beacon_enabled      = ! empty( $lasso_options['performance_event_tracking'] );
+		$posthog_track_ready = Product_Analytics::is_enabled()
+			&& '' !== Constant::get_posthog_project_key();
+
+		if ( ! $beacon_enabled && ! $posthog_track_ready ) {
 			return;
 		}
 
-		$beacon_url = add_query_arg( LASSO_BEACON_QUERY, '1', home_url( '/' ) );
+		$beacon_url = $beacon_enabled
+			? add_query_arg( LASSO_BEACON_QUERY, '1', home_url( '/' ) )
+			: '';
 		?>
 		<script type="text/javascript">
 			(function () {
 				var beaconUrl = <?php echo wp_json_encode( $beacon_url ); ?>;
+				var posthogTrackReady = <?php echo $posthog_track_ready ? 'true' : 'false'; ?>;
 				function lassoLiteTrackUpgradeClick(ctaId) {
-					if (!ctaId || !beaconUrl) {
+					if (!ctaId) {
+						return;
+					}
+					if (posthogTrackReady && typeof window.lasso_lite_product_analytics_track === 'function') {
+						window.lasso_lite_product_analytics_track('lite_upgrade_click', { cta_id: ctaId });
+					}
+					if (!beaconUrl) {
 						return;
 					}
 					var payload = JSON.stringify({ n: 'lite_upgrade_click', cta_id: ctaId });
@@ -1033,37 +1053,6 @@ class Hook {
 			}
 		}
 		return $results;
-	}
-
-	/**
-	 * Update the text in the footer
-	 *
-	 * @param string $text Text.
-	 */
-	public function admin_footer( $text ) {
-		global $current_screen;
-
-		$setting = new Setting();
-
-		if ( ! empty( $current_screen->id ) && $setting->is_surls_page() ) {
-			$url  = Enum::LASSO_REVIEW_URL;
-			$text = sprintf(
-				wp_kses(
-					'Enjoying %1$s? Please leave a review on <a href="%2$s" target="_blank" rel="noopener noreferrer">WordPress.org</a> to help us spread the word. Thanks from the Lasso team!',
-					array(
-						'a' => array(
-							'href'   => array(),
-							'target' => array(),
-							'rel'    => array(),
-						),
-					)
-				),
-				'<strong>Lasso Lite</strong>',
-				$url
-			);
-		}
-
-		return $text;
 	}
 
 	/**

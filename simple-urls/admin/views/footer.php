@@ -11,6 +11,7 @@ use LassoLite\Classes\Estimate_Earning;
 use LassoLite\Classes\Helper;
 use LassoLite\Classes\License;
 use LassoLite\Classes\Page;
+use LassoLite\Classes\Product_Analytics;
 use LassoLite\Classes\Setting;
 
 $current_page     = $_GET['page'] ?? '';
@@ -585,3 +586,7 @@ if ( $intercom_jwt && ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 	window.lassoInitIntercom(intercomParams, { show: false });
 </script>
 <?php } ?>
+<?php
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- script markup from Product_Analytics helper.
+echo Product_Analytics::get_footer_script_markup( $lasso_lite_setting );
+?>

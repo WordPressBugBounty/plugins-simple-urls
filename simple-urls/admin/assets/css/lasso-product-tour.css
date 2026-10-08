@@ -1,0 +1,165 @@
+/**
+ * Lasso Pro Dashboard Intro.js tour chrome (#5894).
+ * Purple tooltip to match .lasso-header / --purple; Skip sits inside the card.
+ *
+ * Intro.js v8 applies .introjs-light on the tour root (white --introjs-* vars).
+ * Override that theme root + the tooltip so the card stays purple.
+ */
+
+/*
+ * Spotlight dim uses helperLayer box-shadow. lasso-dashboard.css has
+ * `div { box-shadow: none !important }` which kills it — restore here.
+ */
+.introjs-helperLayer {
+	box-shadow: 0 0 1px 2px rgba(33, 33, 33, 0.8), rgba(33, 33, 33, 0.55) 0 0 0 5000px !important;
+	opacity: 1 !important;
+	/* Smooth spotlight move between tour steps. */
+	transition: top 0.28s ease-out, left 0.28s ease-out, width 0.28s ease-out, height 0.28s ease-out;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltip,
+.introjs-tooltip.lasso-product-tour-tooltip {
+	transition: opacity 0.18s ease-out;
+}
+
+.introjs-overlay {
+	/* Transparent click catcher; visual dim is helperLayer. Keep above page chrome. */
+	opacity: 0 !important;
+	pointer-events: auto !important;
+}
+
+/* Theme root (Intro.js applyToRoot) — inherited by tooltip / buttons / arrow. */
+.introjs-light {
+	--introjs-bg: #5e36ca !important;
+	--introjs-color: #ffffff !important;
+	--introjs-arrow-color: #5e36ca !important;
+	--introjs-btn-bg: rgba(255, 255, 255, 0.14) !important;
+	--introjs-btn-color: #ffffff !important;
+	--introjs-btn-border: rgba(255, 255, 255, 0.45) !important;
+	--introjs-btn-hover-bg: rgba(255, 255, 255, 0.24) !important;
+	--introjs-btn-hover-color: #ffffff !important;
+	--introjs-btn-focus-bg: rgba(255, 255, 255, 0.24) !important;
+	--introjs-btn-focus-color: #ffffff !important;
+	--introjs-btn-active-bg: rgba(255, 255, 255, 0.3) !important;
+	--introjs-btn-active-color: #ffffff !important;
+	--introjs-btn-active-border: rgba(255, 255, 255, 0.55) !important;
+	--introjs-btn-textShadow: transparent !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltip,
+.introjs-tooltip.lasso-product-tour-tooltip,
+.introjs-tooltip {
+	--introjs-bg: #5e36ca !important;
+	--introjs-color: #ffffff !important;
+	--introjs-arrow-color: #5e36ca !important;
+	background-color: #5e36ca !important;
+	background: #5e36ca !important;
+	color: #ffffff !important;
+	border-radius: 8px;
+	box-shadow: 0 8px 28px rgba(64, 37, 138, 0.45);
+	padding-top: 4px;
+	max-width: 320px;
+}
+
+.introjs-tooltipReferenceLayer .introjs-tooltiptext,
+.introjs-tooltiptext {
+	color: #ffffff !important;
+	padding: 12px 20px 8px !important;
+	font-size: 14px;
+	line-height: 1.45;
+}
+
+.introjs-tooltip-header {
+	position: relative;
+	min-height: 36px;
+	padding: 10px 72px 0 20px !important;
+	color: #ffffff !important;
+}
+
+.introjs-tooltip-title {
+	color: #ffffff !important;
+}
+
+/* Skip: default is 45×45 at top:0/right:0 — clips longer labels like "Skip". */
+.introjs-tooltipReferenceLayer .introjs-skipbutton,
+.introjs-skipbutton {
+	top: 8px !important;
+	right: 10px !important;
+	width: auto !important;
+	height: auto !important;
+	min-width: 0;
+	line-height: 1.2 !important;
+	padding: 6px 10px !important;
+	font-size: 13px !important;
+	font-weight: 600 !important;
+	color: rgba(255, 255, 255, 0.9) !important;
+	border-radius: 4px;
+	z-index: 2;
+}
+
+.introjs-skipbutton:hover,
+.introjs-skipbutton:focus {
+	color: #ffffff !important;
+	background-color: rgba(255, 255, 255, 0.12);
+	text-decoration: none !important;
+}
+
+.introjs-bullets {
+	padding: 4px 0 0;
+}
+
+.introjs-bullets ul li a {
+	background: rgba(255, 255, 255, 0.35) !important;
+}
+
+.introjs-bullets ul li a.active {
+	background: #ffffff !important;
+}
+
+.introjs-tooltipbuttons {
+	border-top: 1px solid rgba(255, 255, 255, 0.2) !important;
+	padding: 12px 14px !important;
+}
+
+.introjs-tooltipReferenceLayer .introjs-button,
+.introjs-tooltip .introjs-button {
+	text-shadow: none !important;
+	color: #ffffff !important;
+	background-color: rgba(255, 255, 255, 0.14) !important;
+	border-color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.introjs-tooltip .introjs-button:hover,
+.introjs-tooltip .introjs-button:focus {
+	background-color: rgba(255, 255, 255, 0.24) !important;
+	color: #ffffff !important;
+	border-color: rgba(255, 255, 255, 0.55) !important;
+}
+
+.introjs-tooltip .introjs-disabled {
+	opacity: 0.45;
+	color: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* Arrow matches purple card. */
+.introjs-arrow.top,
+.introjs-arrow.top-middle,
+.introjs-arrow.top-right {
+	border-bottom-color: #5e36ca !important;
+}
+
+.introjs-arrow.bottom,
+.introjs-arrow.bottom-middle,
+.introjs-arrow.bottom-right {
+	border-top-color: #5e36ca !important;
+}
+
+.introjs-arrow.left,
+.introjs-arrow.left-bottom {
+	border-right-color: #5e36ca !important;
+}
+
+.introjs-arrow.right,
+.introjs-arrow.right-bottom {
+	border-left-color: #5e36ca !important;
+}

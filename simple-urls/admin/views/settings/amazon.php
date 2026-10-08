@@ -64,6 +64,12 @@ $lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EM
 							<div class="form-group mb-4">
 								<label><strong>Tracking ID for This Site</strong></label>
 								<input type="text" name="amazon_tracking_id" id="amazon_tracking_id" class="form-control<?php echo $tracking_id_class; ?>" value="<?php echo esc_html( $amazon_tracking_id ) ?>" placeholder="tracking-20">
+								<p class="mb-2 mt-2">
+									Changing or retiring this ID? Update it in your
+									<a class="purple underline" href="<?php echo esc_url( Constant::get_lasso_hub_url() . '/settings/amazon' ); ?>" target="_blank" rel="noopener noreferrer">Lasso Account</a>
+									too
+									<a data-tooltip="WordPress and your Lasso Account each store this ID. Keep them in sync so no links are left on an old ID."><i class="far fa-info-circle light-purple"></i></a>
+								</p>
 								<div id="tracking-id-invalid-msg" class="red<?php echo $tracking_id_invalid_class; ?>">This is an invalid Tracking ID</div>
 							</div>
 							<div class="form-group">

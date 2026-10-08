@@ -73,12 +73,12 @@ $intro_text      = $is_editor_shell
 						<input
 							type="search"
 							id="lasso-marketplace-search"
-							class="form-control"
+							class="form-control form-control-append"
 							placeholder="Search Marketplace products"
 							autocomplete="off"
 						>
 						<div class="input-group-append">
-							<button type="button" class="btn btn-outline-secondary" id="lasso-marketplace-search-btn">
+							<button type="button" class="btn btn-append lasso-marketplace-search-btn" id="lasso-marketplace-search-btn">
 								Search
 							</button>
 						</div>
@@ -86,20 +86,13 @@ $intro_text      = $is_editor_shell
 				</div>
 				<p class="js-marketplace-error text-danger d-none mb-2"></p>
 				<div class="lasso-marketplace-results list-group mb-3" id="lasso-marketplace-results" aria-live="polite"></div>
+				<div class="lasso-card-pager lasso-marketplace-pager d-none">
+					<span class="lasso-card-pager-range" aria-live="polite"></span>
+					<div class="pagination lasso-marketplace-pagination"></div>
+				</div>
 				<p class="text-muted small d-none" id="lasso-marketplace-empty">No products found. Try another search.</p>
 				<input type="hidden" id="lasso-marketplace-selected-asin" value="">
 				<input type="hidden" id="lasso-marketplace-selected-url" value="">
-				<div class="text-center">
-					<?php if ( $is_editor_shell ) : ?>
-						<span id="btn-lasso-add-marketplace-link" class="btn btn-lasso-add-link d-none" data-disabled="0">
-							<i class="far fa-plus-circle"></i> Add Link
-						</span>
-					<?php else : ?>
-						<button id="btn-lasso-add-marketplace-link" class="btn d-none" type="button">
-							<i class="far fa-plus-circle"></i> Add Link
-						</button>
-					<?php endif; ?>
-				</div>
 			</div>
 		</div>
 	</div>

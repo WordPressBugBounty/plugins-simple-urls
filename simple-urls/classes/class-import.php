@@ -765,11 +765,12 @@ class Import {
 			return false;
 		}
 
-		$sql     = '
+		$sql = '
 			select DISTINCT plugin
 			from ' . ( new Revert() )->get_table_name() . '
-			where lasso_id = ' . $post_id . '
+			where lasso_id = %d
 		';
+		$sql     = Model::prepare( $sql, $post_id );
 		$results = Model::get_results( $sql );
 
 		if ( is_null( $results ) ) {

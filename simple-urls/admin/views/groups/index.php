@@ -49,7 +49,7 @@ use LassoLite\Classes\Page;
 		</div>
 
 		<!-- TABLE -->
-		<div class="white-bg rounded shadow">
+		<div class="white-bg rounded shadow lasso-card">
 
 			<!-- TABLE HEADER -->
 			<div class="px-4 pt-4 pb-2 font-weight-bold dark-gray d-lg-block">
@@ -60,11 +60,14 @@ use LassoLite\Classes\Page;
 				</div>
 			</div>
 
-			<div id="report-content"></div>
-		</div>
+			<div id="report-content"><div class="py-5"><div class="loader"></div></div></div>
 
-		<!-- PAGINATION -->
-		<div class="pagination row align-items-center no-gutters pb-3 pt-0 dashboard-pagination"></div>
+			<!-- PAGINATION (card footer) -->
+			<div class="lasso-card-pager">
+				<span id="lasso-link-range" class="lasso-card-pager-range" aria-live="polite"></span>
+				<div class="pagination dashboard-pagination"></div>
+			</div>
+		</div>
 	</div>
 
 </section>

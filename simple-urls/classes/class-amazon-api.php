@@ -647,7 +647,7 @@ class Amazon_Api {
 		$search = sanitize_text_field( $search );
 
 		$page  = max( 1, intval( $args['page'] ?? 1 ) );
-		$limit = max( 1, min( 50, intval( $args['limit'] ?? 20 ) ) );
+		$limit = max( 1, min( 50, intval( $args['limit'] ?? 10 ) ) );
 
 		$country = '';
 		if ( isset( $args['country'] ) && '' !== (string) $args['country'] ) {
@@ -825,22 +825,7 @@ class Amazon_Api {
 			$target = 'https://www.amazon.com/dp/' . $asin;
 		}
 
-		$price_raw = '';
-		if ( isset( $payload['price'] ) && '' !== $payload['price'] && null !== $payload['price'] ) {
-			$price_raw = (string) $payload['price'];
-		}
-		$symbol = '';
-		if ( ! empty( $payload['priceSymbol'] ) ) {
-			$symbol = (string) $payload['priceSymbol'];
-		} elseif ( ! empty( $payload['currency'] ) ) {
-			$symbol = (string) $payload['currency'];
-		}
-		$display_price = $price_raw;
-		if ( '' !== $price_raw && '' !== $symbol && false === strpos( $price_raw, $symbol ) ) {
-			$display_price = $symbol . $price_raw;
-		}
-		$amount = Helper::get_price_value_from_price_text( $price_raw, $symbol );
-
+		// Marketplace catalog free-data is name + image only (epic lock); ignore price fields.
 		return array(
 			'product_id'  => $asin,
 			'title'       => $title,
@@ -849,9 +834,9 @@ class Amazon_Api {
 			'image'       => trim( $image ),
 			'quantity'    => 200,
 			'is_prime'    => false,
-			'price'       => $display_price,
-			'amount'      => $amount,
-			'currency'    => $symbol,
+			'price'       => '',
+			'amount'      => '',
+			'currency'    => '',
 			'features'    => array(),
 		);
 	}
@@ -859,8 +844,13 @@ class Amazon_Api {
 	/**
 	 * Prefer Marketplace catalog free-data before Creators / PA-API / BLS.
 	 *
+	 * Catalog payloads are not real Amazon product rows (often Lasso placeholder images),
+	 * so they are never written to lasso_lite_amazon_products. Callers still receive
+	 * title/image for the Lasso post. When $store_product and image is empty, return null
+	 * so BLS/PA-API can supply real Amazon imagery.
+	 *
 	 * @param string      $product_id    ASIN.
-	 * @param bool        $store_product Persist locally.
+	 * @param bool        $store_product When true, require a non-empty image (else fall through).
 	 * @param bool|string $updated_at    Optional timestamp.
 	 * @param string      $amz_link      Amazon URL.
 	 * @param bool        $bypass_cache  Bypass per-process catalog cache (Refresh).
@@ -875,25 +865,9 @@ class Amazon_Api {
 
 		$product = $this->enrich_fetched_amazon_product( $product, false, $updated_at, $amz_link );
 
-		if ( $store_product ) {
-			if ( '' === trim( (string) ( $product['image'] ?? '' ) ) ) {
-				return null;
-			}
-			$store_data = array(
-				'product_id'  => $product['product_id'],
-				'title'       => $product['title'],
-				'price'       => $product['price'],
-				'default_url' => $product['default_url'],
-				'url'         => $product['url'],
-				'image'       => $product['image'],
-				'quantity'    => intval( $product['quantity'] ?? 200 ),
-				'is_manual'   => 1,
-				'currency'    => $product['currency'] ?? '',
-			);
-			$stored = Amazon_Products::store_marketplace_free_product( $store_data, $updated_at );
-			if ( ! $stored ) {
-				return null;
-			}
+		// Add-link/store callers need an image on the post; catalog without image → fall through.
+		if ( $store_product && '' === trim( (string) ( $product['image'] ?? '' ) ) ) {
+			return null;
 		}
 
 		return $this->build_fetch_product_info_response( $product, 'marketplace', $payload, 'success', '' );
