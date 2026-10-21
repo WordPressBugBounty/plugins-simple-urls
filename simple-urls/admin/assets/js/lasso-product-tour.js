@@ -93,6 +93,39 @@
 		return candidates[0];
 	}
 
+	function expandHeaderNavIfCollapsed() {
+		var nav = document.getElementById('lasso-lite-header-nav');
+		if (!nav || nav.classList.contains('show')) {
+			return;
+		}
+
+		nav.classList.add('show');
+		var toggle = document.querySelector(
+			'.lasso-lite-header-toggle[data-target="#lasso-lite-header-nav"]'
+		);
+		if (toggle) {
+			toggle.setAttribute('aria-expanded', 'true');
+		}
+	}
+
+	function isVisibleTourTarget(selector) {
+		var el = document.querySelector(selector);
+		if (!el) {
+			return false;
+		}
+
+		var rect = el.getBoundingClientRect();
+		return rect.width >= 1 && rect.height >= 1;
+	}
+
+	function isHeaderNavTourTarget(targetElement) {
+		return (
+			targetElement &&
+			(targetElement.closest('#lasso-header-nav') ||
+				targetElement.closest('#lasso-lite-header-nav'))
+		);
+	}
+
 	function syncChatTourAnchor() {
 		var found = findVisibleChatLauncher();
 		if (!found) {
@@ -126,6 +159,7 @@
 	}
 
 	function buildSteps() {
+		expandHeaderNavIfCollapsed();
 		var chatSelector = syncChatTourAnchor();
 		var out = [];
 
@@ -148,7 +182,7 @@
 				return;
 			}
 
-			if (step.element && document.querySelector(step.element)) {
+			if (step.element && isVisibleTourTarget(step.element)) {
 				out.push(step);
 			}
 		});
@@ -370,6 +404,9 @@
 			.onskip(persistOnce)
 			.onBeforeChange(function (targetElement) {
 				clearScrollTimers();
+				if (isHeaderNavTourTarget(targetElement)) {
+					expandHeaderNavIfCollapsed();
+				}
 				// Panel is collapsed by default — open before spotlight measures Filters steps.
 				if (isFiltersStep(targetElement)) {
 					openFiltersPanel();

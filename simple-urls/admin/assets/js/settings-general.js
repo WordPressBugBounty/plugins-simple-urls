@@ -31,11 +31,23 @@ jQuery(document).ready(function () {
             : 0;
         let btn_save = jQuery("#btn-save-settings-general");
         let lasso_lite_update_popup = jQuery("#url-save");
-        let performance_event_tracking = jQuery(
+        let performance_event_tracking_el = jQuery(
             "#performance_event_tracking"
-        ).prop("checked")
-            ? 1
-            : 0;
+        );
+
+        let save_data = {
+            action: "lasso_lite_save_settings_general",
+            nonce: lassoLiteOptionsData.optionsNonce,
+            general_disable_tooltip: general_disable_tooltip,
+            general_disable_amazon_notifications:
+                general_disable_amazon_notifications,
+            general_disable_notification: general_disable_notification,
+            general_enable_new_ui: general_enable_new_ui,
+        };
+        if (performance_event_tracking_el.length) {
+            save_data.performance_event_tracking =
+                performance_event_tracking_el.prop("checked") ? 1 : 0;
+        }
 
         lasso_lite_helper.add_loading_button(btn_save);
         event.preventDefault();
@@ -43,16 +55,7 @@ jQuery(document).ready(function () {
             .ajax({
                 url: lassoLiteOptionsData.ajax_url,
                 type: "post",
-                data: {
-                    action: "lasso_lite_save_settings_general",
-                    nonce: lassoLiteOptionsData.optionsNonce,
-                    general_disable_tooltip: general_disable_tooltip,
-                    general_disable_amazon_notifications:
-                        general_disable_amazon_notifications,
-                    general_disable_notification: general_disable_notification,
-                    general_enable_new_ui: general_enable_new_ui,
-                    performance_event_tracking: performance_event_tracking,
-                },
+                data: save_data,
                 beforeSend: function (xhr) {
                     // Collapse current error + success notifications
                     jQuery(".alert.red-bg.collapse").collapse("hide");

@@ -387,6 +387,21 @@ abstract class Process extends Lasso_WP_Background_Process {
 	 * within server memory and time limit constraints.
 	 */
 	protected function handle() {
+		$this->process_queue();
+		wp_die();
+	}
+
+	/**
+	 * Drain the queue without terminating the request (for wp-cron).
+	 */
+	public function handle_for_cron() {
+		$this->process_queue();
+	}
+
+	/**
+	 * Pass each queue item to the task handler within memory and time limits.
+	 */
+	protected function process_queue() {
 		$this->lock_process();
 
 		do {
@@ -425,8 +440,6 @@ abstract class Process extends Lasso_WP_Background_Process {
 		} else {
 			$this->complete();
 		}
-
-		wp_die();
 	}
 
 	/**

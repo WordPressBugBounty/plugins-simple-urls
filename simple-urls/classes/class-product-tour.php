@@ -84,8 +84,9 @@ class Product_Tour {
 			return false;
 		}
 
+		$intro_style_handle = SIMPLE_URLS_SLUG . '-' . self::STYLE_HANDLE_INTRO;
 		Helper::enqueue_style( self::STYLE_HANDLE_INTRO, 'introjs.min.css' );
-		Helper::enqueue_style( self::STYLE_HANDLE_TOUR, 'lasso-product-tour.css', array( self::STYLE_HANDLE_INTRO ) );
+		Helper::enqueue_style( self::STYLE_HANDLE_TOUR, 'lasso-product-tour.css', array( $intro_style_handle ) );
 		self::enqueue_purple_theme_inline();
 		$intro_handle = SIMPLE_URLS_SLUG . '-' . self::SCRIPT_HANDLE_INTRO;
 		$tour_handle  = SIMPLE_URLS_SLUG . '-' . self::SCRIPT_HANDLE_TOUR;

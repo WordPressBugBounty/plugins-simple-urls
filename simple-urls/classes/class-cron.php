@@ -53,7 +53,9 @@ class Cron {
 		add_action( 'lasso_lite_cron_get_info', array( $this, 'lasso_lite_cron_get_info' ) );
 		add_action( 'lasso_lite_check_lite_user', array( $this, 'lasso_lite_check_lite_user' ) );
 		add_action( Estimate_Earning::CRON_HOOK, array( $this, 'lasso_lite_weekly_estimate_earning' ) );
-		$this->lasso_create_schedule_hook();
+		// Defer scheduling until init so wp_get_schedules() / cron_schedules filters
+		// (e.g. All-in-One WP Migration __()) do not load translations too early (WP 6.7+).
+		add_action( 'init', array( $this, 'lasso_create_schedule_hook' ) );
 	}
 
 	/**
@@ -170,23 +172,39 @@ class Cron {
 		$load_slot = self::site_load_slot( self::site_schedule_key() );
 
 		foreach ( $crons as $cron_name => $interval ) {
-			$next_scheduled = wp_next_scheduled( $cron_name );
-			$is_daily       = ( 'daily' === $interval );
-			$is_15m         = ( 'lasso_lite_15_minutes' === $interval );
-			$is_weekly      = ( 'weekly' === $interval );
+			$is_daily  = ( 'daily' === $interval );
+			$is_15m    = ( 'lasso_lite_15_minutes' === $interval );
+			$is_weekly = ( 'weekly' === $interval );
 
-			if ( $next_scheduled && $is_daily && ! self::timestamp_matches_daily_slot( $next_scheduled, $load_slot ) ) {
-				wp_clear_scheduled_hook( $cron_name );
-				$next_scheduled = false;
-			} elseif ( $next_scheduled && $is_15m && ! self::timestamp_matches_15m_slot( $next_scheduled, $load_slot ) ) {
-				wp_clear_scheduled_hook( $cron_name );
-				$next_scheduled = false;
-			} elseif ( $next_scheduled && $is_weekly && ! self::timestamp_matches_daily_slot( $next_scheduled, $load_slot ) ) {
-				wp_clear_scheduled_hook( $cron_name );
-				$next_scheduled = false;
+			// Realign only recurring schedules. Never wp_clear_scheduled_hook() —
+			// that also wipes one-off events (WP Crontrol "Run now"), so the hook
+			// never fires when spawn_cron loads wp-cron.php.
+			$has_valid_recurring = false;
+			foreach ( $crons_array as $time => $hooks ) {
+				if ( ! is_array( $hooks ) || ! isset( $hooks[ $cron_name ] ) || ! is_array( $hooks[ $cron_name ] ) ) {
+					continue;
+				}
+				foreach ( $hooks[ $cron_name ] as $data ) {
+					$schedule = $data['schedule'] ?? false;
+					if ( ! $schedule ) {
+						continue; // one-off / Run now
+					}
+					$args    = $data['args'] ?? array();
+					$matches = true;
+					if ( $is_daily || $is_weekly ) {
+						$matches = self::timestamp_matches_daily_slot( (int) $time, $load_slot );
+					} elseif ( $is_15m ) {
+						$matches = self::timestamp_matches_15m_slot( (int) $time, $load_slot );
+					}
+					if ( $schedule !== $interval || ! $matches ) {
+						wp_unschedule_event( (int) $time, $cron_name, $args );
+						continue;
+					}
+					$has_valid_recurring = true;
+				}
 			}
 
-			if ( ! $next_scheduled ) {
+			if ( ! $has_valid_recurring ) {
 				$current_time  = time();
 				$next_run_time = $current_time;
 				if ( $is_daily || $is_weekly ) {
@@ -481,6 +499,16 @@ class Cron {
 	 */
 	public function lasso_lite_update_amazon() {
 		$settings = Setting::get_settings();
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
+		error_log(
+			sprintf(
+				'Lasso Lite Amazon cron: hook fired doing_cron=%s is_admin=%s ajax=%s pricing_daily=%s',
+				( defined( 'DOING_CRON' ) && DOING_CRON ) ? '1' : '0',
+				is_admin() ? '1' : '0',
+				wp_doing_ajax() ? '1' : '0',
+				boolval( $settings['amazon_pricing_daily'] ) ? '1' : '0'
+			)
+		);
 		if ( boolval( $settings['amazon_pricing_daily'] ) ) {
 			$lasso_amazon = new Amazon();
 			$lasso_amazon->run();

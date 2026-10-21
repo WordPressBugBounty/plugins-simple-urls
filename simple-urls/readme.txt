@@ -135,6 +135,15 @@ Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.o
 
 == Changelog ==
 
+= 161 =
+* Released: October 21, 2026
+* Amazon product refresh cron runs more reliably (including Crontrol Run now)
+* Recognize amzlink.to as an Amazon shortlink
+* Updated bundled connect snippet to the current lasso.link CDN build
+* Tour CSS loads correctly with the prefixed Intro.js handle
+* Preserve non-Amazon destination URLs when saving links
+* General settings save keeps click tracking on when the checkbox is omitted from the form
+
 = 160 =
 * Released: October 8, 2026
 * Interactive dashboard product tour for new Lite users

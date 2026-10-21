@@ -462,10 +462,15 @@ class Affiliate_Link {
 			$term
 		);
 
-		$get_final_url = Helper::get_redirect_final_target( $surl_redirect, true, $is_new ? true : false ); // ? If adding the new link, we set param "get_page_title" is true to get result from cache.
-		$get_final_url = is_array( $get_final_url ) ? $get_final_url[0] : $get_final_url;
-		$get_final_url = Amazon_Api::format_amazon_url( $get_final_url );
-		$surl_redirect = $get_final_url;
+		$is_amazon_redirect = Amazon_Api::is_amazon_url( $surl_redirect );
+		$get_final_url      = $surl_redirect;
+
+		if ( $is_amazon_redirect ) {
+			$get_final_url = Helper::get_redirect_final_target( $surl_redirect, true, $is_new ? true : false ); // ? If adding the new link, we set param "get_page_title" is true to get result from cache.
+			$get_final_url = is_array( $get_final_url ) ? $get_final_url[0] : $get_final_url;
+			$get_final_url = Amazon_Api::format_amazon_url( $get_final_url );
+			$surl_redirect = $get_final_url;
+		}
 
 		// ? Check whether product is existing
 		$lasso_post_id = self::get_lasso_lite_post_id_by_url( $surl_redirect );

@@ -25,7 +25,7 @@ class Amazon_Api {
 	const OBJECT_KEY                                        = 'lasso_amazon_api';
 	const FUNCTION_NAME_GET_LASSO_ID_BY_PRODUCT_ID_AND_TYPE = 'get_lasso_id_by_product_id_and_type';
 	const PRODUCT_TYPE                                      = 'amazon';
-	const SHORT_LINK_DOMAINS                                = array( 'amzn.com', 'amzn.to' );
+	const SHORT_LINK_DOMAINS                                = array( 'amzn.com', 'amzn.to', 'amzlink.to' );
 	const FILTER_AMAZON_PRODUCT                             = 'filter_amazon_product';
 	const TRACKING_ID_REGEX                                 = '^[a-zA-Z0-9-]+-\d{2,3}$';
 	const CURRENCY_ISO                                      = array( 'USD', 'AUD', 'CAD', 'EUR', 'MXN', 'CNY', 'JPY', 'INR', 'SEK', 'BRL', 'TRY', 'GBP', 'PLN', 'EGP', 'SGD', 'AED' );
@@ -302,6 +302,7 @@ class Amazon_Api {
 			'amazon.ae',            // ? United Arab Emirates
 			'amzn.com',             // ? Short URL
 			'amzn.to',              // ? Short URL
+			'amzlink.to',           // ? Short URL
 			'amazon-adsystem.com',  // ? Amazon Embed
 			'smile.amazon.com',      // ? Amazon Smile
 		);
@@ -405,7 +406,9 @@ class Amazon_Api {
 	 */
 	public static function is_amazon_shortened_url( $url ) {
 		$is_amazon_url     = self::is_amazon_url( $url );
-		$is_shortented_url = strpos( $url, 'amzn.to' ) || strpos( $url, 'amzn.com' );
+		$is_shortented_url = strpos( $url, 'amzn.to' )
+			|| strpos( $url, 'amzn.com' )
+			|| strpos( $url, 'amzlink.to' );
 
 		return $is_amazon_url && $is_shortented_url;
 	}

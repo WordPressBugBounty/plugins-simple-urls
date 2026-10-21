@@ -721,12 +721,13 @@ class Ajax {
 		$general_disable_tooltip              = $post['general_disable_tooltip'] ?? Constant::DEFAULT_SETTINGS['general_disable_tooltip'];
 		$general_disable_notification         = $post['general_disable_notification'] ?? Constant::DEFAULT_SETTINGS['general_disable_notification'];
 		$general_enable_new_ui                = $post['general_enable_new_ui'] ?? Constant::DEFAULT_SETTINGS['general_enable_new_ui'];
-		$performance_event_tracking           = $post['performance_event_tracking'] ?? Constant::DEFAULT_SETTINGS['performance_event_tracking'];
 
 		$options['general_disable_amazon_notifications'] = $general_disable_amazon_notifications;
 		$options['general_disable_tooltip']              = $general_disable_tooltip;
 		$options['general_disable_notification']         = $general_disable_notification;
-		$options['performance_event_tracking']           = $performance_event_tracking;
+		if ( array_key_exists( 'performance_event_tracking', $post ) ) {
+			$options['performance_event_tracking'] = $post['performance_event_tracking'];
+		}
 
 		Setting::set_settings( $options );
 		$data['msg'] = 'All settings saved';
