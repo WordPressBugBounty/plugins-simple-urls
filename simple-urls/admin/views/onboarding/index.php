@@ -86,5 +86,12 @@ $onboarding_resume_step  = Helper::get_onboarding_current_step( $should_show_imp
 
 <!-- LICENSE ACTIVATION MODAL -->
 <?php echo Helper::include_with_variables( SIMPLE_URLS_DIR . '/admin/views/modals/license-activation.php' ); ?>
+<?php
+if ( ! Helper::is_lasso_app_account_linked() ) {
+	echo Helper::render_lite_existing_account_modal_once(
+		Helper::get_lite_existing_account_modal_prefill_email()
+	);
+}
+?>
 <?php echo Helper::wrapper_js_render( 'default-template-notification-amz', Helper::get_path_views_folder() . '/notifications/default-template-jsrender.html' ); ?>
 <?php Config::get_footer(); ?>

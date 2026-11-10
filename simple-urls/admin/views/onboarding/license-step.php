@@ -2,6 +2,7 @@
 
 use LassoLite\Classes\Setting;
 use LassoLite\Classes\Enum;
+use LassoLite\Classes\Helper;
 $lasso_options = Setting::get_settings();
 $email_support = $lasso_options[ Enum::EMAIL_SUPPORT ] ?? '';
 $admin_email   = esc_attr( get_option( 'admin_email' ) );
@@ -9,21 +10,19 @@ $prefill_email = ! empty( $email_support ) ? $email_support : $admin_email;
 ?>
 
 <div id="activate" class="tab-item text-center d-none" data-step="connect-lasso">
-	<div class="progressbar_container">
-		<ul class="progressbar">
-			<li class="step-get-started complete">Welcome</li>
-			<li class="step-display-design complete" data-step="display">Display Designer</li>
-			<li class="step-amazon-info complete" data-step="amazon">Amazon Associates</li>
-			<li class="step-connect-lasso active" data-step="connect-lasso">Connect to Lasso</li>
-			<?php if ( $should_show_import_step ) : ?>
-				<li class="step-import">Imports</li>
-			<?php endif; ?>
-		</ul>
-	</div>
+	<?php
+	echo Helper::include_with_variables(
+		Helper::get_path_views_folder() . 'onboarding/onboarding-progressbar.php',
+		array(
+			'active_step'             => 'connect-lasso',
+			'should_show_import_step' => $should_show_import_step,
+		)
+	);
+	?>
 
 	<div class="onboarding_header text-center">
-		<h1 class="font-weight-bold">Create Your Free Account</h1>
-		<p>Access free click tracking, private brand deals, and more.</p>
+		<h1 class="font-weight-bold"><?php esc_html_e( 'Connect to Lasso', 'simple-urls' ); ?></h1>
+		<p><?php esc_html_e( 'Unlock click tracking, brand deals, and sync with Lasso Hub—or skip and keep using Lite locally.', 'simple-urls' ); ?></p>
 	</div>
 
 	<div id="lasso-signup-wrapper" class="mt-4">
@@ -100,8 +99,11 @@ $prefill_email = ! empty( $email_support ) ? $email_support : $admin_email;
 
 		<!-- Skip for now link -->
 		<div class="mt-4">
-			<a href="#" id="lasso-skip-signup" class="lasso-skip-link">Skip for now</a>
+			<a href="#" id="lasso-skip-signup" class="lasso-skip-link"><?php esc_html_e( 'Skip for now — set up later', 'simple-urls' ); ?></a>
 		</div>
+		<p class="mt-3 mb-0 text-center">
+			<a href="#" class="lasso-skip-link lasso-lite-open-existing-account-login"><?php esc_html_e( 'Already have an account? Log in', 'simple-urls' ); ?></a>
+		</p>
 	</div>
 
 	<!-- Get Started button (shown after signup complete) -->

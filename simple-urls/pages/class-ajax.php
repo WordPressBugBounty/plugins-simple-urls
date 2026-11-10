@@ -47,6 +47,7 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_save_support', array( $this, 'lasso_lite_save_support' ) );
 		add_action( 'wp_ajax_lasso_lite_save_lasso_account', array( $this, 'lasso_lite_save_lasso_account' ) );
 		add_action( 'wp_ajax_lasso_lite_skip_hub_connect', array( $this, 'lasso_lite_skip_hub_connect' ) );
+		add_action( 'wp_ajax_lasso_lite_defer_onboarding_step', array( $this, 'lasso_lite_defer_onboarding_step' ) );
 		add_action( 'wp_ajax_lasso_lite_save_onboarding_step', array( $this, 'lasso_lite_save_onboarding_step' ) );
 		add_action( 'wp_ajax_lasso_lite_check_existing_account', array( $this, 'lasso_lite_check_existing_account' ) );
 		add_action( 'wp_ajax_lasso_lite_review_snooze', array( $this, 'lasso_lite_review_snooze' ) );
@@ -57,7 +58,7 @@ class Ajax {
 		add_action( 'wp_ajax_lasso_lite_realtime_ingest', array( $this, 'lasso_lite_realtime_ingest' ) );
 		add_action( 'wp_ajax_lasso_lite_realtime_pull', array( $this, 'lasso_lite_realtime_pull' ) );
 		add_action( 'wp_ajax_lasso_lite_track_activation_funnel', array( $this, 'lasso_lite_track_activation_funnel' ) );
-		add_action( 'wp_ajax_lasso_dismiss_dashboard_tour', array( $this, 'lasso_dismiss_dashboard_tour' ) );
+		add_action( 'wp_ajax_lasso_lite_dismiss_dashboard_tour', array( $this, 'lasso_lite_dismiss_dashboard_tour' ) );
 	}
 
 	/**
@@ -658,6 +659,11 @@ class Ajax {
 			$metadata['cta_id'] = $cta_id;
 		}
 
+		if ( ! Activation_Funnel::is_browser_trackable_event_name( $event ) ) {
+			wp_send_json_error( array( 'msg' => 'Invalid or duplicate funnel event.' ) );
+			return;
+		}
+
 		$payload = Activation_Funnel::track_admin_event( $event, $metadata );
 		if ( false === $payload ) {
 			wp_send_json_error( array( 'msg' => 'Invalid or duplicate funnel event.' ) );
@@ -677,9 +683,57 @@ class Ajax {
 	public function lasso_lite_skip_hub_connect() {
 		Helper::verify_access_and_nonce();
 
+		Helper::defer_onboarding_optional_step( 'connect-lasso' );
+		Activation_Funnel::track_admin_event(
+			Activation_Funnel::EVENT_ONBOARDING_STEP,
+			array(
+				'step'   => 'connect-lasso',
+				'action' => 'skipped',
+			)
+		);
+
 		wp_send_json_success(
 			array(
 				'success' => true,
+			)
+		);
+	}
+
+	/**
+	 * Defer an optional onboarding step (Skip for now / Set up later).
+	 */
+	public function lasso_lite_defer_onboarding_step() {
+		Helper::verify_access_and_nonce();
+
+		if ( ! Helper::is_lite_onboarding_pending_first_link() ) {
+			wp_send_json_error( array( 'msg' => 'Onboarding is already complete.' ) );
+			return;
+		}
+
+		$step = sanitize_text_field( Helper::POST()['step'] ?? '' );
+		if ( ! Helper::is_onboarding_optional_step( $step ) ) {
+			wp_send_json_error( array( 'msg' => 'Step cannot be deferred.' ) );
+			return;
+		}
+
+		if ( 'import' === $step && ! Helper::should_show_import_page() ) {
+			wp_send_json_error( array( 'msg' => 'Import step is not available.' ) );
+			return;
+		}
+
+		Helper::defer_onboarding_optional_step( $step );
+		Activation_Funnel::track_admin_event(
+			Activation_Funnel::EVENT_ONBOARDING_STEP,
+			array(
+				'step'   => $step,
+				'action' => 'deferred',
+			)
+		);
+
+		wp_send_json_success(
+			array(
+				'step'     => $step,
+				'deferred' => Helper::get_onboarding_deferred_steps(),
 			)
 		);
 	}
@@ -698,6 +752,21 @@ class Ajax {
 
 		$step = sanitize_text_field( Helper::POST()['step'] ?? '' );
 		if ( '' === $step ) {
+			$include_import = Helper::should_show_import_page();
+			$saved_step     = Helper::get_onboarding_current_step( $include_import );
+			$minimal_ok     = Helper::can_complete_lite_onboarding_with_deferred_optional_steps( $include_import );
+			$legacy_finish  = in_array( $saved_step, array( 'upsell', 'import' ), true );
+
+			if ( ! Helper::is_onboarding_display_activation_complete() ) {
+				wp_send_json_error( array( 'msg' => 'Complete display setup before finishing onboarding.' ) );
+				return;
+			}
+
+			if ( ! $minimal_ok && ! $legacy_finish ) {
+				wp_send_json_error( array( 'msg' => 'Complete or defer optional onboarding steps before finishing.' ) );
+				return;
+			}
+
 			// Empty step = explicit finish (e.g. upsell "go to dashboard").
 			Helper::mark_onboarding_welcome_complete();
 			wp_send_json_success( array( 'step' => '' ) );
@@ -725,18 +794,35 @@ class Ajax {
 	public function lasso_lite_check_existing_account() {
 		Helper::verify_access_and_nonce();
 
-		$is_connected_aff      = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
-		$lasso_account_email   = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
 		$lasso_account_user_id = intval( Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
-		$is_lasso_connected    = ! empty( $lasso_account_email ) || $lasso_account_user_id > 0 || $is_connected_aff > 0;
 
-		if ( $is_lasso_connected ) {
+		if ( $lasso_account_user_id > 0 ) {
 			wp_send_json_success(
 				array(
 					'connected' => true,
 					'synced'    => false,
 				)
 			);
+		}
+
+		$automatic = ! empty( $_POST['automatic'] ) && '1' === (string) wp_unslash( $_POST['automatic'] );
+		$force     = ! empty( $_POST['force_check'] ) && '1' === (string) wp_unslash( $_POST['force_check'] );
+
+		if ( $automatic && ! $force ) {
+			$cooldown_seconds = (int) apply_filters( 'lasso_lite_auto_account_check_cooldown_seconds', DAY_IN_SECONDS );
+			if ( $cooldown_seconds < 1 ) {
+				$cooldown_seconds = DAY_IN_SECONDS;
+			}
+			$last_attempt = (int) Helper::get_option( Constant::LASSO_OPTION_AUTO_ACCOUNT_CHECK_LAST_AT, 0 );
+			if ( $last_attempt > 0 && ( time() - $last_attempt ) < $cooldown_seconds ) {
+				wp_send_json_success(
+					array(
+						'connected' => false,
+						'synced'    => false,
+						'cooldown'  => true,
+					)
+				);
+			}
 		}
 
 		$lookup = Helper::send_request(
@@ -748,8 +834,23 @@ class Ajax {
 			)
 		);
 
+		if ( $automatic ) {
+			Helper::update_option( Constant::LASSO_OPTION_AUTO_ACCOUNT_CHECK_LAST_AT, time() );
+		}
+
+		$status_code = isset( $lookup['status_code'] ) ? (int) $lookup['status_code'] : 0;
+		if ( $status_code >= 500 || $status_code <= 0 ) {
+			wp_send_json_success(
+				array(
+					'connected'         => false,
+					'synced'            => false,
+					'transient_failure' => true,
+				)
+			);
+		}
+
 		$lookup_body = $lookup['response'] ?? null;
-		if ( empty( $lookup_body ) || ( $lookup['status_code'] ?? 500 ) >= 400 || empty( $lookup_body->data ) ) {
+		if ( empty( $lookup_body ) || $status_code >= 400 || empty( $lookup_body->data ) ) {
 			wp_send_json_success(
 				array(
 					'connected' => false,
@@ -781,7 +882,7 @@ class Ajax {
 		}
 
 		Helper::update_option( Constant::LASSO_ACCOUNT_EMAIL, $email );
-		// Do not auto-sync user_id here — orphan earnings banner/cron key off user_id=0 only.
+		Helper::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
 		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
 
 		wp_send_json_success(
@@ -1096,16 +1197,17 @@ class Ajax {
 	}
 
 	/**
-	 * Persist Dashboard product tour dismiss (Skip / Done).
+	 * Persist Lite Dashboard product tour dismiss (Skip / Done).
+	 * Action is Lite-prefixed so it cannot collide with Pro's dismiss handler.
 	 */
-	public function lasso_dismiss_dashboard_tour() {
-		check_ajax_referer( 'lasso_ajax', 'security' );
+	public function lasso_lite_dismiss_dashboard_tour() {
+		check_ajax_referer( Constant::LASSO_LITE_NONCE . wp_salt(), 'security' );
 
 		if ( ! current_user_can( 'manage_options' ) ) {
 			wp_send_json_error( array( 'message' => __( 'Unauthorized.', 'simple-urls' ) ), 403 );
 		}
 
-		Product_Tour::mark_done_for_user();
+		Product_Tour::mark_done();
 
 		wp_send_json_success(
 			array(

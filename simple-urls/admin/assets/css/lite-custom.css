@@ -11,6 +11,28 @@
 #onboarding_container .progressbar_container .progressbar li {
     width: 19.5%;
 }
+.onboarding-progress-legend {
+    font-size: 0.85rem;
+}
+.onboarding-progressbar .onboarding-step-badge {
+    display: block;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    margin-top: 0.15rem;
+}
+.onboarding-progressbar .onboarding-step-optional .onboarding-step-label {
+    font-weight: 600;
+}
+.onboarding-progressbar .onboarding-step-required.active .onboarding-step-label {
+    font-weight: 700;
+}
+/* Amazon/Imports skip uses same tertiary link UI as Connect (.lasso-skip-link). */
+#onboarding_container .onboarding-amazon-advanced {
+    margin-top: 1rem;
+}
 #onboarding_container .sp-original-input-container .sp-colorize-container {
     width: 50px !important;
 }
@@ -354,12 +376,44 @@
 
 .lasso-skip-link {
     color: #6b7280;
-    text-decoration: underline!important;
+    text-decoration: underline !important;
     font-size: 14px;
+    opacity: 1;
+    visibility: visible;
 }
 
-.lasso-skip-link:hover {
+.lasso-skip-link:hover,
+.lasso-skip-link:focus,
+.lasso-skip-link:focus-visible {
     color: #374151;
+    opacity: 1;
+    visibility: visible;
+    text-decoration: underline !important;
+}
+
+/* Beat #wpbody a { text-decoration: none; } and keep skip/login tertiary links readable on hover. */
+#wpbody a.lasso-skip-link {
+    color: #6b7280 !important;
+    text-decoration: underline !important;
+}
+
+#wpbody a.lasso-skip-link:hover,
+#wpbody a.lasso-skip-link:focus,
+#wpbody a.lasso-skip-link:focus-visible {
+    color: #374151 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    text-decoration: underline !important;
+}
+
+#wpbody .lasso-footer-cta a.lasso-skip-link,
+#wpbody .lasso-footer-cta a.lasso-skip-link:hover,
+#wpbody .lasso-footer-cta a.lasso-skip-link:focus,
+#wpbody .lasso-footer-cta a.lasso-skip-link:focus-visible {
+    color: #ffffff !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    text-decoration: underline !important;
 }
 
 .lasso-signup-success {
@@ -401,13 +455,10 @@
 }
 
 .lasso-plugin-footer-version {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    color: #ffffff;
-    font-size: 12px;
-    font-weight: 400;
-    opacity: 0.9;
+    position: static;
+    margin-top: 12px;
+    padding: 8px 16px 0;
+    text-align: center;
 }
 
 .lasso-footer-cta {

@@ -90,6 +90,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 					<div class="mt-3 text-center">
 						<a href="#" id="lasso-skip-signup" class="lasso-skip-link" data-dismiss="modal">Skip for now</a>
 					</div>
+					<p class="mt-3 mb-0 text-center">
+						<a href="#" class="lasso-skip-link lasso-lite-open-existing-account-login"><?php esc_html_e( 'Already have an account? Log in', 'simple-urls' ); ?></a>
+					</p>
 				</div>
 			</div>
 		</div>

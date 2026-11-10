@@ -38,8 +38,6 @@ $license_active              = License::get_license_status();
 $class_license_active        = $license_active ? '' : 'lasso-lite-disabled no-hint';
 $class_license_display       = !empty( $license_active ) ? 'd-none' : '';
 $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? true;
-
-$lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
 ?>
 
 <?php Config::get_header(); ?>
@@ -205,7 +203,7 @@ $lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EM
 								<span class="slider"></span>
 							</label>
 							<label class="m-0">
-								Auto-upgrade Eligible Links
+								Commission Upgrades
 								<a
 									href="https://getlasso.co/features/affiliate-plus/"
 									target="_blank"
@@ -229,14 +227,6 @@ $lite_account_cta_prefill_email = Helper::get_option( Constant::LASSO_ACCOUNT_EM
 		</form>
 	</div>
 </section>
-<?php
-echo Helper::include_with_variables(
-	SIMPLE_URLS_DIR . '/admin/views/modals/lite-account-existing-login.php',
-	array(
-		'prefill_email' => $lite_account_cta_prefill_email,
-	)
-);
-?>
 <?php
 // Amazon notices: keep legacy banner UX (click row / X to dismiss) on default-template-jsrender.html.
 // Lite-account CTA only uses default-template-amz-html-jsrender.html (row is not a collapse trigger; link is real <a>).

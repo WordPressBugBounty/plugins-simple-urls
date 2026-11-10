@@ -134,6 +134,23 @@ Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.o
 3. Browse every link from one dashboard. Find and update offers without digging through old posts.
 
 == Changelog ==
+= 163 =
+* Released: November 9, 2026
+* New Lite installs open the link dashboard directly without a separate onboarding flow
+* Activation events reach Lasso Hub with Lite identity headers even before a license is stored
+* Activation completion is recorded once the dashboard is ready to use
+
+= 162 =
+* Released: November 4, 2026
+* Onboarding focuses on activation first, with optional setup steps you can finish later
+* Connect flow on Amazon and Imports matches other Lite setup screens, with a clearer skip option
+* Link or reconnect your Lasso account from the dashboard, including if you already have an account
+* Connect footer shows a login link and version stamp; version badge styling aligned with Lasso Pro
+* Renamed Auto-upgrade to Commission Upgrades in settings labels
+* Retired Affiliate+ wording in the admin promotions notice
+* Safer Hub account linking when a site is already associated with another account
+* Reduced unnecessary automatic Hub checks on sites that have not linked an account yet
+* Tour dismiss actions no longer conflict with Lasso Pro on sites running both plugins
 
 = 161 =
 * Released: October 21, 2026
@@ -193,191 +210,3 @@ Yes. Lasso Lite is the current name (**Formerly Simple URLs**). Same WordPress.o
 * WordPress 7.1 compatibility (Tested up to)
 * Onboarding step persistence improvements
 
-= 153 =
-* Released: August 5, 2026
-* Improved Amazon Creators API product URL and country handling
-* Hardened admin/shortcode output and quick-detail AJAX against XSS
-* Improved WordPress.org listing copy
-
-= 152 =
-* Released: August 3, 2026
-* Amazon Creators API: improved product fetch reliability in Lite
-* Fixed discount pricing display after Creators product fetch
-* Maintenance and tooling updates
-
-= 151 =
-* Released: 2026
-* Gutenberg block: Block API v3 support and display CSS in the block editor iframe
-* Amazon settings: Creators credentials and image refresh improvements
-* Hardened thumbnail upload and license AJAX auth
-* Earnings / orphan-account banner reliability improvements
-
-= 150 =
-* Released: 2026
-* PHP 8 stability: safer handling of empty/null API responses (license, Amazon, BLS)
-* Amazon Creators product fetch improvements
-* Analytics link updates
-
-= 149 =
-* Amazon settings: Lite account validate/connect flow with clearer Creators UX and signup handoff
-* Hub URL override support for the Lite/hub integration path used from Amazon settings
-* Lite account email can fall back to the WordPress admin_email when needed
-* Additional unit tests for settings/Ajax behavior
-
-= 148 =
-* Released: April 29, 2026
-* Added Learn link in Amazon settings for Product Advertising API documentation
-
-= 147 =
-* Released: April 22, 2026
-* Improved persistence for Amazon Creators settings when saving
-* Refined Amazon Creators migration notice with a clearer dismiss flow
-
-= 146 =
-* Released: April 6, 2026
-* Realtime click tracking on the dashboard with improved connect CTAs
-* Updated Amazon Creators API validation settings
-* Added banner for Amazon credentials updates when needed
-
-= 145 =
-* Released: March 3, 2026
-* Deployment packaging improvements
-
-= 144 =
-* Released: March 2, 2026
-* Improved site ID retrieval logic
-* Documentation updates
-
-= 143 =
-* Released: January 23, 2026
-* Added simple click counts for links
-* Improved link optimizations for all free users
-
-= 142 =
-* Released: January 14, 2026
-* API endpoint fix
-
-= 141 =
-* Released: January 13, 2026
-* Added in-app account creation
-* Improved Lasso account connection
-* Various small bug fixes
-
-= 140 =
-* Released: November 6, 2025
-* Link handling updates
-* JavaScript Cleanup
-
-= 139 =
-* Released: October 23, 2025
-* Fixed the copy shortcode button
-* Misc JavaScript improvements
-
-= 138 =
-* Released: September 18, 2025
-* Fixed an issue with click tracking
-
-= 137 =
-* Released: September 16, 2025
-* Improved JavaScript external handling
-
-= 136 =
-* Released: September 5, 2025
-* Revised plugin description and details
-
-= 135 =
-* Released: August 29, 2025
-* Additional JS improvements
-
-= 134 =
-* Released: August 26, 2025
-* Improved the way Lasso Lite handles JavaScript
-
-= 133 =
-* Released: August 18, 2025
-* Improved code stability for upgrades
-
-= 132 =
-* Released: May 8, 2025
-* Fixed a bug related to new PHP versions
-* Updated in-app banners
-
-= 131 =
-* Released: March 21, 2025
-* Updated tracking and link updates
-
-= 130 =
-* Released: December 30, 2024
-* Updated Amazon attribution link handling to comply with new policies
-* Improved importing and exporting of displays between plugin versions
-* Fixed an edge case issue that stopped users from accessing the "Add a link" modals
-
-= 129 =
-* Released: November 5, 2024
-* Fixed an issue with promotional banners showing by mistake
-* Added the ability to refresh manually Amazon product data
-* Fixed an issue with Lasso Lite blocks
-
-= 128 =
-* Released: October 8, 2024
-* Stability improvements
-
-= 127 =
-* Released: October 2, 2024
-* Fixed promotional banners that were showing by mistake
-* Added auto-upgrade functionality for link handling
-
-= 126 =
-* Released: August 26, 2024
-* Updated the plugin's onboarding flow
-* Fixed icons, modals, and external URLs in the plugin that were depreciated
-* Enhanced the ability to connect to admin tools
-
-= 125 =
-* Released: February 22, 2024
-* Updated the plugin's name in the WP admin dashboard sidebar and plugin page
-
-= 124 =
-* Released: February 21, 2024
-* Fixed an issue where banners couldn't be dismissed
-
-= 123 =
-* Released: January 17, 2024
-* Support for WordPress 6.4.2
-* Improved Amazon price-checking consistency
-* Improved ability to import large numbers of links to Lasso Pro
-
-= 122 =
-* Released: January 16, 2024
-* Just an internal test to improve the release process
-
-= 121 =
-* Released: October 19, 2023
-* Support for WordPress 6.3.2
-* Security Fix: CSRF vulnerability patched
-
-= 120 =
-* Released: October 6, 2023
-* Fixed an encoding issue on some display links
-
-= 119 =
-* Released: September 26, 2023
-* Support for WordPress 6.3.1
-* Security Fix
-* Resolved deprecation notices in PHP 8.2
-
-= 118 =
-* Released: August 31, 2023
-* Support for WordPress 6.3
-* Fixed Access Controls
-* Security Fix: Cross Site Scripting (XSS)
-
-= 117 =
-* Released: May 30, 2023
-* Support for WordPress 6.2.1
-* Better Import detection and flexibility
-
-= 116 =
-* Released: Feb 28, 2023
-* Fixed an edge case where you wouldn't see imports
-* Ability to disable support

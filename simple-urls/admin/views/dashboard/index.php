@@ -15,10 +15,8 @@ use LassoLite\Classes\SURL;
 $dashboard_link_count            = SURL::total();
 $suppress_upgrade_heavy_chrome   = Helper::should_suppress_upgrade_heavy_chrome();
 $link_search_txt                 = esc_html( $_GET['link-search-input'] ?? '' );
-$lasso_account_email  = Helper::get_option( LassoLite\Admin\Constant::LASSO_ACCOUNT_EMAIL, '' );
-$lasso_account_user_id = intval( Helper::get_option( LassoLite\Admin\Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
-// Same as header: app signup/login only; is_connected_aff alone must not skip the create-account modal.
-$is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_account_user_id > 0;
+// Same predicate as header/footer connect chrome (positive user ID only).
+$is_lasso_app_account_connected = Helper::is_lasso_app_account_linked();
 ?>
 
 <?php Config::get_header(); ?>
@@ -154,7 +152,7 @@ $is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_acco
 </div>
 
 <?php
-// Header only loads this modal when no app account; connected sites still see the realtime upsell toast.
+// Header loads this modal when unlinked only; linked dashboards need a copy for realtime-toast CTAs.
 if ( $is_lasso_app_account_connected ) {
 	$lasso_options_prefill   = Setting::get_settings();
 	$email_support_prefill   = $lasso_options_prefill[ Enum::EMAIL_SUPPORT ] ?? '';

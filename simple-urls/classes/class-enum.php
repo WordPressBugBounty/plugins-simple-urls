@@ -29,7 +29,9 @@ class Enum {
 	const LASSO_LITE_ACTIVE       = 'is_active_lasso_lite';
 	const SWITCH_TO_NEW_UI        = 'is_lasso_live_switch_to_new_ui';
 	const IS_VISITED_WELCOME_PAGE   = 'is_visited_welcome_page';
-	const ONBOARDING_CURRENT_STEP   = 'onboarding_current_step';
+	const ONBOARDING_CURRENT_STEP        = 'onboarding_current_step';
+	const ONBOARDING_DEFERRED_STEPS      = 'onboarding_deferred_steps';
+	const ONBOARDING_DISPLAY_ACTIVATED   = 'onboarding_display_activated';
 	const RESET_WELCOME_PAGE      = 'reset-onboarding';
 	const RESET_REQUEST_REVIEW    = 'reset-review';
 
@@ -68,7 +70,8 @@ class Enum {
 	const IS_PRE_POPULATED_AMAZON_API = 'is_pre_populated_amazon_api';
 	const CUSTOMER_FLOW_ENABLED       = 'customer_flow_enabled';
 	const SHARE_DIAGNOSTICS           = 'share_diagnostics';
-	const USER_META_DASHBOARD_TOUR_DONE   = 'lasso_lite_dashboard_tour_done';
+	/** Site option: Lite Dashboard Intro.js tour completed or skipped (#1134 / #1171). */
+	const OPTION_DASHBOARD_TOUR_DONE = 'lasso_lite_dashboard_tour_done';
 
 	const SUB_PAGE_GROUP_DETAIL = 'detail';
 	const SUB_PAGE_GROUP_URLS   = 'urls';

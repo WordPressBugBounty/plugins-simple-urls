@@ -1,6 +1,7 @@
 <?php
 
 use LassoLite\Classes\Enum;
+use LassoLite\Classes\Helper;
 
 $show_price_attr       = $lasso_options['show_price'] ? 'checked' : '';
 $show_disclosure_attr  = $lasso_options['show_disclosure'] ? 'checked' : '';
@@ -8,21 +9,19 @@ $enable_brag_mode_attr = 'checked';
 ?>
 
 <div class="tab-item d-none" data-step="display">
-	<div class="progressbar_container">
-		<ul class="progressbar">
-			<li class="step-get-started complete">Welcome</li>
-			<li class="step-display-design active">Display Designer</li>
-			<li class="step-amazon-info">Amazon Associates</li>
-			<li class="step-connect-lasso">Connect to Lasso</li>
-			<?php if ( $should_show_import_step ) : ?>
-				<li class="step-import">Imports</li>
-			<?php endif; ?>
-		</ul>
-	</div>
+	<?php
+	echo Helper::include_with_variables(
+		Helper::get_path_views_folder() . 'onboarding/onboarding-progressbar.php',
+		array(
+			'active_step'             => 'display',
+			'should_show_import_step' => $should_show_import_step,
+		)
+	);
+	?>
 
 	<div class="onboarding_header text-center">
-		<h1>Display Designer</h1>
-		<p class="pb-3">Don't worry, you can easily change all of these settings later.</p>
+		<h1><?php esc_html_e( 'Display Designer', 'simple-urls' ); ?></h1>
+		<p class="pb-3"><?php esc_html_e( 'Pick a few colors and button text—we’ll apply safe defaults so you can publish a display right away. Fine-tune everything later in Settings → Display.', 'simple-urls' ); ?></p>
 	</div>
 
 	<div class="onboarding_display_container pb-3">
@@ -213,7 +212,7 @@ $enable_brag_mode_attr = 'checked';
 	<!-- SAVE CHANGES -->
 	<div class="row align-items-center mt-4">
 		<div class="col-lg text-lg-right text-center">
-			<button id="onboarding-save-display-btn" class="btn next-step">Save and Continue &rarr;</button>
+			<button id="onboarding-save-display-btn" class="btn next-step"><?php esc_html_e( 'Save and continue activation', 'simple-urls' ); ?> &rarr;</button>
 		</div>
 	</div>
 </div>

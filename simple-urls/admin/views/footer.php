@@ -48,10 +48,8 @@ if ( '' !== $commit_hash ) {
 
 <?php
 if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
-	$is_connected_aff      = intval( Helper::get_option( Constant::LASSO_OPTION_IS_CONNECTED_AFFILIATE, '0' ) );
-	$lasso_account_email   = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
-	$lasso_account_user_id = intval( Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
-	$is_lasso_connected    = ! empty( $lasso_account_email ) || $lasso_account_user_id > 0 || $is_connected_aff > 0;
+	$is_lasso_app_account_linked = Helper::is_lasso_app_account_linked();
+	$is_lasso_connected          = $is_lasso_app_account_linked;
 	$prefill_email         = get_option( 'admin_email' );
 
 	$lasso_logo_url = esc_url( rtrim( SIMPLE_URLS_URL, '/' ) . '/admin/assets/images/lasso-logo.svg' );
@@ -105,25 +103,28 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 			<?php
 		}
 	};
+
+	$render_footer_version = function () use ( $commit_hash ) {
+		?>
+		<div class="lasso-plugin-footer-version text-center pb-4" style="margin-bottom: 20px;">
+			<span class="badge rounded purple-bg white font-weight-normal py-2 px-3">
+				<?php print 'Version ' . LASSO_LITE_VERSION; // phpcs:ignore ?>
+			</span>
+			<?php if ( '' !== $commit_hash ) : ?>
+				<br>
+				<small class="d-inline-block mt-2 text-muted">
+					<?php echo esc_html( $commit_hash ); ?>
+				</small>
+			<?php endif; ?>
+		</div>
+		<?php
+	};
 	?>
 
 	<footer class="lasso-plugin-footer <?php echo $is_lasso_connected ? 'lasso-plugin-footer--default-only' : 'lasso-plugin-footer--with-cta'; ?>">
-		<div class="lasso-plugin-footer-version">
-			<?php print 'Version ' . LASSO_LITE_VERSION; // phpcs:ignore ?>
-			<?php if ( '' !== $commit_hash ) : ?>
-				<span class="d-block mt-1"><?php echo esc_html( $commit_hash ); ?></span>
-			<?php endif; ?>
-		</div>
-
 		<?php if ( ! $is_lasso_connected ) : ?>
+		<?php $render_footer_version(); ?>
 		<div class="lasso-footer-cta-content">
-			<div class="lasso-plugin-footer-version">
-				<?php print 'Version ' . LASSO_LITE_VERSION; // phpcs:ignore ?>
-				<?php if ( '' !== $commit_hash ) : ?>
-					<span class="d-block mt-1"><?php echo esc_html( $commit_hash ); ?></span>
-				<?php endif; ?>
-			</div>
-
 			<div class="lasso-footer-cta">
 				<div class="lasso-footer-cta-inner">
 					<h2 class="lasso-footer-cta-title">Create Your Free Account</h2>
@@ -199,6 +200,10 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 						</div>
 					</div>
 
+					<p class="mt-3 mb-0 text-center">
+						<a href="#" class="lasso-skip-link lasso-lite-open-existing-account-login"><?php esc_html_e( 'Already have an account? Log in', 'simple-urls' ); ?></a>
+					</p>
+
 					<div class="lasso-footer-cta-footer">
 						<?php $render_footer_brand_social(); ?>
 						<?php $render_footer_links( 'lasso-footer-nav-link' ); ?>
@@ -209,6 +214,12 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 
 		<input type="hidden" id="footer-prefill-email" value="<?php echo esc_attr( $prefill_email ); ?>">
 		<input type="hidden" id="footer-lasso-hub-url" value="<?php echo esc_attr( Constant::get_lasso_hub_url() ); ?>">
+		<?php
+			echo Helper::wrapper_js_render(
+				'default-template-notification',
+				Helper::get_path_views_folder() . '/notifications/default-template-jsrender.html'
+			);
+		?>
 		<?php endif; ?>
 
 		<?php if ( $is_lasso_connected ) : ?>
@@ -220,10 +231,12 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 				</div>
 			</div>
 		</div>
+		<?php $render_footer_version(); ?>
 		<?php endif; ?>
 	</footer>
 <?php } ?>
 
+<script src="<?php echo esc_url( rtrim( SIMPLE_URLS_URL, '/' ) . '/admin/assets/js/lasso-existing-account-sync.js' ); ?>"></script>
 <script>
 	// Check existing account via admin-ajax so it's visible in DevTools Network.
 	window.lassoLiteCheckExistingAccount = function () {
@@ -244,7 +257,11 @@ if ( ! $lasso_lite_setting->is_setting_onboarding_page() ) {
 				dataType: 'json',
 				data: {
 					action: 'lasso_lite_check_existing_account',
-					nonce: lassoLiteOptionsData.optionsNonce
+					nonce: lassoLiteOptionsData.optionsNonce,
+					automatic: '1'
+				},
+				success: function (resp) {
+					window.lassoLiteApplyExistingAccountSyncResponse(resp);
 				}
 			});
 		} catch (e) {}

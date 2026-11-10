@@ -12,10 +12,8 @@ use LassoLite\Classes\Helper;
 use LassoLite\Classes\Page;
 use LassoLite\Classes\Setting;
 
-$lasso_account_email   = Helper::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
-$lasso_account_user_id = intval( Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 ) );
-// App account only (synced email/user from hub/signup). Excludes is_connected_aff from license API; that flag is not a Lasso app login.
-$is_lasso_app_account_connected = ! empty( $lasso_account_email ) || $lasso_account_user_id > 0;
+// App account linkage is positive user ID only (see Helper::is_lasso_app_account_linked()).
+$is_lasso_app_account_connected = Helper::is_lasso_app_account_linked();
 
 $lasso_options_prefill = Setting::get_settings();
 $email_support_prefill = $lasso_options_prefill[ Enum::EMAIL_SUPPORT ] ?? '';
@@ -145,6 +143,9 @@ if ( Helper::show_request_review() ) {
 			array(
 				'prefill_email_header' => $prefill_email_header,
 			)
+		);
+		echo Helper::render_lite_existing_account_modal_once(
+			Helper::get_lite_existing_account_modal_prefill_email()
 		);
 	}
 	?>

@@ -116,7 +116,7 @@ class Ajax {
 			wp_send_json_error( array( 'msg' => $msg ) );
 		}
 
-		$data = $this->normalize_lite_account_existing_response_data( $body );
+		$data = Helper::normalize_lite_account_existing_response_data( $body );
 		if ( null === $data ) {
 			wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
 		}
@@ -162,7 +162,7 @@ class Ajax {
 
 	/**
 	 * Step 2: POST {LASSO_LINK}/account/existing — same as FastAPI `lite_existing_account_endpoint` for POST.
-	 * JSON body: `email`, `site_url`, `mode` = `creators_api` (Lambda skips dim_sites binding when mode matches).
+	 * JSON body: `email`, `site_url`, `mode` = `creators_api`, optional `site_id` / `license_serial`.
 	 *
 	 * @return void
 	 */
@@ -182,6 +182,16 @@ class Ajax {
 			'site_url' => site_url(),
 			'mode'     => 'creators_api',
 		);
+
+		$site_id = trim( (string) License::get_site_id() );
+		if ( '' !== $site_id ) {
+			$request_payload['site_id'] = $site_id;
+		}
+
+		$license_serial = trim( (string) License::get_license() );
+		if ( '' !== $license_serial ) {
+			$request_payload['license_serial'] = $license_serial;
+		}
 
 		$response = Helper::send_request(
 			'post',
@@ -205,7 +215,7 @@ class Ajax {
 			wp_send_json_error( array( 'msg' => $error_message ) );
 		}
 
-		$data = $this->normalize_lite_account_existing_response_data( $lookup_body );
+		$data = Helper::normalize_lite_account_existing_response_data( $lookup_body );
 		if ( null === $data ) {
 			wp_send_json_error( array( 'msg' => 'Unexpected response from Lasso.' ) );
 		}
@@ -361,37 +371,6 @@ class Ajax {
 			return $email;
 		}
 		return '';
-	}
-
-	/**
-	 * Extract the `data` object from lasso.link /account/existing JSON (Lambda/FastAPI).
-	 *
-	 * Supports: wrapped `{ "message", "data": { ... } }`, flattened `{ "exists", ... }`,
-	 * and `data` as associative array from json_decode.
-	 *
-	 * @param mixed $body Decoded JSON root from Helper::send_request().
-	 * @return object|null Normalized object for Lite validate logic, or null if unusable.
-	 */
-	private function normalize_lite_account_existing_response_data( $body ) {
-		if ( ! is_object( $body ) ) {
-			return null;
-		}
-		$data = null;
-		if ( property_exists( $body, 'data' ) ) {
-			$data = $body->data;
-		} elseif ( property_exists( $body, 'exists' ) || property_exists( $body, 'needs_signup' ) || property_exists( $body, 'email_exists' ) ) {
-			$data = $body;
-		}
-		if ( null === $data ) {
-			return null;
-		}
-		if ( is_array( $data ) ) {
-			return (object) $data;
-		}
-		if ( ! is_object( $data ) ) {
-			return null;
-		}
-		return $data;
 	}
 
 	/**
@@ -779,6 +758,7 @@ class Ajax {
 
 		$onboarding_ftue = ! empty( $data['onboarding_ftue'] ) || ! empty( $data['onboarding'] );
 		if ( $onboarding_ftue ) {
+			Helper::mark_onboarding_display_activation_complete();
 			Activation_Funnel::track_admin_event( Activation_Funnel::EVENT_DISPLAY_RENDER );
 		}
 

@@ -207,6 +207,12 @@ class Constant {
 	const LASSO_ACCOUNT_API_KEY = 'lasso_account_api_key';
 	const LASSO_ACCOUNT_USER_ID = 'lasso_account_user_id';
 
+	/** Unix timestamp of last automatic footer Hub account lookup. */
+	const LASSO_OPTION_AUTO_ACCOUNT_CHECK_LAST_AT = 'lasso_lite_auto_account_check_last_at';
+
+	/** Unix timestamp of last linked-account ownership reconciliation attempt. */
+	const LASSO_OPTION_ACCOUNT_RECONCILE_LAST_AT = 'lasso_lite_account_reconcile_last_at';
+
 	const BLOCK_CUSTOMIZE = array(
 		'single'            => array(
 			'type'       => 'single',

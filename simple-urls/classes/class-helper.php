@@ -84,6 +84,75 @@ class Helper {
 	}
 
 	/**
+	 * Extract the `data` object from lasso.link /account/existing JSON (Lambda/FastAPI).
+	 *
+	 * Supports: wrapped `{ "message", "data": { ... } }`, flattened `{ "exists", ... }`,
+	 * and `data` as associative array from json_decode.
+	 *
+	 * @param mixed $body Decoded JSON root from Helper::send_request().
+	 * @return object|null Normalized object for Lite validate logic, or null if unusable.
+	 */
+	public static function normalize_lite_account_existing_response_data( $body ) {
+		if ( ! is_object( $body ) ) {
+			return null;
+		}
+		$data = null;
+		if ( property_exists( $body, 'data' ) ) {
+			$data = $body->data;
+		} elseif ( property_exists( $body, 'exists' ) || property_exists( $body, 'needs_signup' ) || property_exists( $body, 'email_exists' ) ) {
+			$data = $body;
+		}
+		if ( null === $data ) {
+			return null;
+		}
+		if ( is_array( $data ) ) {
+			return (object) $data;
+		}
+		if ( ! is_object( $data ) ) {
+			return null;
+		}
+		return $data;
+	}
+
+	/**
+	 * Email prefill for the existing-account modal: stored Lite account email, else support/admin.
+	 *
+	 * @return string
+	 */
+	public static function get_lite_existing_account_modal_prefill_email() {
+		$stored = (string) self::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		if ( '' !== $stored ) {
+			return $stored;
+		}
+
+		$lasso_options = Setting::get_settings();
+		$email_support = $lasso_options[ Enum::EMAIL_SUPPORT ] ?? '';
+		$admin_email   = get_option( 'admin_email' );
+		return ! empty( $email_support ) ? (string) $email_support : (string) $admin_email;
+	}
+
+	/**
+	 * Render the existing-account login modal once per request.
+	 *
+	 * @param string $prefill_email Email prefill for login and signup fields.
+	 * @return string Modal HTML on first call; empty string afterward.
+	 */
+	public static function render_lite_existing_account_modal_once( $prefill_email = '' ) {
+		static $rendered = false;
+		if ( $rendered ) {
+			return '';
+		}
+		$rendered = true;
+
+		return self::include_with_variables(
+			SIMPLE_URLS_DIR . '/admin/views/modals/lite-account-existing-login.php',
+			array(
+				'prefill_email' => (string) $prefill_email,
+			)
+		);
+	}
+
+	/**
 	 * Get path to views folder
 	 *
 	 * @return string
@@ -1319,7 +1388,14 @@ class Helper {
 	 * @return bool
 	 */
 	public static function should_show_import_page() {
-		return ! empty( ( new Lasso_DB() )->get_import_plugins( true ) ) ? true : false;
+		$show = ! empty( ( new Lasso_DB() )->get_import_plugins( true ) ) ? true : false;
+
+		/**
+		 * Filter whether the Lite onboarding import step is available.
+		 *
+		 * @param bool $show Default from detected import plugins.
+		 */
+		return (bool) apply_filters( 'lasso_lite_should_show_import_page', $show );
 	}
 
 	/**
@@ -1329,6 +1405,192 @@ class Helper {
 	 */
 	public static function get_onboarding_step_ids() {
 		return array( 'welcome', 'display', 'amazon', 'connect-lasso', 'import', 'upsell' );
+	}
+
+	/**
+	 * Required-vs-optional onboarding step contract (activation-first).
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	public static function get_onboarding_step_contract() {
+		return array(
+			'welcome'       => array(
+				'label'          => 'Welcome',
+				'progress_class' => 'step-get-started',
+				'required'       => true,
+			),
+			'display'       => array(
+				'label'          => 'Display Designer',
+				'progress_class' => 'step-display-design',
+				'required'       => true,
+			),
+			'amazon'        => array(
+				'label'          => 'Amazon Associates',
+				'progress_class' => 'step-amazon-info',
+				'required'       => false,
+			),
+			'connect-lasso' => array(
+				'label'          => 'Connect to Lasso',
+				'progress_class' => 'step-connect-lasso',
+				'required'       => false,
+			),
+			'import'        => array(
+				'label'          => 'Imports',
+				'progress_class' => 'step-import',
+				'required'       => false,
+			),
+		);
+	}
+
+	/**
+	 * Ordered progress-bar steps (excludes upsell).
+	 *
+	 * @param bool $include_import Whether import appears in this install.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public static function get_onboarding_progress_steps( $include_import = true ) {
+		$contract = self::get_onboarding_step_contract();
+		$order    = array( 'welcome', 'display', 'amazon', 'connect-lasso' );
+		if ( $include_import ) {
+			$order[] = 'import';
+		}
+
+		$steps = array();
+		foreach ( $order as $step_id ) {
+			if ( ! isset( $contract[ $step_id ] ) ) {
+				continue;
+			}
+			$steps[] = array_merge(
+				array( 'id' => $step_id ),
+				$contract[ $step_id ]
+			);
+		}
+
+		return $steps;
+	}
+
+	/**
+	 * Whether a wizard step is optional (not required for activation).
+	 *
+	 * @param string $step Step id.
+	 * @return bool
+	 */
+	public static function is_onboarding_optional_step( $step ) {
+		$contract = self::get_onboarding_step_contract();
+		if ( ! isset( $contract[ $step ] ) ) {
+			return false;
+		}
+
+		return empty( $contract[ $step ]['required'] );
+	}
+
+	/**
+	 * Deferred optional step ids recorded during FTUE.
+	 *
+	 * @return string[]
+	 */
+	public static function get_onboarding_deferred_steps() {
+		$deferred = self::get_option( Enum::ONBOARDING_DEFERRED_STEPS, array() );
+		if ( ! is_array( $deferred ) ) {
+			return array();
+		}
+
+		return array_values(
+			array_filter(
+				$deferred,
+				function ( $step ) {
+					return is_string( $step ) && self::is_onboarding_optional_step( $step );
+				}
+			)
+		);
+	}
+
+	/**
+	 * Record that the user chose Skip / Set up later on an optional step.
+	 *
+	 * @param string $step Step id.
+	 * @return bool
+	 */
+	public static function defer_onboarding_optional_step( $step ) {
+		if ( ! self::is_onboarding_optional_step( $step ) ) {
+			return false;
+		}
+
+		$deferred = self::get_onboarding_deferred_steps();
+		if ( in_array( $step, $deferred, true ) ) {
+			return true;
+		}
+
+		$deferred[] = $step;
+
+		return self::update_option( Enum::ONBOARDING_DEFERRED_STEPS, $deferred );
+	}
+
+	/**
+	 * Whether display activation saved during onboarding.
+	 *
+	 * @return bool
+	 */
+	public static function is_onboarding_display_activation_complete() {
+		return (bool) self::get_option( Enum::ONBOARDING_DISPLAY_ACTIVATED, 0 );
+	}
+
+	/**
+	 * Persist display activation after onboarding display save.
+	 *
+	 * @return bool
+	 */
+	public static function mark_onboarding_display_activation_complete() {
+		return self::update_option( Enum::ONBOARDING_DISPLAY_ACTIVATED, 1 );
+	}
+
+	/**
+	 * Clear deferred-step and display-activation FTUE flags.
+	 *
+	 * @return void
+	 */
+	public static function clear_onboarding_deferred_steps() {
+		self::update_option( Enum::ONBOARDING_DEFERRED_STEPS, array() );
+		self::update_option( Enum::ONBOARDING_DISPLAY_ACTIVATED, 0 );
+	}
+
+	/**
+	 * Whether optional Amazon / Connect / Import can stay unset while finishing FTUE.
+	 *
+	 * @param bool $include_import Whether import is in the wizard for this install.
+	 * @return bool
+	 */
+	public static function can_complete_lite_onboarding_with_deferred_optional_steps( $include_import = true ) {
+		if ( ! self::is_onboarding_display_activation_complete() ) {
+			return false;
+		}
+
+		$optional = array( 'amazon', 'connect-lasso' );
+		if ( $include_import ) {
+			$optional[] = 'import';
+		}
+
+		$deferred = self::get_onboarding_deferred_steps();
+		foreach ( $optional as $step_id ) {
+			if ( ! in_array( $step_id, $deferred, true ) ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * User reached dashboard via the minimal activation path (display only + deferred optional).
+	 *
+	 * @return bool
+	 */
+	public static function is_lite_onboarding_minimally_activated() {
+		if ( ! (bool) self::get_option( Enum::IS_VISITED_WELCOME_PAGE, 0 ) ) {
+			return false;
+		}
+
+		return self::is_onboarding_display_activation_complete();
 	}
 
 	/**
@@ -1388,6 +1650,62 @@ class Helper {
 	}
 
 	/**
+	 * Whether this Lite install is linked to a Lasso app account (positive user ID only).
+	 *
+	 * Email stored without a user ID, affiliate license flags, and API keys do not count as linked.
+	 *
+	 * @return bool
+	 */
+	public static function is_lasso_app_account_linked() {
+		$user_id = self::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 );
+		if ( is_string( $user_id ) && '' === trim( $user_id ) ) {
+			return false;
+		}
+
+		return (int) $user_id > 0;
+	}
+
+	/**
+	 * Persist a confirmed Lasso app-account link (positive user ID + email).
+	 *
+	 * @param string $email   Account email from Hub.
+	 * @param int    $user_id Hub user ID.
+	 * @return bool True when options were updated.
+	 */
+	public static function apply_lasso_app_account_link( $email, $user_id ) {
+		$email   = sanitize_email( $email );
+		$user_id = (int) $user_id;
+		if ( empty( $email ) || $user_id <= 0 ) {
+			return false;
+		}
+
+		self::update_option( Constant::LASSO_ACCOUNT_EMAIL, $email );
+		self::update_option( Constant::LASSO_ACCOUNT_USER_ID, $user_id );
+		Setting::set_setting( Enum::EMAIL_SUPPORT, $email );
+
+		return true;
+	}
+
+	/**
+	 * Clear local Lasso app-account link fields (does not change affiliate/onboarding flags).
+	 *
+	 * @return void
+	 */
+	public static function clear_lasso_app_account_link() {
+		$email = (string) self::get_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		self::update_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
+		self::update_option( Constant::LASSO_ACCOUNT_USER_ID, 0 );
+
+		if ( '' !== $email ) {
+			$lasso_options = Setting::get_settings();
+			$email_support = $lasso_options[ Enum::EMAIL_SUPPORT ] ?? '';
+			if ( $email === $email_support ) {
+				Setting::set_setting( Enum::EMAIL_SUPPORT, '' );
+			}
+		}
+	}
+
+	/**
 	 * Whether upgrade-heavy Lite chrome should stay hidden until the first link exists.
 	 *
 	 * @return bool
@@ -1429,6 +1747,7 @@ class Helper {
 	public static function reset_onboarding_for_testing() {
 		self::update_option( Enum::IS_VISITED_WELCOME_PAGE, 0 );
 		self::clear_onboarding_current_step();
+		self::clear_onboarding_deferred_steps();
 		update_option( Enum::LASSO_LITE_ACTIVE, 1 );
 		self::update_option( Constant::LASSO_ACCOUNT_EMAIL, '' );
 		self::update_option( Constant::LASSO_ACCOUNT_API_KEY, '' );

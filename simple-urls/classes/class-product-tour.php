@@ -1,12 +1,14 @@
 <?php
 /**
  * Lite Dashboard Intro.js product tour (#1134, parity with Pro #5894).
- * Completion meta is Lite-only (`lasso_lite_dashboard_tour_done`); do not share Pro's key.
+ * Completion is a Lite-only site option (`lasso_lite_dashboard_tour_done`); do not share Pro's key.
  *
  * @package Classes
  */
 
 namespace LassoLite\Classes;
+
+use LassoLite\Admin\Constant;
 
 /**
  * Class Product_Tour
@@ -18,45 +20,32 @@ class Product_Tour {
 	const STYLE_HANDLE_TOUR   = 'lasso-product-tour';
 
 	/**
-	 * Whether the current (or given) user has completed/skipped the tour.
+	 * Whether this site has completed/skipped the tour (site option, not per-user).
 	 *
-	 * @param int $user_id User ID (defaults to current user).
 	 * @return bool
 	 */
-	public static function is_done_for_user( $user_id = 0 ) {
-		$user_id = $user_id > 0 ? (int) $user_id : get_current_user_id();
-		if ( $user_id <= 0 ) {
-			return false;
-		}
-
-		$value = get_user_meta( $user_id, Enum::USER_META_DASHBOARD_TOUR_DONE, true );
+	public static function is_done() {
+		$value = get_option( Enum::OPTION_DASHBOARD_TOUR_DONE, '' );
 
 		return '' !== $value && '0' !== (string) $value;
 	}
 
 	/**
-	 * Whether the tour should auto-start for this user.
+	 * Whether the tour should auto-start on this site.
 	 *
-	 * @param int $user_id User ID (defaults to current user).
 	 * @return bool
 	 */
-	public static function should_show_for_user( $user_id = 0 ) {
-		return ! self::is_done_for_user( $user_id );
+	public static function should_show() {
+		return ! self::is_done();
 	}
 
 	/**
-	 * Persist tour completion / skip for the user.
+	 * Persist tour completion / skip for the site.
 	 *
-	 * @param int $user_id User ID (defaults to current user).
 	 * @return void
 	 */
-	public static function mark_done_for_user( $user_id = 0 ) {
-		$user_id = $user_id > 0 ? (int) $user_id : get_current_user_id();
-		if ( $user_id <= 0 ) {
-			return;
-		}
-
-		update_user_meta( $user_id, Enum::USER_META_DASHBOARD_TOUR_DONE, '1' );
+	public static function mark_done() {
+		update_option( Enum::OPTION_DASHBOARD_TOUR_DONE, '1', false );
 	}
 
 	/**
@@ -71,7 +60,7 @@ class Product_Tour {
 	}
 
 	/**
-	 * Enqueue Intro.js + tour bootstrap when on Dashboard and meta unset.
+	 * Enqueue Intro.js + tour bootstrap when on Dashboard and site option unset.
 	 *
 	 * @return bool True when assets were enqueued.
 	 */
@@ -80,7 +69,7 @@ class Product_Tour {
 			return false;
 		}
 
-		if ( ! self::should_show_for_user() ) {
+		if ( ! self::should_show() ) {
 			return false;
 		}
 
@@ -104,8 +93,8 @@ class Product_Tour {
 			'lassoProductTour',
 			array(
 				'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-				'nonce'   => wp_create_nonce( 'lasso_ajax' ),
-				'action'  => 'lasso_dismiss_dashboard_tour',
+				'nonce'   => wp_create_nonce( Constant::LASSO_LITE_NONCE . wp_salt() ),
+				'action'  => 'lasso_lite_dismiss_dashboard_tour',
 				'steps'   => self::get_steps(),
 			)
 		);

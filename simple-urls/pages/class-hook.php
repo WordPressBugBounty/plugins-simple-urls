@@ -296,6 +296,28 @@ class Hook {
 				Page::get_page_url( $switch_ui )
 			);
 		}
+
+		$this->maybe_track_activation_funnel_activation_complete( $get_page, $post_type, $dashboard_slug );
+	}
+
+	/**
+	 * Record activation_complete once on the usable Lite dashboard request (linked account, not in FTUE redirect).
+	 *
+	 * @param string $get_page       Current `page` query arg.
+	 * @param string $post_type      Current `post_type` query arg.
+	 * @param string $dashboard_slug Prefixed dashboard page slug.
+	 * @return void
+	 */
+	private function maybe_track_activation_funnel_activation_complete( $get_page, $post_type, $dashboard_slug ) {
+		if ( SIMPLE_URLS_SLUG !== $post_type || $dashboard_slug !== $get_page ) {
+			return;
+		}
+
+		if ( self::should_redirect_to_welcome_page() ) {
+			return;
+		}
+
+		Activation_Funnel::maybe_track_activation_complete();
 	}
 
 	/**
@@ -396,6 +418,8 @@ class Hook {
 
 		if ( $setting->is_setting_amazon_page() ) {
 			Helper::enqueue_style( 'settings-amazon-modal', 'settings-amazon-modal.css', array( SIMPLE_URLS_SLUG . '-lasso-lite-custom' ) );
+		} elseif ( ! Helper::is_lasso_app_account_linked() && $setting->is_surls_page() ) {
+			Helper::enqueue_style( 'settings-amazon-modal', 'settings-amazon-modal.css', array( SIMPLE_URLS_SLUG . '-lasso-lite-custom' ) );
 		}
 
 		if ( $setting->is_setting_display_page() || $setting->is_setting_onboarding_page() ) {
@@ -469,6 +493,11 @@ class Hook {
 			// Amazon settings only: edit.php?post_type=surl&page=surl-settings-amazon
 			$data_passed_to_js['lite_account_existing_always_post']           = true;
 			$data_passed_to_js['lite_amazon_settings_post_signup_verify_creators'] = true;
+			$data_passed_to_js['lite_account_link_notification_template']   = 'default-template-notification-amz';
+		} elseif ( ! Helper::is_lasso_app_account_linked() && ( $setting->is_surls_page() || $setting->is_setting_onboarding_page() ) ) {
+			$data_passed_to_js['lite_account_link_notification_template'] = $setting->is_setting_onboarding_page()
+				? 'default-template-notification-amz'
+				: 'default-template-notification';
 		}
 
 		if ( SIMPLE_URLS_SLUG === $post_type ) {
@@ -554,9 +583,23 @@ class Hook {
 
 		if ( $setting->is_setting_amazon_page() ) {
 			Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
-			Helper::enqueue_script( 'settings-amazon', 'settings-amazon.js', array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-signup' ) );
-		} elseif ( $setting->is_setting_onboarding_page() ) {
-			Helper::enqueue_script( 'settings-amazon', 'settings-amazon.js', array( 'jquery' ) );
+			Helper::enqueue_script(
+				'lasso-lite-account-link',
+				'lasso-lite-account-link.js',
+				array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-helper', SIMPLE_URLS_SLUG . '-lasso-signup' )
+			);
+			Helper::enqueue_script(
+				'settings-amazon',
+				'settings-amazon.js',
+				array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-signup', SIMPLE_URLS_SLUG . '-lasso-lite-account-link' )
+			);
+		} elseif ( ! Helper::is_lasso_app_account_linked() && ( $setting->is_surls_page() || $setting->is_setting_onboarding_page() ) ) {
+			Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
+			Helper::enqueue_script(
+				'lasso-lite-account-link',
+				'lasso-lite-account-link.js',
+				array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-helper', SIMPLE_URLS_SLUG . '-lasso-signup' )
+			);
 		}
 
 		if ( $setting->is_import_page() || $setting->is_setting_onboarding_page() ) {
@@ -568,6 +611,11 @@ class Hook {
 			Helper::enqueue_script( 'settings-js', 'settings.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'settings-display-js', 'settings-display.js', array( 'jquery' ) );
 			Helper::enqueue_script( 'lasso-signup', 'lasso-signup.js', array( 'jquery' ) );
+			$onboarding_amazon_deps = array( 'jquery', SIMPLE_URLS_SLUG . '-lasso-signup' );
+			if ( ! Helper::is_lasso_app_account_linked() ) {
+				$onboarding_amazon_deps[] = SIMPLE_URLS_SLUG . '-lasso-lite-account-link';
+			}
+			Helper::enqueue_script( 'settings-amazon', 'settings-amazon.js', $onboarding_amazon_deps );
 		}
 
 		if ( $setting->is_setting_general_page() ) {
@@ -1071,26 +1119,14 @@ class Hook {
 	/**
 	 * Whether Lite onboarding should redirect admin users to the welcome flow.
 	 *
-	 * Redirect until FTUE is explicitly finished (first link or skip-to-dashboard).
+	 * Forced FTUE redirect is disabled so new installs stay on the dashboard first.
+	 * While first-time onboarding is still pending, a direct visit to the onboarding admin URL
+	 * is redirected to the dashboard (see {@see self::build_admin_menu()}).
 	 *
 	 * @return bool
 	 */
 	public static function should_redirect_to_welcome_page() {
-		if ( ! (bool) get_option( Enum::LASSO_LITE_ACTIVE ) ) {
-			return false;
-		}
-
-		// Explicit finish (upsell "go to dashboard") or first-link completion.
-		if ( intval( Helper::get_option( Enum::IS_VISITED_WELCOME_PAGE, 0 ) ) ) {
-			return false;
-		}
-
-		if ( ! Helper::is_lite_onboarding_pending_first_link() ) {
-			Helper::maybe_mark_onboarding_welcome_complete_after_first_link();
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 
 	/**

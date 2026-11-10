@@ -11,7 +11,7 @@ if ( ! $dismiss ) { ?>
 	</div>
 	<div class="lasso-lite-notice-content">
 		<h3>Earn 3-5x Higher Amazon Commissions for Free!</h3>
-		<p>Affiliate+ is Lasso's AI-powered affiliate marketplace. Earn 9-15% bonus commissions on the same products you already recommend.</p>
+		<p>Lasso Marketplace is our AI-powered brand deals platform. Earn 9-15% bonus commissions on the same products you already recommend.</p>
 		<div>
 			<a href="https://getlasso.co/features/affiliate-plus/" target="_blank" class="button lasso-lite-cta1">Learn more</a>
 		</div>

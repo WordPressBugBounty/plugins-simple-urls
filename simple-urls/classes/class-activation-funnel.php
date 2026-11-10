@@ -14,12 +14,14 @@ use LassoLite\Admin\Constant;
  */
 class Activation_Funnel {
 
-	const EVENT_INSTALL         = 'install';
-	const EVENT_WELCOME_VIEW    = 'welcome_view';
-	const EVENT_CONNECT_SUCCESS = 'connect_success';
-	const EVENT_FIRST_LINK      = 'first_link';
-	const EVENT_DISPLAY_RENDER  = 'display_render';
-	const EVENT_UPGRADE_CLICK   = 'upgrade_click';
+	const EVENT_INSTALL             = 'install';
+	const EVENT_WELCOME_VIEW        = 'welcome_view';
+	const EVENT_CONNECT_SUCCESS     = 'connect_success';
+	const EVENT_FIRST_LINK          = 'first_link';
+	const EVENT_DISPLAY_RENDER      = 'display_render';
+	const EVENT_UPGRADE_CLICK       = 'upgrade_click';
+	const EVENT_ONBOARDING_STEP     = 'onboarding_step';
+	const EVENT_ACTIVATION_COMPLETE = 'activation_complete';
 
 	/**
 	 * Whether a shutdown flush is already scheduled for this request.
@@ -41,6 +43,26 @@ class Activation_Funnel {
 			self::EVENT_FIRST_LINK,
 			self::EVENT_DISPLAY_RENDER,
 			self::EVENT_UPGRADE_CLICK,
+			self::EVENT_ONBOARDING_STEP,
+			self::EVENT_ACTIVATION_COMPLETE,
+		);
+	}
+
+	/**
+	 * Event names the browser may emit via the AJAX funnel tracker (subset of taxonomy).
+	 *
+	 * Activation_complete is server-only so it cannot be forged from generic admin JS.
+	 *
+	 * @return string[]
+	 */
+	public static function get_browser_trackable_event_names() {
+		return array_values(
+			array_filter(
+				self::get_event_names(),
+				function ( $name ) {
+					return self::EVENT_ACTIVATION_COMPLETE !== $name;
+				}
+			)
 		);
 	}
 
@@ -55,13 +77,23 @@ class Activation_Funnel {
 	}
 
 	/**
+	 * Whether the browser funnel endpoint may accept and record this event.
+	 *
+	 * @param string $event_name Event name.
+	 * @return bool
+	 */
+	public static function is_browser_trackable_event_name( $event_name ) {
+		return self::EVENT_ACTIVATION_COMPLETE !== $event_name && self::is_valid_event_name( $event_name );
+	}
+
+	/**
 	 * Config passed to admin JS (taxonomy + site id).
 	 *
 	 * @return array<string, mixed>
 	 */
 	public static function get_js_config() {
 		return array(
-			'events'  => self::get_event_names(),
+			'events'  => self::get_browser_trackable_event_names(),
 			'site_id' => Estimate_Earning::get_tracking_site_id(),
 		);
 	}
@@ -98,8 +130,12 @@ class Activation_Funnel {
 			'site_id'   => Estimate_Earning::get_tracking_site_id(),
 			'timestamp' => gmdate( 'c' ),
 			'metadata'  => $metadata,
-			'source'    => 'lasso-lite',
+			'source'    => 'lite',
 		);
+
+		if ( self::EVENT_ACTIVATION_COMPLETE === $event_name ) {
+			$payload['idempotency_key'] = 'lite_activation_v1:' . (string) $payload['site_id'];
+		}
 
 		if ( self::EVENT_UPGRADE_CLICK === $event_name && isset( $metadata['cta_id'] ) ) {
 			$payload['cta_id'] = sanitize_text_field( (string) $metadata['cta_id'] );
@@ -127,11 +163,11 @@ class Activation_Funnel {
 			return false;
 		}
 
-		if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::was_event_recorded( $event_name ) ) {
+		if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::EVENT_ONBOARDING_STEP !== $event_name && self::was_event_recorded( $event_name ) ) {
 			return false;
 		}
 
-		if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::is_event_in_forward_queue( $event_name ) ) {
+		if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::EVENT_ONBOARDING_STEP !== $event_name && self::is_event_in_forward_queue( $event_name ) ) {
 			return false;
 		}
 
@@ -154,7 +190,7 @@ class Activation_Funnel {
 				return false;
 			}
 			self::enqueue_forward( $event_name, $payload );
-		} elseif ( self::EVENT_UPGRADE_CLICK !== $event_name ) {
+		} elseif ( self::EVENT_UPGRADE_CLICK !== $event_name && self::EVENT_ONBOARDING_STEP !== $event_name ) {
 			self::mark_event_recorded( $event_name );
 		}
 
@@ -182,6 +218,43 @@ class Activation_Funnel {
 
 		delete_option( Constant::OPTION_FUNNEL_PENDING_INSTALL );
 		self::track_admin_event( self::EVENT_INSTALL );
+
+		// Fresh installs no longer load onboarding JS on the first admin hit; mirror the former
+		// client-side upsell completion event so the funnel stays consistent.
+		self::track_admin_event(
+			self::EVENT_ONBOARDING_STEP,
+			array(
+				'step'   => 'upsell',
+				'action' => 'completed',
+			)
+		);
+	}
+
+	/**
+	 * Emit activation_complete once the Lite dashboard is usable (new UI, linked Hub account).
+	 *
+	 * Caller must only invoke on the usable-dashboard request (not while redirecting to FTUE).
+	 *
+	 * @return void
+	 */
+	public static function maybe_track_activation_complete() {
+		if ( ! is_admin() || ! current_user_can( 'manage_options' ) ) {
+			return;
+		}
+
+		if ( ! (bool) get_option( Enum::LASSO_LITE_ACTIVE ) ) {
+			return;
+		}
+
+		if ( ! Helper::is_lite_using_new_ui() ) {
+			return;
+		}
+
+		if ( ! Helper::is_lasso_app_account_linked() ) {
+			return;
+		}
+
+		self::track_admin_event( self::EVENT_ACTIVATION_COMPLETE );
 	}
 
 	/**
@@ -195,7 +268,7 @@ class Activation_Funnel {
 			$path = '/' . $path;
 		}
 
-		return rtrim( Constant::get_lasso_hub_url(), '/' ) . $path;
+		return rtrim( Constant::get_lasso_link(), '/' ) . $path;
 	}
 
 	/**
@@ -241,15 +314,13 @@ class Activation_Funnel {
 			return false;
 		}
 
-		$url     = self::get_track_url();
-		$headers = array(
-			'Content-Type' => 'application/json',
-		);
+		$url = self::get_track_url();
 
 		$license = License::get_license();
-		if ( is_string( $license ) && '' !== $license ) {
-			$headers = array_merge( Helper::get_headers( $license ), $headers );
+		if ( ! is_string( $license ) ) {
+			$license = '';
 		}
+		$headers = Helper::get_headers( $license );
 
 		$request_options = array(
 			'headers'   => $headers,
@@ -281,7 +352,7 @@ class Activation_Funnel {
 			$queue = array();
 		}
 
-		if ( self::EVENT_UPGRADE_CLICK !== $event_name ) {
+		if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::EVENT_ONBOARDING_STEP !== $event_name ) {
 			foreach ( $queue as $item ) {
 				if ( is_array( $item ) && ( $item['event_name'] ?? '' ) === $event_name ) {
 					self::schedule_forward_flush();
@@ -334,7 +405,7 @@ class Activation_Funnel {
 			}
 
 			if ( self::forward_payload_sync( $payload ) ) {
-				if ( self::EVENT_UPGRADE_CLICK !== $event_name ) {
+				if ( self::EVENT_UPGRADE_CLICK !== $event_name && self::EVENT_ONBOARDING_STEP !== $event_name ) {
 					self::mark_event_recorded( $event_name );
 				}
 				continue;

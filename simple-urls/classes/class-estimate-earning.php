@@ -31,12 +31,7 @@ class Estimate_Earning {
 	 * @return bool
 	 */
 	public static function has_linked_lasso_account() {
-		$user_id = Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 );
-		if ( is_string( $user_id ) && '' === trim( $user_id ) ) {
-			return false;
-		}
-
-		return (int) $user_id > 0;
+		return Helper::is_lasso_app_account_linked();
 	}
 
 	/**

@@ -611,6 +611,7 @@ class Cron {
 	 */
 	public function lasso_lite_check_lite_user() {
 		$this->sync_dormant_reengage_flag();
+		$this->reconcile_linked_lasso_app_account_with_hub();
 
 		try {
 			$admin_email = get_option( 'admin_email' );
@@ -627,6 +628,85 @@ class Cron {
 		} catch ( \Exception $e ) {
 			return false;
 		}
+	}
+
+	/**
+	 * When locally linked, compare Hub site ownership and apply confirmed transitions only.
+	 *
+	 * Preserves local state on Hub 5xx/timeouts; clears or updates only on authoritative GET /account/existing data.
+	 *
+	 * @return void
+	 */
+	public function reconcile_linked_lasso_app_account_with_hub() {
+		if ( ! Helper::is_lasso_app_account_linked() ) {
+			return;
+		}
+
+		$interval = (int) apply_filters( 'lasso_lite_account_reconcile_interval_seconds', DAY_IN_SECONDS );
+		if ( $interval < 1 ) {
+			$interval = DAY_IN_SECONDS;
+		}
+
+		$last_run = (int) Helper::get_option( Constant::LASSO_OPTION_ACCOUNT_RECONCILE_LAST_AT, 0 );
+		if ( $last_run > 0 && ( time() - $last_run ) < $interval ) {
+			return;
+		}
+
+		$local_user_id = (int) Helper::get_option( Constant::LASSO_ACCOUNT_USER_ID, 0 );
+		if ( $local_user_id <= 0 ) {
+			return;
+		}
+
+		try {
+			$lookup = Helper::send_request(
+				'get',
+				Constant::get_lasso_link() . '/account/existing',
+				array(),
+				array(
+					'site-url' => site_url(),
+				)
+			);
+		} catch ( \Exception $e ) {
+			return;
+		}
+
+		$status_code = isset( $lookup['status_code'] ) ? (int) $lookup['status_code'] : 0;
+		if ( $status_code >= 500 || $status_code <= 0 ) {
+			return;
+		}
+
+		Helper::update_option( Constant::LASSO_OPTION_ACCOUNT_RECONCILE_LAST_AT, time() );
+
+		$lookup_body = $lookup['response'] ?? null;
+		if ( empty( $lookup_body ) || $status_code >= 400 ) {
+			return;
+		}
+
+		$data = Helper::normalize_lite_account_existing_response_data( $lookup_body );
+		if ( null === $data ) {
+			return;
+		}
+
+		if ( ! property_exists( $data, 'exists' ) ) {
+			return;
+		}
+
+		if ( ! $data->exists ) {
+			Helper::clear_lasso_app_account_link();
+			return;
+		}
+
+		$email   = sanitize_email( $data->email ?? '' );
+		$user_id = (int) ( $data->user_id ?? 0 );
+		if ( empty( $email ) || $user_id <= 0 ) {
+			return;
+		}
+
+		if ( $user_id === $local_user_id ) {
+			return;
+		}
+
+		Helper::apply_lasso_app_account_link( $email, $user_id );
 	}
 
 	/**

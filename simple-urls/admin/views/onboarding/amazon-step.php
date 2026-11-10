@@ -25,20 +25,19 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 ?>
 
 <div class="tab-item d-none" data-step="amazon">
-	<div class="progressbar_container">
-		<ul class="progressbar">
-			<li class="step-get-started complete">Welcome</li>
-			<li class="step-display-design complete" data-step="display">Display Designer</li>
-			<li class="step-amazon-info active">Amazon Associates</li>
-			<li class="step-connect-lasso">Connect to Lasso</li>
-			<?php if ( $should_show_import_step ) : ?>
-				<li class="step-import">Imports</li>
-			<?php endif; ?>
-		</ul>
-	</div>
+	<?php
+	echo Helper::include_with_variables(
+		Helper::get_path_views_folder() . 'onboarding/onboarding-progressbar.php',
+		array(
+			'active_step'             => 'amazon',
+			'should_show_import_step' => $should_show_import_step,
+		)
+	);
+	?>
 
 	<div class="onboarding_header text-center">
-		<h1 class="font-weight-bold">Amazon Associates</h1>
+		<h1 class="font-weight-bold"><?php esc_html_e( 'Amazon Associates', 'simple-urls' ); ?></h1>
+		<p class="mb-2"><?php esc_html_e( 'Add a Tracking ID when you are ready to monetize. API keys and Pro monetization tools are optional and can wait.', 'simple-urls' ); ?></p>
 		&nbsp;<a href="https://support.getlasso.co/en/articles/3182308-how-to-get-your-amazon-product-api-keys" target="_blank" class="btn btn-sm learn-btn">
 			<i class="far fa-info-circle"></i> Learn
 		</a>
@@ -88,7 +87,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 			</div>
 
 			<div class="col-lg">
-				<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5 amazon-api-card">
+				<div class="white-bg rounded shadow p-4 mb-lg-0 mb-5 amazon-api-card onboarding-amazon-advanced">
 					<section>
 						<h3 class="d-inline-block align-middle mr-2">Amazon Product Data API</h3>
 						<a href="https://support.getlasso.co/en/articles/3182308-how-to-set-up-amazon-creators-api-credentials-with-lasso" target="_blank" rel="noopener noreferrer" class="btn btn-sm learn-btn mb-2">
@@ -176,7 +175,7 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 							<input type="checkbox" name="auto_upgrade_eligible_links" id="auto_upgrade_eligible_links" <?php echo $auto_upgrade_eligible_links ? 'checked' : ''; ?>>
 							<span class="slider"></span>
 						</label>
-						<label class="m-0">Auto-upgrade Eligible Links</label>
+						<label class="m-0">Commission Upgrades</label>
 					</div>
 				</div>
 			</div>
@@ -186,7 +185,12 @@ $auto_upgrade_eligible_links = $lasso_options['auto_upgrade_eligible_links'] ?? 
 		<!-- SAVE CHANGES -->
 		<div class="row align-items-center">
 			<div class="col-lg text-lg-right text-center">
-				<button type="submit" class="btn btn-save-settings-amazon" >Save and Continue &rarr;</button>
+				<button type="submit" class="btn btn-save-settings-amazon"><?php esc_html_e( 'Save and continue', 'simple-urls' ); ?> &rarr;</button>
+				<div class="mt-3">
+					<a href="#" class="lasso-skip-link onboarding-skip-step" data-step="amazon">
+						<?php esc_html_e( 'Skip for now — set up Amazon later', 'simple-urls' ); ?>
+					</a>
+				</div>
 			</div>
 		</div>
 	</form>
